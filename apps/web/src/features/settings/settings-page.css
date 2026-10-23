@@ -1,0 +1,184 @@
+.settings-appearance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  align-items: center;
+  gap: 20px;
+}
+.settings-appearance h2 {
+  margin-bottom: 6px;
+}
+.settings-design-style {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-5) 0 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.settings-design-style legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-3);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.design-style-options {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  max-width: 640px;
+}
+.design-style-option {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+.design-style-option:has(input:checked) {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+.design-style-option > input {
+  position: absolute;
+  z-index: 1;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+.design-style-preview {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  min-height: 126px;
+  padding: 16px 18px;
+  border-radius: 6px;
+  background: var(--preview-bg);
+  color: var(--preview-ink);
+}
+.preview-minimal {
+  --preview-bg: #f5f7f8;
+  --preview-ink: #35444f;
+  --preview-line: #d9e1e6;
+  --preview-accent: #4d667a;
+}
+.preview-warm {
+  --preview-bg: #f1f0e5;
+  --preview-ink: #45523d;
+  --preview-line: #d4ddc7;
+  --preview-accent: #60734f;
+  border-left: 3px solid var(--preview-line);
+}
+.design-preview-title {
+  padding-right: var(--space-6);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.preview-warm .design-preview-title {
+  font-family: 'Iowan Old Style', 'Songti SC', SimSun, serif;
+  font-weight: 500;
+}
+.design-preview-tabs {
+  display: flex;
+  gap: var(--space-4);
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--preview-line);
+  font-size: 11px;
+}
+.design-preview-tabs > span:first-child {
+  color: var(--preview-accent);
+  box-shadow: 0 6px 0 -5px var(--preview-accent);
+}
+.design-preview-row {
+  display: block;
+  width: 90%;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--preview-line);
+}
+.design-preview-row:last-child {
+  width: 65%;
+}
+.design-style-caption {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2) var(--space-2);
+}
+.design-style-caption strong {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.design-style-caption > span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.design-style-error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+.design-style-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+:root[data-theme='dark'] .preview-minimal {
+  --preview-bg: #263039;
+  --preview-ink: #dde7ed;
+  --preview-line: #495b68;
+  --preview-accent: #adc4d3;
+}
+:root[data-theme='dark'] .preview-warm {
+  --preview-bg: #333d2d;
+  --preview-ink: #e5ecd8;
+  --preview-line: #566b47;
+  --preview-accent: #b3c99f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .preview-minimal {
+    --preview-bg: #263039;
+    --preview-ink: #dde7ed;
+    --preview-line: #495b68;
+    --preview-accent: #adc4d3;
+  }
+  :root:not([data-theme='light']) .preview-warm {
+    --preview-bg: #333d2d;
+    --preview-ink: #e5ecd8;
+    --preview-line: #566b47;
+    --preview-accent: #b3c99f;
+  }
+}
+.settings-password-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.settings-password fieldset > .button,
+.settings-password [role='status'] > .button {
+  align-self: flex-start;
+}
+.settings-page .device-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .settings-password-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .settings-appearance {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+}

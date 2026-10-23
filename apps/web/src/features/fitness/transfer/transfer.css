@@ -1,0 +1,49 @@
+.fitness-transfer-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.fitness-transfer-mapping {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.fitness-transfer-mapping select {
+  min-width: 0;
+  max-width: 100%;
+}
+.fitness-transfer-records {
+  display: grid;
+  gap: 0.5rem;
+}
+.fitness-transfer-records label,
+.fitness-transfer-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow-wrap: anywhere;
+}
+.fitness-transfer-records input,
+.fitness-transfer-confirm input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+.fitness-transfer-records span {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.fitness-transfer-records small {
+  color: var(--text-secondary);
+}
+@media (max-width: 600px) {
+  .fitness-transfer-mapping {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

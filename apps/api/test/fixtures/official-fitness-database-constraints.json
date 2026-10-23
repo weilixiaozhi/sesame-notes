@@ -1,0 +1,12 @@
+{
+  "official_fitness_content.official_fitness_content_content_check": "CHECK (((jsonb_typeof(content) = 'object'::text) AND ((content ->> 'id'::text) IS NOT NULL) AND ((content ->> 'id'::text) = (id)::text)))",
+  "official_fitness_content.official_fitness_content_exercise_fields_check": "CHECK ((((kind)::text <> 'exercise'::text) OR (NOT (content ? 'aliases'::text))))",
+  "official_fitness_content.official_fitness_content_kind_check": "CHECK (((kind)::text = ANY ((ARRAY['exercise'::character varying, 'template'::character varying, 'plan'::character varying])::text[])))",
+  "official_fitness_content.official_fitness_content_version_check": "CHECK ((version > 0))",
+  "official_fitness_media.official_fitness_media_hash_check": "CHECK (((id)::text ~ '^[a-f0-9]{64}$'::text))",
+  "official_fitness_media.official_fitness_media_shape_check": "CHECK ((((mime_type)::text = 'image/gif'::text) AND (byte_size > 0) AND (width > 0) AND (height > 0) AND (frames > 0)))",
+  "official_fitness_state.official_fitness_state_singleton": "CHECK (((id = 1) AND (content_version > 0)))",
+  "official_fitness_taxonomies.official_fitness_taxonomies_kind_check": "CHECK (((kind)::text = ANY ((ARRAY['body_part'::character varying, 'equipment'::character varying])::text[])))",
+  "official_fitness_taxonomies.official_fitness_taxonomies_version_check": "CHECK ((version >= 1))",
+  "official_fitness_taxonomies.official_fitness_taxonomies_sort_check": "CHECK ((sort_order >= 0))"
+}

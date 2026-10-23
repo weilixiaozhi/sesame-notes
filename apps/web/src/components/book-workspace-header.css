@@ -1,0 +1,101 @@
+.book-workspace-header {
+  container: book-workspace / inline-size;
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.book-workspace-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+}
+.book-workspace-selector {
+  min-width: 0;
+}
+.book-workspace-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.book-workspace-actions > .button {
+  min-height: 40px;
+  color: var(--text-secondary);
+  border-color: transparent;
+  background: transparent;
+}
+.book-workspace-actions > .button:hover,
+.book-workspace-actions > .button[aria-expanded='true'] {
+  color: var(--primary);
+  background: var(--selected);
+}
+.book-management-chevron {
+  transition: transform 0.15s;
+}
+.book-workspace-actions > .button[aria-expanded='true'] .book-management-chevron {
+  transform: rotate(180deg);
+}
+.book-management-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+.book-management-panel[hidden] {
+  display: none;
+}
+.book-management-section {
+  min-width: 0;
+}
+.book-management-section h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 550;
+}
+.book-management-section-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+  gap: var(--space-1);
+}
+.book-management-section-content > .button {
+  justify-content: flex-start;
+  text-align: left;
+}
+.book-management-section-content > .book-management-delete {
+  color: var(--danger);
+}
+.book-management-danger {
+  grid-column: 1 / -1;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.book-management-danger .book-management-section-content {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+/* 窄屏本子名称独占整行，管理工具另起一行，避免挤压可横向浏览的本子栏。 */
+@container book-workspace (max-width: 640px) {
+  .book-workspace-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .book-workspace-actions {
+    gap: var(--space-1) var(--space-2);
+  }
+  .book-management-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+  .book-management-danger .button {
+    flex: 1 1 140px;
+  }
+}
+@container book-workspace (max-width: 360px) {
+  .book-management-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,0 +1,172 @@
+.fitness-editor,
+.fitness-preview {
+  width: min(1040px, calc(100vw - 32px));
+}
+.fitness-picker {
+  width: min(740px, calc(100vw - 32px));
+}
+.fitness-taxonomy-manager {
+  width: min(900px, calc(100vw - var(--space-8)));
+}
+.fitness-editor-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.fitness-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.fitness-form-grid textarea {
+  min-height: 140px;
+}
+.fitness-section-heading,
+.fitness-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.fitness-picker-list {
+  display: grid;
+  padding: var(--space-3) 0;
+}
+.fitness-picker-item {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.fitness-picker-item > span:first-child {
+  flex: 1;
+}
+.fitness-media-editor {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: var(--space-5);
+  align-items: center;
+}
+.fitness-media-preview,
+.fitness-media-empty {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+}
+.fitness-media-empty {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.fitness-preview-animation {
+  display: block;
+  width: min(420px, 100%);
+  height: 320px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.fitness-equipment {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+.fitness-equipment label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.fitness-sequence,
+.fitness-plan-days {
+  display: grid;
+  gap: var(--space-3);
+}
+.fitness-sequence-item {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.fitness-exercise-parameters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.fitness-plan-days {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: 540px;
+  overflow: auto;
+}
+.fitness-plan-day {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+}
+.fitness-cycle-field {
+  display: flex;
+  gap: var(--space-3);
+  align-items: end;
+}
+.fitness-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--muted);
+}
+.fitness-preserve-lines {
+  white-space: pre-wrap;
+}
+.fitness-instructions {
+  display: grid;
+  gap: var(--space-3);
+  padding-left: var(--space-6);
+  margin: 0;
+}
+.fitness-table-subtitle {
+  display: block;
+  margin-top: var(--space-1);
+}
+.fitness-table-media {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  overflow: hidden;
+}
+.fitness-table-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.fitness-table-media span {
+  padding: var(--space-2);
+}
+@media (max-width: 760px) {
+  .fitness-form-grid,
+  .fitness-media-editor,
+  .fitness-plan-days {
+    grid-template-columns: 1fr;
+  }
+  .fitness-exercise-parameters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fitness-section-heading {
+    flex-wrap: wrap;
+  }
+}

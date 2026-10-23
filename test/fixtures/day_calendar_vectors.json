@@ -1,0 +1,60 @@
+{
+  "description": "人工核对的独立历法样本，预期不由待测 Tyme 库生成。",
+  "sources": {
+    "hko_1901": "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T1901c.txt",
+    "hko_2023": "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2023c.txt",
+    "hko_2042": "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2042c.txt",
+    "hko_2057": "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2057c.txt",
+    "hko_2089": "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2089c.txt",
+    "hko_2097": "https://www.hko.gov.hk/tc/gts/time/calendar/text/files/T2097c.txt",
+    "hko_prediction_note": "https://www.hko.gov.hk/tc/gts/time/conversion.htm"
+  },
+  "lunar_to_solar": [
+    { "year": 1900, "month": 11, "day": 11, "is_leap_month": false, "solar_date": "1901-01-01", "source": "hko_1901" },
+    { "year": 2022, "month": 12, "day": 30, "is_leap_month": false, "solar_date": "2023-01-21", "source": "hko_2023" },
+    { "year": 2023, "month": 1, "day": 1, "is_leap_month": false, "solar_date": "2023-01-22", "source": "hko_2023" },
+    { "year": 2023, "month": 1, "day": 15, "is_leap_month": false, "solar_date": "2023-02-05", "source": "hko_2023" },
+    { "year": 2023, "month": 2, "day": 1, "is_leap_month": false, "solar_date": "2023-02-20", "source": "hko_2023" },
+    { "year": 2023, "month": 2, "day": 30, "is_leap_month": false, "solar_date": "2023-03-21", "source": "hko_2023" },
+    { "year": 2023, "month": 2, "day": 1, "is_leap_month": true, "solar_date": "2023-03-22", "source": "hko_2023" },
+    { "year": 2023, "month": 2, "day": 29, "is_leap_month": true, "solar_date": "2023-04-19", "source": "hko_2023" },
+    { "year": 2023, "month": 3, "day": 29, "is_leap_month": false, "solar_date": "2023-05-18", "source": "hko_2023" },
+    { "year": 2023, "month": 5, "day": 5, "is_leap_month": false, "solar_date": "2023-06-22", "source": "hko_2023" },
+    { "year": 2023, "month": 7, "day": 7, "is_leap_month": false, "solar_date": "2023-08-22", "source": "hko_2023" },
+    { "year": 2023, "month": 8, "day": 15, "is_leap_month": false, "solar_date": "2023-09-29", "source": "hko_2023" },
+    { "year": 2023, "month": 9, "day": 9, "is_leap_month": false, "solar_date": "2023-10-23", "source": "hko_2023" },
+    { "year": 2042, "month": 2, "day": 1, "is_leap_month": true, "solar_date": "2042-03-22", "source": "hko_2042" },
+    { "year": 2089, "month": 8, "day": 1, "is_leap_month": false, "solar_date": "2089-09-04", "source": "hko_2089" },
+    { "year": 2097, "month": 7, "day": 1, "is_leap_month": false, "solar_date": "2097-08-07", "source": "hko_2097" }
+  ],
+  "invalid_lunar": [
+    { "year": 2023, "month": 2, "day": 30, "is_leap_month": true, "error": "invalid_lunar_date" },
+    { "year": 2024, "month": 2, "day": 1, "is_leap_month": true, "error": "invalid_lunar_date" },
+    { "year": 1900, "month": 11, "day": 10, "is_leap_month": false, "error": "date_out_of_range" }
+  ],
+  "spans": [
+    { "start": "2020-02-29", "end": "2021-02-28", "years": 1, "months": 0, "days": 0 },
+    { "start": "2026-01-31", "end": "2026-02-28", "years": 0, "months": 1, "days": 0 },
+    { "start": "2026-01-31", "end": "2026-03-30", "years": 0, "months": 1, "days": 30 },
+    { "start": "2020-02-29", "end": "2024-02-28", "years": 3, "months": 11, "days": 30 }
+  ],
+  "name_normalization": [
+    { "input": "\u0085\ufeff 家庭\t日子 \u3000", "expected": "家庭\t日子" },
+    { "input": "\u200b", "expected": null },
+    { "input": "\u202f\u205f名称\u00a0", "expected": "名称" }
+  ],
+  "prediction_review": [
+    {
+      "year": 2057,
+      "month": 9,
+      "day": 1,
+      "is_leap_month": false,
+      "solar_date": "2057-09-28",
+      "source": "hko_2057",
+      "dart_tyme_1_5_0_observed": "2057-09-29",
+      "typescript_tyme4ts_1_5_2_observed": "2057-09-29",
+      "status": "unresolved_prediction_difference",
+      "diagnosis": "HKO注明2057-09-28新月接近午夜，远期预测可能相差一日。独立HKO期望保持不变；库观测仅供差异审查，不作为黄金测试期望，不宣称该样本已通过。"
+    }
+  ]
+}

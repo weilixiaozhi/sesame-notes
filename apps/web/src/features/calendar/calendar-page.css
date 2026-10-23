@@ -1,0 +1,69 @@
+.calendar-page .calendar-toolbar {
+  display: grid;
+  grid-template-columns: 44px 116px 90px 44px auto;
+  max-width: 440px;
+  gap: 8px;
+  align-items: end;
+}
+.calendar-page .calendar-toolbar > .field {
+  min-width: 0;
+  max-width: none;
+}
+.calendar-page .calendar-toolbar select {
+  padding-inline: 4px;
+}
+.calendar-page .calendar-month-step {
+  width: 44px;
+  min-height: 44px;
+  padding-inline: 0;
+}
+.calendar-page .calendar-sources > p {
+  margin-top: 16px;
+  font-size: 13px;
+}
+.calendar-page .calendar-legend {
+  flex-wrap: wrap;
+}
+.calendar-day-records {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+.calendar-day-records > .panel {
+  min-width: 0;
+}
+.calendar-day-records .section-heading {
+  margin-top: 0;
+  align-items: baseline;
+  gap: 12px;
+}
+.calendar-day-records .section-heading h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.calendar-day-records .section-heading > a {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.calendar-day-records .calendar-record {
+  gap: 8px;
+}
+.calendar-day-records .calendar-record strong {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .calendar-day-records {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .calendar-page .calendar-toolbar {
+    grid-template-columns: 44px minmax(0, 1.3fr) minmax(0, 1fr) 44px;
+    gap: 4px;
+  }
+  .calendar-page .calendar-today-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

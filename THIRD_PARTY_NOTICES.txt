@@ -1,0 +1,44 @@
+第三方内容声明
+
+本项目的 MIT 许可不替代以下第三方内容各自的许可。本文件列出随本仓库
+直接分发的相关资料；通过包管理器取得的其他依赖仍适用其各自的许可。
+
+一、健身动作非媒体数据
+
+来源：https://github.com/hasaneyldrm/exercises-dataset
+固定版本：7455efae41b330c265e7cd4b78dfa848e7ce5ebd
+版权：Copyright (c) 2026 Hasan Emir Yıldırım
+许可：上游 MIT，完整原文见 third_party/exercises-dataset/LICENSE。
+
+适用文件：
+- apps/web/src/features/fitness/exercise-catalog.json
+- apps/api/src/modules/fitness/fitness-catalog.json
+- packages/api-contract/fitness-catalog.json
+- apps/api/prisma/migrations/ 中内嵌或派生的该动作数据
+
+这些文件使用或派生自上游动作名称、分类、教学文字等非媒体数据，
+并包含本项目使用的数据结构、标识与本地媒体路径。
+
+二、健身 GIF 与其他 Gym Visual 媒体
+
+适用目录：apps/web/public/fitness/videos/
+权利人及署名：© Gym visual — https://gymvisual.com/
+条款：https://gymvisual.com/content/3-terms-and-conditions-of-use
+
+这些媒体不在本项目或 exercises-dataset 的 MIT 授权范围内。本项目不因
+附带这些文件而授予使用或再分发权利，相关使用须遵守权利人的条款，
+并在需要时取得独立授权。
+
+third_party/exercises-dataset/NOTICE.md 是固定版本的上游声明原文。
+其中关于已取得许可和媒体规格的表述描述的是上游仓库，不能视为本项目
+或本项目使用者已经取得相同授权的证明。
+
+三、电话号码地区表
+
+适用文件：packages/api-client/src/phone-regions.json
+来源：https://github.com/google/libphonenumber/blob/d1457634c3d95e570dad433ee0ab400beb343a56/resources/PhoneNumberMetadata.xml
+版权：Copyright (C) 2009 The Libphonenumber Authors
+许可：Apache License, Version 2.0；完整原文见 third_party/libphonenumber/LICENSE。
+
+本项目从该固定版本的 XML 元数据提取区号资料，整理为包含地区标签的
+JSON 目录；该文件不是上游原始 XML。来源版权和 Apache 2.0 许可继续适用。

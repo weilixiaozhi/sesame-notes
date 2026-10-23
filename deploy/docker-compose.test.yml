@@ -1,0 +1,83 @@
+name: sesame-notes-test
+
+# test 环境：源码热重载的 API + PostgreSQL；与 prod 隔离。
+# 生产部署使用 docker-compose.prod.yml（API + PostgreSQL；TLS/反代由宿主机统一管理）。
+services:
+  postgres:
+    image: sesame-notes-test-postgres:test-17-${POSTGRES_IMAGE_REVISION:?请在 test 的 --env-file 中设置当前 PostgreSQL 镜像 ID 的裸 64 位 sha256}
+    pull_policy: never
+    # Docker Desktop 随登录自启，容器按策略一并恢复，重启电脑后无需再手工 up。
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sesame_notes_test
+      POSTGRES_USER: sesame
+      POSTGRES_PASSWORD: sesame
+    ports:
+      # 宿主连库工具使用 127.0.0.1:55432，容器网络使用 5432。
+      - '127.0.0.1:55432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sesame -d sesame_notes_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    container_name: sesame-notes-test-api
+    image: sesame-notes-test-api:test-${TEST_IMAGE_TAG:-local}
+    pull_policy: never
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: test
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - node apps/api/prisma/setup.mjs --test-admin && exec node apps/api/node_modules/tsx/dist/cli.mjs watch apps/api/src/server.ts
+    environment:
+      # development 是 Node.js 热重载运行模式；部署环境名称为 test。
+      SESAME_ENV: test
+      NODE_ENV: development
+      PORT: 8080
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://sesame:sesame@postgres:5432/sesame_notes_test
+      JWT_SECRET: dev-only-secret-that-is-at-least-32-bytes-long
+      STORAGE_PATH: /data
+      # 浏览器同源反代也必须显式列出允许的网页来源。
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      ADMIN_ORIGINS: ${ADMIN_ORIGINS:-}
+      ADMIN_SESSION_TTL: ${ADMIN_SESSION_TTL:-28800}
+      ADMIN_SESSION_IDLE_TTL: ${ADMIN_SESSION_IDLE_TTL:-1800}
+    ports:
+      - '0.0.0.0:8080:8080'
+    volumes:
+      - type: bind
+        source: ${TEST_SOURCE_ROOT:-..}/apps/api/src
+        target: /app/apps/api/src
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${TEST_SOURCE_ROOT:-..}/apps/api/prisma
+        target: /app/apps/api/prisma
+        bind:
+          create_host_path: false
+      - api_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  # 仅连接名称明确的测试物理卷。
+  # external 使目标卷不存在时直接失败，避免误连一套新空库。
+  pg_data:
+    external: true
+    name: sesame-notes-test_pg_data
+  api_data:
+    external: true
+    name: sesame-notes-test_api_data
+
+networks:
+  default:
+    name: sesame-notes-test_default

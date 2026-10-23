@@ -1,0 +1,61 @@
+.book-tabs-container {
+  min-width: 0;
+  flex: 1;
+}
+.book-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-5);
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  border-bottom: 1px solid var(--border);
+  padding: 3px 2px 0;
+}
+.book-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 46px;
+  max-width: 260px;
+  flex: 0 0 auto;
+  padding: var(--space-2) 2px var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.book-tab > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.book-tab > small {
+  font-size: var(--text-xs);
+}
+.book-tab:hover {
+  color: var(--text);
+}
+.book-tab[aria-pressed='true'] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+/* 聚焦轮廓保留在滚动容器内，键盘定位不被边缘裁切。 */
+.book-tab:focus-visible {
+  outline-offset: -2px;
+}
+@media (max-width: 640px) {
+  .book-tabs {
+    gap: var(--space-4);
+  }
+  .book-tab {
+    max-width: 210px;
+  }
+}

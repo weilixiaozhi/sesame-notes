@@ -1,0 +1,8242 @@
+{
+  "format": "sesame-notes.shared-catalogs",
+  "version": 1,
+  "source": {
+    "repository": "sesame-notes-mobile",
+    "revision": "c47fe33a681725c5567190ff2b6343488c4b4318",
+    "files": [
+      {
+        "file": "lib/utils/default_category_keys.dart",
+        "sha256": "fafbc6a82f169b6e8745096dfcc3e1d90fc66db7e9a0641eb4b52c4736d2960a"
+      },
+      {
+        "file": "lib/shared/services/seed_service.dart",
+        "sha256": "8afdf41260753a15a84365fbd8ec137d0b790b45ecd5e9dff22f9ef5a4fc9940"
+      },
+      {
+        "file": "lib/l10n/app_zh.arb",
+        "sha256": "f670162181660609740ebe2dafc155828802e54ebd1983835f60a32528cda611"
+      },
+      {
+        "file": "lib/utils/default_category_ids.dart",
+        "sha256": "f8f6619b39f40602abe199cbd92d9ed4d96515e59bd72389b6ccf1f8d9a2578d"
+      },
+      {
+        "file": "lib/utils/currency/currencies.dart",
+        "sha256": "b7ed32a516d571b8584e88da05fe24adb19b78ece72771e325f43705df5a3e2b"
+      },
+      {
+        "file": "lib/shared/presentation/currency_names.dart",
+        "sha256": "fd4a590189daffb7507002fa52ce855b95a96c739d6525ce85e7afc7e8564b41"
+      },
+      {
+        "file": "assets/fitness/exercises.json",
+        "sha256": "f4e0438ad355ec99f4c3cc1e8300bf4b50771f52d18900048b43758bee1a4158"
+      }
+    ]
+  },
+  "categories": {
+    "namespace": "b3e7c0de000040008000beec00000001",
+    "sources": [
+      {
+        "file": "lib/utils/default_category_keys.dart",
+        "sha256": "fafbc6a82f169b6e8745096dfcc3e1d90fc66db7e9a0641eb4b52c4736d2960a"
+      },
+      {
+        "file": "lib/shared/services/seed_service.dart",
+        "sha256": "8afdf41260753a15a84365fbd8ec137d0b790b45ecd5e9dff22f9ef5a4fc9940"
+      },
+      {
+        "file": "lib/l10n/app_zh.arb",
+        "sha256": "f670162181660609740ebe2dafc155828802e54ebd1983835f60a32528cda611"
+      },
+      {
+        "file": "lib/utils/default_category_ids.dart",
+        "sha256": "f8f6619b39f40602abe199cbd92d9ed4d96515e59bd72389b6ccf1f8d9a2578d"
+      }
+    ],
+    "flat": [
+      {
+        "key": "dining",
+        "level": 1,
+        "name": "餐饮",
+        "icon": "utensils",
+        "seed_id": "ffec6471-df8b-5bb3-8a05-93ef863ca958",
+        "parent_key": null
+      },
+      {
+        "key": "transport",
+        "level": 1,
+        "name": "交通",
+        "icon": "bus",
+        "seed_id": "512859af-c24d-5b60-a237-b7d974eaffec",
+        "parent_key": null
+      },
+      {
+        "key": "shopping",
+        "level": 1,
+        "name": "购物",
+        "icon": "shoppingCart",
+        "seed_id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+        "parent_key": null
+      },
+      {
+        "key": "entertainment",
+        "level": 1,
+        "name": "娱乐",
+        "icon": "partyPopper",
+        "seed_id": "e0315338-f078-5f93-9227-373acba72456",
+        "parent_key": null
+      },
+      {
+        "key": "home",
+        "level": 1,
+        "name": "居家",
+        "icon": "home",
+        "seed_id": "ee091e47-98e5-5203-8955-f9385ed4b8f6",
+        "parent_key": null
+      },
+      {
+        "key": "family",
+        "level": 1,
+        "name": "家庭",
+        "icon": "users",
+        "seed_id": "d429788d-2b33-5583-bfff-f4741337c340",
+        "parent_key": null
+      },
+      {
+        "key": "communication",
+        "level": 1,
+        "name": "通讯",
+        "icon": "phone",
+        "seed_id": "0938ad4a-b8d5-5cf2-b3a8-763ce9d7f4c4",
+        "parent_key": null
+      },
+      {
+        "key": "utilities",
+        "level": 1,
+        "name": "水电",
+        "icon": "zap",
+        "seed_id": "74d01588-dd91-5d4a-8e6c-83cdd9bfe6b7",
+        "parent_key": null
+      },
+      {
+        "key": "housing",
+        "level": 1,
+        "name": "住房",
+        "icon": "building2",
+        "seed_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+        "parent_key": null
+      },
+      {
+        "key": "medical",
+        "level": 1,
+        "name": "医疗",
+        "icon": "cross",
+        "seed_id": "1aaf1de7-d76b-5d4a-8e65-7ea7db0f39b9",
+        "parent_key": null
+      },
+      {
+        "key": "education",
+        "level": 1,
+        "name": "教育",
+        "icon": "graduationCap",
+        "seed_id": "591c233c-e6e2-5a61-92d6-5676aa2c8168",
+        "parent_key": null
+      },
+      {
+        "key": "pets",
+        "level": 1,
+        "name": "宠物",
+        "icon": "dog",
+        "seed_id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+        "parent_key": null
+      },
+      {
+        "key": "sports",
+        "level": 1,
+        "name": "运动",
+        "icon": "dumbbell",
+        "seed_id": "a13cf817-17d8-5733-8af7-fa4ec1fa362b",
+        "parent_key": null
+      },
+      {
+        "key": "digital",
+        "level": 1,
+        "name": "数码",
+        "icon": "smartphone",
+        "seed_id": "4e7ce64f-38e0-5fbc-9478-ee19190a9e4a",
+        "parent_key": null
+      },
+      {
+        "key": "travel",
+        "level": 1,
+        "name": "旅行",
+        "icon": "plane",
+        "seed_id": "f0cd7ca4-9c04-5297-9bac-691f35a7bb05",
+        "parent_key": null
+      },
+      {
+        "key": "alcohol_tobacco",
+        "level": 1,
+        "name": "烟酒",
+        "icon": "beer",
+        "seed_id": "2ea96e38-0dc1-50d5-9692-adb9a754284b",
+        "parent_key": null
+      },
+      {
+        "key": "baby_care",
+        "level": 1,
+        "name": "母婴",
+        "icon": "baby",
+        "seed_id": "c5beb245-706a-54e1-8d25-cc8b624bfdb1",
+        "parent_key": null
+      },
+      {
+        "key": "beauty",
+        "level": 1,
+        "name": "美容",
+        "icon": "sparkles",
+        "seed_id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+        "parent_key": null
+      },
+      {
+        "key": "repair",
+        "level": 1,
+        "name": "维修",
+        "icon": "wrench",
+        "seed_id": "fbbd6bd4-2f31-53b1-bbe5-0f0465e52e0a",
+        "parent_key": null
+      },
+      {
+        "key": "social",
+        "level": 1,
+        "name": "社交",
+        "icon": "users2",
+        "seed_id": "95123b7f-52d9-56e9-8560-56c0db4f5097",
+        "parent_key": null
+      },
+      {
+        "key": "learning",
+        "level": 1,
+        "name": "学习",
+        "icon": "library",
+        "seed_id": "ca747186-7cef-5691-bbca-db1c38e6d28c",
+        "parent_key": null
+      },
+      {
+        "key": "car",
+        "level": 1,
+        "name": "汽车",
+        "icon": "car",
+        "seed_id": "451a2767-8036-5543-9cd3-f1b00162865c",
+        "parent_key": null
+      },
+      {
+        "key": "taxi",
+        "level": 1,
+        "name": "打车",
+        "icon": "car",
+        "seed_id": "6e075e15-c88f-55d8-8b8c-21266f6fd036",
+        "parent_key": null
+      },
+      {
+        "key": "subway",
+        "level": 1,
+        "name": "地铁",
+        "icon": "train",
+        "seed_id": "7d1cd958-d145-596c-a02d-5604265338ca",
+        "parent_key": null
+      },
+      {
+        "key": "delivery",
+        "level": 1,
+        "name": "外卖",
+        "icon": "bike",
+        "seed_id": "3a227bd4-3b94-537f-ac61-38da212c5374",
+        "parent_key": null
+      },
+      {
+        "key": "property",
+        "level": 1,
+        "name": "物业",
+        "icon": "building",
+        "seed_id": "8ddf8b4d-ace6-596a-9ece-26c8b9ee42ce",
+        "parent_key": null
+      },
+      {
+        "key": "parking",
+        "level": 1,
+        "name": "停车",
+        "icon": "parkingCircle",
+        "seed_id": "e6ac48bd-e121-503c-b67a-20adf8d3af90",
+        "parent_key": null
+      },
+      {
+        "key": "donation",
+        "level": 1,
+        "name": "捐赠",
+        "icon": "heartHandshake",
+        "seed_id": "77550f7e-70e0-51e4-8585-34dd7b800595",
+        "parent_key": null
+      },
+      {
+        "key": "gift",
+        "level": 1,
+        "name": "送礼",
+        "icon": "gift",
+        "seed_id": "20724e51-e4e5-52c2-ac07-12308bdd93a0",
+        "parent_key": null
+      },
+      {
+        "key": "tax",
+        "level": 1,
+        "name": "纳税",
+        "icon": "receipt",
+        "seed_id": "a7c735ba-cff5-5665-bda8-94ac307cb0aa",
+        "parent_key": null
+      },
+      {
+        "key": "beverage",
+        "level": 1,
+        "name": "饮料",
+        "icon": "milk",
+        "seed_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+        "parent_key": null
+      },
+      {
+        "key": "clothing",
+        "level": 1,
+        "name": "服装",
+        "icon": "shirt",
+        "seed_id": "1077d57a-2792-5008-9c09-9da087a1752b",
+        "parent_key": null
+      },
+      {
+        "key": "snacks",
+        "level": 1,
+        "name": "零食",
+        "icon": "lollipop",
+        "seed_id": "92937ddc-e454-5e91-953a-0af335d9d469",
+        "parent_key": null
+      },
+      {
+        "key": "red_packet",
+        "level": 1,
+        "name": "发红包",
+        "icon": "wallet",
+        "seed_id": "593133d3-6d07-5255-ba11-4ad92a5b2955",
+        "parent_key": null
+      },
+      {
+        "key": "fruit",
+        "level": 1,
+        "name": "水果",
+        "icon": "apple",
+        "seed_id": "a9ba1d1c-1307-5189-95d6-caa0dacd7d7b",
+        "parent_key": null
+      },
+      {
+        "key": "game",
+        "level": 1,
+        "name": "游戏",
+        "icon": "gamepad2",
+        "seed_id": "4338eb66-6a81-5a68-8d30-09d0592b07d5",
+        "parent_key": null
+      },
+      {
+        "key": "book",
+        "level": 1,
+        "name": "书籍",
+        "icon": "bookOpen",
+        "seed_id": "a14622af-f8d9-5953-8f71-caa3519623fb",
+        "parent_key": null
+      },
+      {
+        "key": "lover",
+        "level": 1,
+        "name": "爱人",
+        "icon": "heart",
+        "seed_id": "b923d5d3-ea1e-5b20-ab64-1684d4f185d0",
+        "parent_key": null
+      },
+      {
+        "key": "decoration",
+        "level": 1,
+        "name": "装修",
+        "icon": "paintbrush",
+        "seed_id": "40194d64-2f80-5e45-ae07-d1103cbc8569",
+        "parent_key": null
+      },
+      {
+        "key": "daily_goods",
+        "level": 1,
+        "name": "日用品",
+        "icon": "package",
+        "seed_id": "a2cc9456-c0e2-5920-8c27-5aedeb6a4ba5",
+        "parent_key": null
+      },
+      {
+        "key": "lottery",
+        "level": 1,
+        "name": "彩票",
+        "icon": "ticket",
+        "seed_id": "467c5a35-6bfd-5d76-b9ef-1ae105894776",
+        "parent_key": null
+      },
+      {
+        "key": "stock",
+        "level": 1,
+        "name": "股票",
+        "icon": "trendingUp",
+        "seed_id": "c75b0fb5-dffd-5ffb-9db3-9fc0cd0beaca",
+        "parent_key": null
+      },
+      {
+        "key": "social_security",
+        "level": 1,
+        "name": "社保",
+        "icon": "shieldCheck",
+        "seed_id": "a8ea816b-fd84-5553-859b-7220f7c418df",
+        "parent_key": null
+      },
+      {
+        "key": "express",
+        "level": 1,
+        "name": "快递",
+        "icon": "truck",
+        "seed_id": "cb37d83e-0f3e-589a-895e-6d3cb852e9c9",
+        "parent_key": null
+      },
+      {
+        "key": "work",
+        "level": 1,
+        "name": "工作",
+        "icon": "briefcase",
+        "seed_id": "abf36a78-ac8e-53b3-adf9-e744ede7642b",
+        "parent_key": null
+      },
+      {
+        "key": "transfer",
+        "level": 1,
+        "name": "转账",
+        "icon": "handCoins",
+        "seed_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+        "parent_key": null
+      },
+      {
+        "key": "other",
+        "level": 1,
+        "name": "其他",
+        "icon": "package",
+        "seed_id": "8899479b-cc3a-58be-af71-c78b1041c480",
+        "parent_key": null
+      }
+    ],
+    "hierarchical": [
+      {
+        "key": "dining",
+        "level": 1,
+        "name": "餐饮",
+        "icon": "utensils",
+        "seed_id": "ffec6471-df8b-5bb3-8a05-93ef863ca958",
+        "parent_key": null
+      },
+      {
+        "key": "dining_breakfast",
+        "level": 2,
+        "name": "早餐",
+        "icon": "sandwich",
+        "seed_id": "02d2cbc5-0298-5dea-ae85-f4616e0eafc2",
+        "parent_key": "dining"
+      },
+      {
+        "key": "dining_lunch",
+        "level": 2,
+        "name": "午餐",
+        "icon": "salad",
+        "seed_id": "8e557f0c-e127-5aac-9a9b-ef70559d6b19",
+        "parent_key": "dining"
+      },
+      {
+        "key": "dining_dinner",
+        "level": 2,
+        "name": "晚餐",
+        "icon": "soup",
+        "seed_id": "b2ace52b-5dad-5b9e-bf52-6148ee1980da",
+        "parent_key": "dining"
+      },
+      {
+        "key": "dining_meituan",
+        "level": 2,
+        "name": "美团外卖",
+        "icon": "bike",
+        "seed_id": "5cec46a0-52d3-570c-b0ef-7d991f7e5cc7",
+        "parent_key": "dining"
+      },
+      {
+        "key": "dining_eleme",
+        "level": 2,
+        "name": "饿了么外卖",
+        "icon": "bike",
+        "seed_id": "852fa30e-2217-5c98-964c-7219e5ce4790",
+        "parent_key": "dining"
+      },
+      {
+        "key": "dining_jd",
+        "level": 2,
+        "name": "京东外卖",
+        "icon": "bike",
+        "seed_id": "c6c0ec2b-9904-5333-817b-0813e507a38f",
+        "parent_key": "dining"
+      },
+      {
+        "key": "dining_restaurant",
+        "level": 2,
+        "name": "餐厅",
+        "icon": "utensils",
+        "seed_id": "8860564a-6dd1-5232-89d9-d553e62e70f7",
+        "parent_key": "dining"
+      },
+      {
+        "key": "dining_food",
+        "level": 2,
+        "name": "美食",
+        "icon": "pizza",
+        "seed_id": "9239f73e-1335-5daa-847a-e2859325f5e7",
+        "parent_key": "dining"
+      },
+      {
+        "key": "snacks",
+        "level": 1,
+        "name": "零食",
+        "icon": "lollipop",
+        "seed_id": "92937ddc-e454-5e91-953a-0af335d9d469",
+        "parent_key": null
+      },
+      {
+        "key": "snacks_biscuit",
+        "level": 2,
+        "name": "饼干",
+        "icon": "cookie",
+        "seed_id": "32329a80-0cda-54b0-adf9-6c6045ade23e",
+        "parent_key": "snacks"
+      },
+      {
+        "key": "snacks_chips",
+        "level": 2,
+        "name": "薯片",
+        "icon": "popcorn",
+        "seed_id": "c588c496-08b4-5efe-8fb4-90629b30e5b0",
+        "parent_key": "snacks"
+      },
+      {
+        "key": "snacks_candy",
+        "level": 2,
+        "name": "糖果",
+        "icon": "candy",
+        "seed_id": "8bdcc42c-12ef-591a-b1a7-81ecd59b354e",
+        "parent_key": "snacks"
+      },
+      {
+        "key": "snacks_chocolate",
+        "level": 2,
+        "name": "巧克力",
+        "icon": "candy",
+        "seed_id": "fdb0613a-50c8-5dd1-a617-1fdb339a4c28",
+        "parent_key": "snacks"
+      },
+      {
+        "key": "snacks_nuts",
+        "level": 2,
+        "name": "坚果",
+        "icon": "wheat",
+        "seed_id": "fe741396-5140-5a79-9cfe-c97a53ee7aea",
+        "parent_key": "snacks"
+      },
+      {
+        "key": "fruit",
+        "level": 1,
+        "name": "水果",
+        "icon": "apple",
+        "seed_id": "a9ba1d1c-1307-5189-95d6-caa0dacd7d7b",
+        "parent_key": null
+      },
+      {
+        "key": "fruit_apple",
+        "level": 2,
+        "name": "苹果",
+        "icon": "apple",
+        "seed_id": "af52b9c2-fa79-5822-aa92-235e2cc7d8ec",
+        "parent_key": "fruit"
+      },
+      {
+        "key": "fruit_banana",
+        "level": 2,
+        "name": "香蕉",
+        "icon": "banana",
+        "seed_id": "3b62913a-c0b5-50ab-bab0-b7d4777ca5ed",
+        "parent_key": "fruit"
+      },
+      {
+        "key": "fruit_orange",
+        "level": 2,
+        "name": "橙子",
+        "icon": "citrus",
+        "seed_id": "9ad210b8-a847-5db1-bd4d-a42165faa8fd",
+        "parent_key": "fruit"
+      },
+      {
+        "key": "fruit_grape",
+        "level": 2,
+        "name": "葡萄",
+        "icon": "grape",
+        "seed_id": "6243a130-7e0d-5b73-a6ef-9fd2b17d49ef",
+        "parent_key": "fruit"
+      },
+      {
+        "key": "fruit_watermelon",
+        "level": 2,
+        "name": "西瓜",
+        "icon": "citrus",
+        "seed_id": "133406bf-ce98-5843-b66f-0776c0ad5e81",
+        "parent_key": "fruit"
+      },
+      {
+        "key": "fruit_other",
+        "level": 2,
+        "name": "其他水果",
+        "icon": "cherry",
+        "seed_id": "1e284c46-32a7-5183-9879-e9144e866249",
+        "parent_key": "fruit"
+      },
+      {
+        "key": "beverage",
+        "level": 1,
+        "name": "饮料",
+        "icon": "milk",
+        "seed_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+        "parent_key": null
+      },
+      {
+        "key": "beverage_milk_tea",
+        "level": 2,
+        "name": "奶茶",
+        "icon": "cupSoda",
+        "seed_id": "43c5651e-c2b4-56ad-98d1-727d81cec8ac",
+        "parent_key": "beverage"
+      },
+      {
+        "key": "beverage_coffee",
+        "level": 2,
+        "name": "咖啡",
+        "icon": "coffee",
+        "seed_id": "fff1a2a4-b5d7-551b-aef1-a0482938eec4",
+        "parent_key": "beverage"
+      },
+      {
+        "key": "beverage_juice",
+        "level": 2,
+        "name": "果汁",
+        "icon": "glassWater",
+        "seed_id": "a82f3dbc-18e4-5e00-8ff9-60ed35e6cd98",
+        "parent_key": "beverage"
+      },
+      {
+        "key": "beverage_soda",
+        "level": 2,
+        "name": "汽水",
+        "icon": "beer",
+        "seed_id": "8970a7b9-bf96-55e0-8fe6-3cd483598d65",
+        "parent_key": "beverage"
+      },
+      {
+        "key": "beverage_water",
+        "level": 2,
+        "name": "矿泉水",
+        "icon": "glassWater",
+        "seed_id": "6319dc3d-095a-50a2-ab12-fb099d2d0f31",
+        "parent_key": "beverage"
+      },
+      {
+        "key": "pastry",
+        "level": 1,
+        "name": "糕点",
+        "icon": "cake",
+        "seed_id": "d09bdbcf-e812-5468-bd5e-ca00fd5a7c85",
+        "parent_key": null
+      },
+      {
+        "key": "pastry_cake",
+        "level": 2,
+        "name": "蛋糕",
+        "icon": "cakeSlice",
+        "seed_id": "09d5bdd7-0494-521f-b0e5-0883569643e8",
+        "parent_key": "pastry"
+      },
+      {
+        "key": "pastry_bread",
+        "level": 2,
+        "name": "面包",
+        "icon": "croissant",
+        "seed_id": "8cccb3c2-a892-55e6-bb83-691a9406429f",
+        "parent_key": "pastry"
+      },
+      {
+        "key": "pastry_dessert",
+        "level": 2,
+        "name": "甜点",
+        "icon": "iceCream",
+        "seed_id": "9baaad03-317a-527d-9d3c-163d0c471493",
+        "parent_key": "pastry"
+      },
+      {
+        "key": "pastry_biscuit",
+        "level": 2,
+        "name": "曲奇",
+        "icon": "cookie",
+        "seed_id": "fc95ef67-586d-5264-b7fc-4757275fa5cb",
+        "parent_key": "pastry"
+      },
+      {
+        "key": "cooking",
+        "level": 1,
+        "name": "做饭食材",
+        "icon": "chefHat",
+        "seed_id": "f905da0f-78b5-5d85-ad41-3759d1904d0f",
+        "parent_key": null
+      },
+      {
+        "key": "cooking_vegetable",
+        "level": 2,
+        "name": "蔬菜",
+        "icon": "carrot",
+        "seed_id": "fd10d694-071d-582c-b881-08375d3e964d",
+        "parent_key": "cooking"
+      },
+      {
+        "key": "cooking_meat",
+        "level": 2,
+        "name": "肉类",
+        "icon": "beef",
+        "seed_id": "6ba7b7d9-daa9-5e8d-8682-e1ab7d13b9ac",
+        "parent_key": "cooking"
+      },
+      {
+        "key": "cooking_seafood",
+        "level": 2,
+        "name": "水产",
+        "icon": "fish",
+        "seed_id": "0c191a72-8009-574e-ab9a-3f55aa098b19",
+        "parent_key": "cooking"
+      },
+      {
+        "key": "cooking_seasoning",
+        "level": 2,
+        "name": "调料",
+        "icon": "soup",
+        "seed_id": "0c6cdb52-7a21-52a9-b886-7ef4dd0042fa",
+        "parent_key": "cooking"
+      },
+      {
+        "key": "cooking_grain",
+        "level": 2,
+        "name": "粮油",
+        "icon": "wheat",
+        "seed_id": "e09d24ac-b538-5acc-a6a5-d5ab150b9038",
+        "parent_key": "cooking"
+      },
+      {
+        "key": "shopping",
+        "level": 1,
+        "name": "购物",
+        "icon": "shoppingCart",
+        "seed_id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+        "parent_key": null
+      },
+      {
+        "key": "shopping_supermarket",
+        "level": 2,
+        "name": "超市",
+        "icon": "shoppingCart",
+        "seed_id": "96f9ca91-8ad3-5ec8-b40a-5a7ef7404d14",
+        "parent_key": "shopping"
+      },
+      {
+        "key": "shopping_daily",
+        "level": 2,
+        "name": "日用百货",
+        "icon": "shoppingCart",
+        "seed_id": "5caf523f-df03-5f4e-bcb6-94da512f1273",
+        "parent_key": "shopping"
+      },
+      {
+        "key": "shopping_clothing",
+        "level": 2,
+        "name": "服装",
+        "icon": "shirt",
+        "seed_id": "3846fffd-dc18-566e-86dc-b649016e7cec",
+        "parent_key": "shopping"
+      },
+      {
+        "key": "shopping_shoes",
+        "level": 2,
+        "name": "鞋子",
+        "icon": "footprints",
+        "seed_id": "15be13f4-9478-5f67-a9d5-883568ca5d46",
+        "parent_key": "shopping"
+      },
+      {
+        "key": "shopping_bag",
+        "level": 2,
+        "name": "包包",
+        "icon": "shoppingBag",
+        "seed_id": "59f9abfd-7a38-5297-9b5c-cf4ea6ed538b",
+        "parent_key": "shopping"
+      },
+      {
+        "key": "pets",
+        "level": 1,
+        "name": "宠物",
+        "icon": "dog",
+        "seed_id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+        "parent_key": null
+      },
+      {
+        "key": "pets_food",
+        "level": 2,
+        "name": "宠物食品",
+        "icon": "bone",
+        "seed_id": "6c5151de-257f-5e9f-abb7-338b78e1cef6",
+        "parent_key": "pets"
+      },
+      {
+        "key": "pets_supplies",
+        "level": 2,
+        "name": "宠物用品",
+        "icon": "boxes",
+        "seed_id": "fd9bf2d3-6317-52b8-94df-cfa2a066f93e",
+        "parent_key": "pets"
+      },
+      {
+        "key": "pets_medical",
+        "level": 2,
+        "name": "宠物医疗",
+        "icon": "stethoscope",
+        "seed_id": "23edba07-53f6-5fef-9a67-d9b894861794",
+        "parent_key": "pets"
+      },
+      {
+        "key": "pets_grooming",
+        "level": 2,
+        "name": "宠物美容",
+        "icon": "showerHead",
+        "seed_id": "585caae6-2c4d-5156-8a16-a2380f204fc6",
+        "parent_key": "pets"
+      },
+      {
+        "key": "transport",
+        "level": 1,
+        "name": "交通",
+        "icon": "bus",
+        "seed_id": "512859af-c24d-5b60-a237-b7d974eaffec",
+        "parent_key": null
+      },
+      {
+        "key": "transport_transitcard",
+        "level": 2,
+        "name": "交通卡充值",
+        "icon": "walletCards",
+        "seed_id": "21fdf6cc-8b18-57d3-81ff-e0e6d37b943a",
+        "parent_key": "transport"
+      },
+      {
+        "key": "transport_taxi",
+        "level": 2,
+        "name": "打车",
+        "icon": "car",
+        "seed_id": "4a5c221a-b79b-5acf-8450-fb2dbfc7b179",
+        "parent_key": "transport"
+      },
+      {
+        "key": "transport_parking",
+        "level": 2,
+        "name": "停车费",
+        "icon": "parkingCircle",
+        "seed_id": "296afb83-2957-5e69-b600-c07888dd81ee",
+        "parent_key": "transport"
+      },
+      {
+        "key": "transport_fuel",
+        "level": 2,
+        "name": "加油",
+        "icon": "fuel",
+        "seed_id": "b52bf0f1-4ee6-59b2-8f48-fe83418ef49f",
+        "parent_key": "transport"
+      },
+      {
+        "key": "transfer",
+        "level": 1,
+        "name": "转账",
+        "icon": "handCoins",
+        "seed_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+        "parent_key": null
+      },
+      {
+        "key": "transfer_livingcost",
+        "level": 2,
+        "name": "生活费",
+        "icon": "heartHandshake",
+        "seed_id": "9a2c4726-13fc-5cfe-9f86-2e63d2803bad",
+        "parent_key": "transfer"
+      },
+      {
+        "key": "transfer_family",
+        "level": 2,
+        "name": "家庭",
+        "icon": "users",
+        "seed_id": "2d171f77-4caa-58cf-a887-aeab8172b5ed",
+        "parent_key": "transfer"
+      },
+      {
+        "key": "transfer_parents",
+        "level": 2,
+        "name": "父母",
+        "icon": "users2",
+        "seed_id": "59f0772c-cf83-5de5-9802-c0c0ab88ed38",
+        "parent_key": "transfer"
+      },
+      {
+        "key": "transfer_lover",
+        "level": 2,
+        "name": "恋人",
+        "icon": "heart",
+        "seed_id": "4741981e-e87c-547e-8b9a-eff97c889fd1",
+        "parent_key": "transfer"
+      },
+      {
+        "key": "transfer_borrowmoney",
+        "level": 2,
+        "name": "借钱",
+        "icon": "coins",
+        "seed_id": "25fb86ba-cd2f-5507-a0e1-d8cec501fd00",
+        "parent_key": "transfer"
+      },
+      {
+        "key": "car",
+        "level": 1,
+        "name": "汽车",
+        "icon": "car",
+        "seed_id": "451a2767-8036-5543-9cd3-f1b00162865c",
+        "parent_key": null
+      },
+      {
+        "key": "car_maintenance",
+        "level": 2,
+        "name": "汽车保养",
+        "icon": "hammer",
+        "seed_id": "3b0c77e1-f396-55cd-aae9-d60e08070143",
+        "parent_key": "car"
+      },
+      {
+        "key": "car_repair",
+        "level": 2,
+        "name": "汽车维修",
+        "icon": "wrench",
+        "seed_id": "b0ad7d31-9157-5944-9ded-edc98f095903",
+        "parent_key": "car"
+      },
+      {
+        "key": "car_insurance",
+        "level": 2,
+        "name": "汽车保险",
+        "icon": "shield",
+        "seed_id": "7544f9e3-f226-5e15-9cf2-2d8866f577e1",
+        "parent_key": "car"
+      },
+      {
+        "key": "car_wash",
+        "level": 2,
+        "name": "洗车",
+        "icon": "droplets",
+        "seed_id": "0f63dfee-7272-5b6f-8a86-d32de3e9da5c",
+        "parent_key": "car"
+      },
+      {
+        "key": "car_fine",
+        "level": 2,
+        "name": "违章罚款",
+        "icon": "alertTriangle",
+        "seed_id": "ed030652-8ca6-53d7-923a-44960e5f5313",
+        "parent_key": "car"
+      },
+      {
+        "key": "clothing",
+        "level": 1,
+        "name": "服装",
+        "icon": "shirt",
+        "seed_id": "1077d57a-2792-5008-9c09-9da087a1752b",
+        "parent_key": null
+      },
+      {
+        "key": "clothing_top",
+        "level": 2,
+        "name": "上衣",
+        "icon": "shirt",
+        "seed_id": "2e50a035-5d40-5b1f-b9f0-154dc8cac4a2",
+        "parent_key": "clothing"
+      },
+      {
+        "key": "clothing_pants",
+        "level": 2,
+        "name": "裤子",
+        "icon": "shirt",
+        "seed_id": "b8b79733-c654-5f89-8d7b-9eb54afb1695",
+        "parent_key": "clothing"
+      },
+      {
+        "key": "clothing_skirt",
+        "level": 2,
+        "name": "裙子",
+        "icon": "sparkle",
+        "seed_id": "510d25b1-bcfc-5f62-a5c5-b2c336acbbc1",
+        "parent_key": "clothing"
+      },
+      {
+        "key": "clothing_shoes",
+        "level": 2,
+        "name": "鞋子",
+        "icon": "footprints",
+        "seed_id": "c2ccac85-a562-5273-a10e-fab0cc943f3b",
+        "parent_key": "clothing"
+      },
+      {
+        "key": "clothing_accessory",
+        "level": 2,
+        "name": "服饰配件",
+        "icon": "watch",
+        "seed_id": "dadedd0a-6c26-512b-9865-1a78e399339e",
+        "parent_key": "clothing"
+      },
+      {
+        "key": "daily_goods",
+        "level": 1,
+        "name": "日用品",
+        "icon": "package",
+        "seed_id": "a2cc9456-c0e2-5920-8c27-5aedeb6a4ba5",
+        "parent_key": null
+      },
+      {
+        "key": "daily_toiletries",
+        "level": 2,
+        "name": "洗护用品",
+        "icon": "sprayCan",
+        "seed_id": "5a477ca6-b3de-59d4-9a59-f342f262ff51",
+        "parent_key": "daily_goods"
+      },
+      {
+        "key": "daily_paper",
+        "level": 2,
+        "name": "纸品",
+        "icon": "scroll",
+        "seed_id": "234223dd-af5e-5ce6-9217-42410ef5251b",
+        "parent_key": "daily_goods"
+      },
+      {
+        "key": "daily_cleaning",
+        "level": 2,
+        "name": "清洁用品",
+        "icon": "brush",
+        "seed_id": "17878352-4560-5aa7-b43b-9ba5e89ed077",
+        "parent_key": "daily_goods"
+      },
+      {
+        "key": "daily_kitchen",
+        "level": 2,
+        "name": "厨房用品",
+        "icon": "refrigerator",
+        "seed_id": "f099f401-3ca2-5a66-937b-25a0500f52fe",
+        "parent_key": "daily_goods"
+      },
+      {
+        "key": "education",
+        "level": 1,
+        "name": "教育",
+        "icon": "graduationCap",
+        "seed_id": "591c233c-e6e2-5a61-92d6-5676aa2c8168",
+        "parent_key": null
+      },
+      {
+        "key": "education_tuition",
+        "level": 2,
+        "name": "学费",
+        "icon": "graduationCap",
+        "seed_id": "fdd20c34-5349-5a06-bd2f-a0d121f7aa72",
+        "parent_key": "education"
+      },
+      {
+        "key": "education_training",
+        "level": 2,
+        "name": "培训费",
+        "icon": "presentation",
+        "seed_id": "e17b3ab7-73db-55e6-97a3-929afe442b81",
+        "parent_key": "education"
+      },
+      {
+        "key": "education_books",
+        "level": 2,
+        "name": "书籍",
+        "icon": "bookOpen",
+        "seed_id": "04d0df3a-6839-5303-a969-717eb8337dba",
+        "parent_key": "education"
+      },
+      {
+        "key": "education_stationery",
+        "level": 2,
+        "name": "文具",
+        "icon": "pencil",
+        "seed_id": "f10eb274-2f98-5278-aa40-4e82311d9842",
+        "parent_key": "education"
+      },
+      {
+        "key": "education_office",
+        "level": 2,
+        "name": "办公用品",
+        "icon": "briefcase",
+        "seed_id": "a515757a-ea84-5231-8d13-1c40d4880b62",
+        "parent_key": "education"
+      },
+      {
+        "key": "education_learning",
+        "level": 2,
+        "name": "学习",
+        "icon": "library",
+        "seed_id": "826307fd-4c88-5563-a004-913831ec0568",
+        "parent_key": "education"
+      },
+      {
+        "key": "invest_loss",
+        "level": 1,
+        "name": "投资亏损",
+        "icon": "trendingDown",
+        "seed_id": "01e92cb7-4f50-5712-ac15-1104375e12ed",
+        "parent_key": null
+      },
+      {
+        "key": "invest_loss_stock",
+        "level": 2,
+        "name": "股票亏损",
+        "icon": "trendingDown",
+        "seed_id": "0301c0c7-f655-5360-94b6-d62f13f13c7e",
+        "parent_key": "invest_loss"
+      },
+      {
+        "key": "invest_loss_fund",
+        "level": 2,
+        "name": "基金亏损",
+        "icon": "lineChart",
+        "seed_id": "f202fa4d-01f9-5590-80aa-52c849520f48",
+        "parent_key": "invest_loss"
+      },
+      {
+        "key": "invest_loss_other",
+        "level": 2,
+        "name": "其他投资亏损",
+        "icon": "banknote",
+        "seed_id": "86ae85dd-5797-5fe1-995c-e67ad631703f",
+        "parent_key": "invest_loss"
+      },
+      {
+        "key": "entertainment",
+        "level": 1,
+        "name": "娱乐",
+        "icon": "partyPopper",
+        "seed_id": "e0315338-f078-5f93-9227-373acba72456",
+        "parent_key": null
+      },
+      {
+        "key": "entertainment_movie",
+        "level": 2,
+        "name": "电影",
+        "icon": "clapperboard",
+        "seed_id": "9ce2dc2a-972e-5441-b2f3-bc7e31c72d48",
+        "parent_key": "entertainment"
+      },
+      {
+        "key": "entertainment_ktv",
+        "level": 2,
+        "name": "KTV",
+        "icon": "mic",
+        "seed_id": "0c2855e2-6c95-5bc4-9cab-1e63e6154c4a",
+        "parent_key": "entertainment"
+      },
+      {
+        "key": "entertainment_amusement",
+        "level": 2,
+        "name": "游乐场",
+        "icon": "ferrisWheel",
+        "seed_id": "a3f3062c-51cf-5376-9ff3-fba3d9ed3db0",
+        "parent_key": "entertainment"
+      },
+      {
+        "key": "entertainment_bar",
+        "level": 2,
+        "name": "酒吧",
+        "icon": "martini",
+        "seed_id": "82af2c56-d8b7-5200-8d7c-e837cd0bfaa3",
+        "parent_key": "entertainment"
+      },
+      {
+        "key": "entertainment_other",
+        "level": 2,
+        "name": "其他娱乐",
+        "icon": "partyPopper",
+        "seed_id": "ef9bf953-02da-5d07-ac70-60b705dc80e8",
+        "parent_key": "entertainment"
+      },
+      {
+        "key": "game",
+        "level": 1,
+        "name": "游戏",
+        "icon": "gamepad2",
+        "seed_id": "4338eb66-6a81-5a68-8d30-09d0592b07d5",
+        "parent_key": null
+      },
+      {
+        "key": "game_recharge",
+        "level": 2,
+        "name": "游戏充值",
+        "icon": "coins",
+        "seed_id": "c176ac25-68af-594f-95b3-9ce2f87de5fe",
+        "parent_key": "game"
+      },
+      {
+        "key": "game_equipment",
+        "level": 2,
+        "name": "游戏装备",
+        "icon": "headphones",
+        "seed_id": "706db864-0c7a-597c-b0f6-8b7a21327219",
+        "parent_key": "game"
+      },
+      {
+        "key": "game_membership",
+        "level": 2,
+        "name": "游戏会员",
+        "icon": "crown",
+        "seed_id": "b9a2d869-f053-5429-979f-ca0f15f8955d",
+        "parent_key": "game"
+      },
+      {
+        "key": "health_products",
+        "level": 1,
+        "name": "保健品",
+        "icon": "pill",
+        "seed_id": "2a749b4a-3879-555d-bdcf-818cc873a3c8",
+        "parent_key": null
+      },
+      {
+        "key": "health_vitamin",
+        "level": 2,
+        "name": "维生素",
+        "icon": "pill",
+        "seed_id": "721e4ff4-c1fc-54ff-9918-fdbbbf148856",
+        "parent_key": "health_products"
+      },
+      {
+        "key": "health_food",
+        "level": 2,
+        "name": "保健食品",
+        "icon": "salad",
+        "seed_id": "5f58fad8-1378-58e6-8e7f-0f3a7381c795",
+        "parent_key": "health_products"
+      },
+      {
+        "key": "health_nutrition",
+        "level": 2,
+        "name": "营养品",
+        "icon": "heartPulse",
+        "seed_id": "ed04355d-0ba9-5cbf-befc-9cf9d2876e29",
+        "parent_key": "health_products"
+      },
+      {
+        "key": "subscription",
+        "level": 1,
+        "name": "订阅服务",
+        "icon": "calendarClock",
+        "seed_id": "961e3602-ad43-5c82-af2f-4202def6098c",
+        "parent_key": null
+      },
+      {
+        "key": "subscription_video",
+        "level": 2,
+        "name": "视频会员",
+        "icon": "playCircle",
+        "seed_id": "057658c8-29f9-57f0-a989-67763c551e92",
+        "parent_key": "subscription"
+      },
+      {
+        "key": "subscription_music",
+        "level": 2,
+        "name": "音乐会员",
+        "icon": "music",
+        "seed_id": "61e2fe39-484a-517c-9378-2818dfa0a5fb",
+        "parent_key": "subscription"
+      },
+      {
+        "key": "subscription_cloud",
+        "level": 2,
+        "name": "云存储",
+        "icon": "cloud",
+        "seed_id": "103b8807-9657-5f92-a8fa-5e6e1ddc4f14",
+        "parent_key": "subscription"
+      },
+      {
+        "key": "subscription_other",
+        "level": 2,
+        "name": "其他订阅",
+        "icon": "repeat",
+        "seed_id": "1c400dd7-ecba-5118-b930-48881312a848",
+        "parent_key": "subscription"
+      },
+      {
+        "key": "sports",
+        "level": 1,
+        "name": "运动",
+        "icon": "dumbbell",
+        "seed_id": "a13cf817-17d8-5733-8af7-fa4ec1fa362b",
+        "parent_key": null
+      },
+      {
+        "key": "sports_gym",
+        "level": 2,
+        "name": "健身房",
+        "icon": "dumbbell",
+        "seed_id": "66213cef-7fe7-5398-b84b-6fe9de2a12c7",
+        "parent_key": "sports"
+      },
+      {
+        "key": "sports_equipment",
+        "level": 2,
+        "name": "运动装备",
+        "icon": "medal",
+        "seed_id": "e1b83340-7bf1-5463-a52c-3d496f670ba7",
+        "parent_key": "sports"
+      },
+      {
+        "key": "sports_course",
+        "level": 2,
+        "name": "运动课程",
+        "icon": "target",
+        "seed_id": "48cf94d9-3865-5d10-95a6-045d5e391543",
+        "parent_key": "sports"
+      },
+      {
+        "key": "sports_outdoor",
+        "level": 2,
+        "name": "户外活动",
+        "icon": "mountain",
+        "seed_id": "66898357-c66d-554d-8cff-cbb796d2efd7",
+        "parent_key": "sports"
+      },
+      {
+        "key": "housing",
+        "level": 1,
+        "name": "住房",
+        "icon": "building2",
+        "seed_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+        "parent_key": null
+      },
+      {
+        "key": "housing_utilities",
+        "level": 2,
+        "name": "水电煤",
+        "icon": "zap",
+        "seed_id": "400c5326-ba62-5dfd-bea3-c53a4ce4cb7b",
+        "parent_key": "housing"
+      },
+      {
+        "key": "housing_property",
+        "level": 2,
+        "name": "物业费",
+        "icon": "building",
+        "seed_id": "2fbbc1ac-b6ef-57cd-9031-1399706be5b9",
+        "parent_key": "housing"
+      },
+      {
+        "key": "housing_rent",
+        "level": 2,
+        "name": "房租",
+        "icon": "key",
+        "seed_id": "67d2d94d-0726-5152-aa34-0ded96348f44",
+        "parent_key": "housing"
+      },
+      {
+        "key": "housing_mortgage",
+        "level": 2,
+        "name": "房贷",
+        "icon": "landmark",
+        "seed_id": "5c7207af-c09d-5a7d-9af2-d05a7f2a6cf1",
+        "parent_key": "housing"
+      },
+      {
+        "key": "housing_decoration",
+        "level": 2,
+        "name": "装修",
+        "icon": "paintbrush",
+        "seed_id": "c308a4c4-05e8-599a-94ba-3eb95625ad4d",
+        "parent_key": "housing"
+      },
+      {
+        "key": "housing_broadband",
+        "level": 2,
+        "name": "宽带",
+        "icon": "wifi",
+        "seed_id": "9f511b4b-ae97-5ff9-9b31-d769692a90e3",
+        "parent_key": "housing"
+      },
+      {
+        "key": "home",
+        "level": 1,
+        "name": "居家",
+        "icon": "home",
+        "seed_id": "ee091e47-98e5-5203-8955-f9385ed4b8f6",
+        "parent_key": null
+      },
+      {
+        "key": "home_furniture",
+        "level": 2,
+        "name": "家具",
+        "icon": "sofa",
+        "seed_id": "e48e6ae8-ac90-5078-8736-cd618941778a",
+        "parent_key": "home"
+      },
+      {
+        "key": "home_appliance",
+        "level": 2,
+        "name": "家电",
+        "icon": "tv",
+        "seed_id": "61a4d9a2-d78d-546d-b708-3836d187e858",
+        "parent_key": "home"
+      },
+      {
+        "key": "home_decor",
+        "level": 2,
+        "name": "装饰品",
+        "icon": "palette",
+        "seed_id": "828bb98e-3149-5258-a83e-90fa67b007d1",
+        "parent_key": "home"
+      },
+      {
+        "key": "home_bedding",
+        "level": 2,
+        "name": "床上用品",
+        "icon": "bed",
+        "seed_id": "9b0d9201-1cae-5f36-9b38-7d6fc0b62afd",
+        "parent_key": "home"
+      },
+      {
+        "key": "beauty",
+        "level": 1,
+        "name": "美容",
+        "icon": "sparkles",
+        "seed_id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+        "parent_key": null
+      },
+      {
+        "key": "beauty_skincare",
+        "level": 2,
+        "name": "护肤品",
+        "icon": "smile",
+        "seed_id": "002b36a1-98e9-5550-b451-734d3b96d65e",
+        "parent_key": "beauty"
+      },
+      {
+        "key": "beauty_cosmetics",
+        "level": 2,
+        "name": "化妆品",
+        "icon": "palette",
+        "seed_id": "22fd9bbe-dc72-5842-b469-8c1b066b7e2e",
+        "parent_key": "beauty"
+      },
+      {
+        "key": "beauty_salon",
+        "level": 2,
+        "name": "剪发",
+        "icon": "scissors",
+        "seed_id": "7730e10e-0c3e-59e1-959a-27e615bfbc16",
+        "parent_key": "beauty"
+      },
+      {
+        "key": "beauty_nail",
+        "level": 2,
+        "name": "美甲",
+        "icon": "hand",
+        "seed_id": "ddd6e5c5-e860-5aa1-811e-4bc451763e6d",
+        "parent_key": "beauty"
+      }
+    ],
+    "hybrid": [
+      {
+        "key": "dining",
+        "level": 1,
+        "name": "餐饮",
+        "icon": "utensils",
+        "seed_id": "ffec6471-df8b-5bb3-8a05-93ef863ca958",
+        "parent_key": null,
+        "sort_order": 0
+      },
+      {
+        "key": "dining_breakfast",
+        "level": 2,
+        "name": "早餐",
+        "icon": "sandwich",
+        "seed_id": "02d2cbc5-0298-5dea-ae85-f4616e0eafc2",
+        "parent_key": "dining",
+        "sort_order": 0
+      },
+      {
+        "key": "dining_lunch",
+        "level": 2,
+        "name": "午餐",
+        "icon": "salad",
+        "seed_id": "8e557f0c-e127-5aac-9a9b-ef70559d6b19",
+        "parent_key": "dining",
+        "sort_order": 1
+      },
+      {
+        "key": "dining_dinner",
+        "level": 2,
+        "name": "晚餐",
+        "icon": "soup",
+        "seed_id": "b2ace52b-5dad-5b9e-bf52-6148ee1980da",
+        "parent_key": "dining",
+        "sort_order": 2
+      },
+      {
+        "key": "beverage",
+        "level": 1,
+        "name": "饮料",
+        "icon": "milk",
+        "seed_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+        "parent_key": null,
+        "sort_order": 1
+      },
+      {
+        "key": "beverage_milk_tea",
+        "level": 2,
+        "name": "奶茶",
+        "icon": "cupSoda",
+        "seed_id": "43c5651e-c2b4-56ad-98d1-727d81cec8ac",
+        "parent_key": "beverage",
+        "sort_order": 0
+      },
+      {
+        "key": "beverage_coffee",
+        "level": 2,
+        "name": "咖啡",
+        "icon": "coffee",
+        "seed_id": "fff1a2a4-b5d7-551b-aef1-a0482938eec4",
+        "parent_key": "beverage",
+        "sort_order": 1
+      },
+      {
+        "key": "beverage_juice",
+        "level": 2,
+        "name": "果汁",
+        "icon": "glassWater",
+        "seed_id": "a82f3dbc-18e4-5e00-8ff9-60ed35e6cd98",
+        "parent_key": "beverage",
+        "sort_order": 2
+      },
+      {
+        "key": "beverage_soda",
+        "level": 2,
+        "name": "汽水",
+        "icon": "beer",
+        "seed_id": "8970a7b9-bf96-55e0-8fe6-3cd483598d65",
+        "parent_key": "beverage",
+        "sort_order": 3
+      },
+      {
+        "key": "beverage_water",
+        "level": 2,
+        "name": "矿泉水",
+        "icon": "glassWater",
+        "seed_id": "6319dc3d-095a-50a2-ab12-fb099d2d0f31",
+        "parent_key": "beverage",
+        "sort_order": 4
+      },
+      {
+        "key": "shopping",
+        "level": 1,
+        "name": "购物",
+        "icon": "shoppingCart",
+        "seed_id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+        "parent_key": null,
+        "sort_order": 2
+      },
+      {
+        "key": "shopping_supermarket",
+        "level": 2,
+        "name": "超市",
+        "icon": "shoppingCart",
+        "seed_id": "96f9ca91-8ad3-5ec8-b40a-5a7ef7404d14",
+        "parent_key": "shopping",
+        "sort_order": 0
+      },
+      {
+        "key": "shopping_clothing",
+        "level": 2,
+        "name": "服装",
+        "icon": "shirt",
+        "seed_id": "3846fffd-dc18-566e-86dc-b649016e7cec",
+        "parent_key": "shopping",
+        "sort_order": 1
+      },
+      {
+        "key": "shopping_shoes",
+        "level": 2,
+        "name": "鞋子",
+        "icon": "footprints",
+        "seed_id": "15be13f4-9478-5f67-a9d5-883568ca5d46",
+        "parent_key": "shopping",
+        "sort_order": 2
+      },
+      {
+        "key": "shopping_bag",
+        "level": 2,
+        "name": "包包",
+        "icon": "shoppingBag",
+        "seed_id": "59f9abfd-7a38-5297-9b5c-cf4ea6ed538b",
+        "parent_key": "shopping",
+        "sort_order": 3
+      },
+      {
+        "key": "transport",
+        "level": 1,
+        "name": "交通",
+        "icon": "bus",
+        "seed_id": "512859af-c24d-5b60-a237-b7d974eaffec",
+        "parent_key": null,
+        "sort_order": 3
+      },
+      {
+        "key": "transport_transitcard",
+        "level": 2,
+        "name": "交通卡充值",
+        "icon": "walletCards",
+        "seed_id": "21fdf6cc-8b18-57d3-81ff-e0e6d37b943a",
+        "parent_key": "transport",
+        "sort_order": 0
+      },
+      {
+        "key": "transport_taxi",
+        "level": 2,
+        "name": "打车",
+        "icon": "car",
+        "seed_id": "4a5c221a-b79b-5acf-8450-fb2dbfc7b179",
+        "parent_key": "transport",
+        "sort_order": 1
+      },
+      {
+        "key": "transport_parking",
+        "level": 2,
+        "name": "停车费",
+        "icon": "parkingCircle",
+        "seed_id": "296afb83-2957-5e69-b600-c07888dd81ee",
+        "parent_key": "transport",
+        "sort_order": 2
+      },
+      {
+        "key": "transport_fuel",
+        "level": 2,
+        "name": "加油",
+        "icon": "fuel",
+        "seed_id": "b52bf0f1-4ee6-59b2-8f48-fe83418ef49f",
+        "parent_key": "transport",
+        "sort_order": 3
+      },
+      {
+        "key": "communication",
+        "level": 1,
+        "name": "通讯",
+        "icon": "phone",
+        "seed_id": "0938ad4a-b8d5-5cf2-b3a8-763ce9d7f4c4",
+        "parent_key": null,
+        "sort_order": 4
+      },
+      {
+        "key": "fruit",
+        "level": 1,
+        "name": "水果",
+        "icon": "apple",
+        "seed_id": "a9ba1d1c-1307-5189-95d6-caa0dacd7d7b",
+        "parent_key": null,
+        "sort_order": 5
+      },
+      {
+        "key": "snacks",
+        "level": 1,
+        "name": "零食",
+        "icon": "lollipop",
+        "seed_id": "92937ddc-e454-5e91-953a-0af335d9d469",
+        "parent_key": null,
+        "sort_order": 6
+      },
+      {
+        "key": "sports",
+        "level": 1,
+        "name": "运动",
+        "icon": "dumbbell",
+        "seed_id": "a13cf817-17d8-5733-8af7-fa4ec1fa362b",
+        "parent_key": null,
+        "sort_order": 7
+      },
+      {
+        "key": "pets",
+        "level": 1,
+        "name": "宠物",
+        "icon": "dog",
+        "seed_id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+        "parent_key": null,
+        "sort_order": 8
+      },
+      {
+        "key": "pets_food",
+        "level": 2,
+        "name": "宠物食品",
+        "icon": "bone",
+        "seed_id": "6c5151de-257f-5e9f-abb7-338b78e1cef6",
+        "parent_key": "pets",
+        "sort_order": 0
+      },
+      {
+        "key": "pets_supplies",
+        "level": 2,
+        "name": "宠物用品",
+        "icon": "boxes",
+        "seed_id": "fd9bf2d3-6317-52b8-94df-cfa2a066f93e",
+        "parent_key": "pets",
+        "sort_order": 1
+      },
+      {
+        "key": "pets_medical",
+        "level": 2,
+        "name": "宠物医疗",
+        "icon": "stethoscope",
+        "seed_id": "23edba07-53f6-5fef-9a67-d9b894861794",
+        "parent_key": "pets",
+        "sort_order": 2
+      },
+      {
+        "key": "pets_grooming",
+        "level": 2,
+        "name": "宠物美容",
+        "icon": "showerHead",
+        "seed_id": "585caae6-2c4d-5156-8a16-a2380f204fc6",
+        "parent_key": "pets",
+        "sort_order": 3
+      },
+      {
+        "key": "housing",
+        "level": 1,
+        "name": "住房",
+        "icon": "building2",
+        "seed_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+        "parent_key": null,
+        "sort_order": 9
+      },
+      {
+        "key": "housing_utilities",
+        "level": 2,
+        "name": "水电煤",
+        "icon": "zap",
+        "seed_id": "400c5326-ba62-5dfd-bea3-c53a4ce4cb7b",
+        "parent_key": "housing",
+        "sort_order": 0
+      },
+      {
+        "key": "housing_property",
+        "level": 2,
+        "name": "物业费",
+        "icon": "building",
+        "seed_id": "2fbbc1ac-b6ef-57cd-9031-1399706be5b9",
+        "parent_key": "housing",
+        "sort_order": 1
+      },
+      {
+        "key": "housing_rent",
+        "level": 2,
+        "name": "房租",
+        "icon": "key",
+        "seed_id": "67d2d94d-0726-5152-aa34-0ded96348f44",
+        "parent_key": "housing",
+        "sort_order": 2
+      },
+      {
+        "key": "housing_mortgage",
+        "level": 2,
+        "name": "房贷",
+        "icon": "landmark",
+        "seed_id": "5c7207af-c09d-5a7d-9af2-d05a7f2a6cf1",
+        "parent_key": "housing",
+        "sort_order": 3
+      },
+      {
+        "key": "housing_broadband",
+        "level": 2,
+        "name": "宽带",
+        "icon": "wifi",
+        "seed_id": "9f511b4b-ae97-5ff9-9b31-d769692a90e3",
+        "parent_key": "housing",
+        "sort_order": 4
+      },
+      {
+        "key": "transfer",
+        "level": 1,
+        "name": "转账",
+        "icon": "handCoins",
+        "seed_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+        "parent_key": null,
+        "sort_order": 10
+      },
+      {
+        "key": "transfer_livingcost",
+        "level": 2,
+        "name": "生活费",
+        "icon": "heartHandshake",
+        "seed_id": "9a2c4726-13fc-5cfe-9f86-2e63d2803bad",
+        "parent_key": "transfer",
+        "sort_order": 0
+      },
+      {
+        "key": "transfer_family",
+        "level": 2,
+        "name": "家庭",
+        "icon": "users",
+        "seed_id": "2d171f77-4caa-58cf-a887-aeab8172b5ed",
+        "parent_key": "transfer",
+        "sort_order": 1
+      },
+      {
+        "key": "transfer_parents",
+        "level": 2,
+        "name": "父母",
+        "icon": "users2",
+        "seed_id": "59f0772c-cf83-5de5-9802-c0c0ab88ed38",
+        "parent_key": "transfer",
+        "sort_order": 2
+      },
+      {
+        "key": "transfer_lover",
+        "level": 2,
+        "name": "恋人",
+        "icon": "heart",
+        "seed_id": "4741981e-e87c-547e-8b9a-eff97c889fd1",
+        "parent_key": "transfer",
+        "sort_order": 3
+      },
+      {
+        "key": "transfer_borrowmoney",
+        "level": 2,
+        "name": "借钱",
+        "icon": "coins",
+        "seed_id": "25fb86ba-cd2f-5507-a0e1-d8cec501fd00",
+        "parent_key": "transfer",
+        "sort_order": 4
+      },
+      {
+        "key": "subscription",
+        "level": 1,
+        "name": "订阅服务",
+        "icon": "calendarClock",
+        "seed_id": "961e3602-ad43-5c82-af2f-4202def6098c",
+        "parent_key": null,
+        "sort_order": 11
+      },
+      {
+        "key": "subscription_video",
+        "level": 2,
+        "name": "视频会员",
+        "icon": "playCircle",
+        "seed_id": "057658c8-29f9-57f0-a989-67763c551e92",
+        "parent_key": "subscription",
+        "sort_order": 0
+      },
+      {
+        "key": "subscription_music",
+        "level": 2,
+        "name": "音乐会员",
+        "icon": "music",
+        "seed_id": "61e2fe39-484a-517c-9378-2818dfa0a5fb",
+        "parent_key": "subscription",
+        "sort_order": 1
+      },
+      {
+        "key": "entertainment",
+        "level": 1,
+        "name": "娱乐",
+        "icon": "partyPopper",
+        "seed_id": "e0315338-f078-5f93-9227-373acba72456",
+        "parent_key": null,
+        "sort_order": 12
+      },
+      {
+        "key": "entertainment_movie",
+        "level": 2,
+        "name": "电影",
+        "icon": "clapperboard",
+        "seed_id": "9ce2dc2a-972e-5441-b2f3-bc7e31c72d48",
+        "parent_key": "entertainment",
+        "sort_order": 0
+      },
+      {
+        "key": "entertainment_ktv",
+        "level": 2,
+        "name": "KTV",
+        "icon": "mic",
+        "seed_id": "0c2855e2-6c95-5bc4-9cab-1e63e6154c4a",
+        "parent_key": "entertainment",
+        "sort_order": 1
+      },
+      {
+        "key": "entertainment_amusement",
+        "level": 2,
+        "name": "游乐场",
+        "icon": "ferrisWheel",
+        "seed_id": "a3f3062c-51cf-5376-9ff3-fba3d9ed3db0",
+        "parent_key": "entertainment",
+        "sort_order": 2
+      },
+      {
+        "key": "education",
+        "level": 1,
+        "name": "教育",
+        "icon": "graduationCap",
+        "seed_id": "591c233c-e6e2-5a61-92d6-5676aa2c8168",
+        "parent_key": null,
+        "sort_order": 13
+      },
+      {
+        "key": "education_books",
+        "level": 2,
+        "name": "书籍",
+        "icon": "bookOpen",
+        "seed_id": "04d0df3a-6839-5303-a969-717eb8337dba",
+        "parent_key": "education",
+        "sort_order": 0
+      },
+      {
+        "key": "education_learning",
+        "level": 2,
+        "name": "学习",
+        "icon": "library",
+        "seed_id": "826307fd-4c88-5563-a004-913831ec0568",
+        "parent_key": "education",
+        "sort_order": 1
+      },
+      {
+        "key": "gift",
+        "level": 1,
+        "name": "送礼",
+        "icon": "gift",
+        "seed_id": "20724e51-e4e5-52c2-ac07-12308bdd93a0",
+        "parent_key": null,
+        "sort_order": 14
+      },
+      {
+        "key": "game",
+        "level": 1,
+        "name": "游戏",
+        "icon": "gamepad2",
+        "seed_id": "4338eb66-6a81-5a68-8d30-09d0592b07d5",
+        "parent_key": null,
+        "sort_order": 15
+      },
+      {
+        "key": "beauty",
+        "level": 1,
+        "name": "美容",
+        "icon": "sparkles",
+        "seed_id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+        "parent_key": null,
+        "sort_order": 16
+      },
+      {
+        "key": "beauty_skincare",
+        "level": 2,
+        "name": "护肤品",
+        "icon": "smile",
+        "seed_id": "002b36a1-98e9-5550-b451-734d3b96d65e",
+        "parent_key": "beauty",
+        "sort_order": 0
+      },
+      {
+        "key": "beauty_cosmetics",
+        "level": 2,
+        "name": "化妆品",
+        "icon": "palette",
+        "seed_id": "22fd9bbe-dc72-5842-b469-8c1b066b7e2e",
+        "parent_key": "beauty",
+        "sort_order": 1
+      },
+      {
+        "key": "beauty_salon",
+        "level": 2,
+        "name": "剪发",
+        "icon": "scissors",
+        "seed_id": "7730e10e-0c3e-59e1-959a-27e615bfbc16",
+        "parent_key": "beauty",
+        "sort_order": 2
+      },
+      {
+        "key": "beauty_nail",
+        "level": 2,
+        "name": "美甲",
+        "icon": "hand",
+        "seed_id": "ddd6e5c5-e860-5aa1-811e-4bc451763e6d",
+        "parent_key": "beauty",
+        "sort_order": 3
+      },
+      {
+        "key": "medical",
+        "level": 1,
+        "name": "医疗",
+        "icon": "cross",
+        "seed_id": "1aaf1de7-d76b-5d4a-8e65-7ea7db0f39b9",
+        "parent_key": null,
+        "sort_order": 17
+      },
+      {
+        "key": "digital",
+        "level": 1,
+        "name": "数码",
+        "icon": "smartphone",
+        "seed_id": "4e7ce64f-38e0-5fbc-9478-ee19190a9e4a",
+        "parent_key": null,
+        "sort_order": 18
+      },
+      {
+        "key": "other",
+        "level": 1,
+        "name": "其他",
+        "icon": "package",
+        "seed_id": "8899479b-cc3a-58be-af71-c78b1041c480",
+        "parent_key": null,
+        "sort_order": 19
+      }
+    ]
+  },
+  "currencies": {
+    "version": 1,
+    "sources": [
+      {
+        "file": "lib/utils/currency/currencies.dart",
+        "sha256": "b7ed32a516d571b8584e88da05fe24adb19b78ece72771e325f43705df5a3e2b"
+      },
+      {
+        "file": "lib/shared/presentation/currency_names.dart",
+        "sha256": "fd4a590189daffb7507002fa52ce855b95a96c739d6525ce85e7afc7e8564b41"
+      },
+      {
+        "file": "lib/l10n/app_zh.arb",
+        "sha256": "f670162181660609740ebe2dafc155828802e54ebd1983835f60a32528cda611"
+      }
+    ],
+    "commonCodes": [
+      "CNY",
+      "HKD",
+      "MOP",
+      "TWD",
+      "USD",
+      "EUR",
+      "JPY",
+      "GBP",
+      "KRW",
+      "AUD",
+      "CAD",
+      "SGD",
+      "THB"
+    ],
+    "currencies": [
+      {
+        "code": "CNY",
+        "name": "人民币",
+        "symbol": "¥",
+        "englishName": "Chinese Yuan"
+      },
+      {
+        "code": "JPY",
+        "name": "日元",
+        "symbol": "JP¥",
+        "englishName": "Japanese Yen"
+      },
+      {
+        "code": "KRW",
+        "name": "韩元",
+        "symbol": "₩",
+        "englishName": "South Korean Won"
+      },
+      {
+        "code": "HKD",
+        "name": "港币",
+        "symbol": "HK$",
+        "englishName": "Hong Kong Dollar"
+      },
+      {
+        "code": "TWD",
+        "name": "新台币",
+        "symbol": "NT$",
+        "englishName": "New Taiwan Dollar"
+      },
+      {
+        "code": "MOP",
+        "name": "澳门元",
+        "symbol": "MOP$",
+        "englishName": "Macau Pataca"
+      },
+      {
+        "code": "MNT",
+        "name": "蒙古图格里克",
+        "symbol": "₮",
+        "englishName": "Mongolian Tughrik"
+      },
+      {
+        "code": "KPW",
+        "name": "朝鲜元",
+        "symbol": "KPW",
+        "englishName": "North Korean Won"
+      },
+      {
+        "code": "SGD",
+        "name": "新加坡元",
+        "symbol": "S$",
+        "englishName": "Singapore Dollar"
+      },
+      {
+        "code": "MYR",
+        "name": "马来西亚林吉特",
+        "symbol": "RM",
+        "englishName": "Malaysian Ringgit"
+      },
+      {
+        "code": "THB",
+        "name": "泰铢",
+        "symbol": "฿",
+        "englishName": "Thai Baht"
+      },
+      {
+        "code": "IDR",
+        "name": "印尼卢比",
+        "symbol": "Rp",
+        "englishName": "Indonesian Rupiah"
+      },
+      {
+        "code": "PHP",
+        "name": "菲律宾比索",
+        "symbol": "₱",
+        "englishName": "Philippine Peso"
+      },
+      {
+        "code": "VND",
+        "name": "越南盾",
+        "symbol": "₫",
+        "englishName": "Vietnamese Dong"
+      },
+      {
+        "code": "MMK",
+        "name": "缅甸元",
+        "symbol": "K",
+        "englishName": "Myanmar Kyat"
+      },
+      {
+        "code": "KHR",
+        "name": "柬埔寨瑞尔",
+        "symbol": "៛",
+        "englishName": "Cambodian Riel"
+      },
+      {
+        "code": "LAK",
+        "name": "老挝基普",
+        "symbol": "₭",
+        "englishName": "Lao Kip"
+      },
+      {
+        "code": "BND",
+        "name": "文莱元",
+        "symbol": "BND",
+        "englishName": "Bruneian Dollar"
+      },
+      {
+        "code": "INR",
+        "name": "印度卢比",
+        "symbol": "₹",
+        "englishName": "Indian Rupee"
+      },
+      {
+        "code": "PKR",
+        "name": "巴基斯坦卢比",
+        "symbol": "₨",
+        "englishName": "Pakistani Rupee"
+      },
+      {
+        "code": "BDT",
+        "name": "孟加拉塔卡",
+        "symbol": "৳",
+        "englishName": "Bangladeshi Taka"
+      },
+      {
+        "code": "LKR",
+        "name": "斯里兰卡卢比",
+        "symbol": "Rs",
+        "englishName": "Sri Lankan Rupee"
+      },
+      {
+        "code": "NPR",
+        "name": "尼泊尔卢比",
+        "symbol": "₨",
+        "englishName": "Nepalese Rupee"
+      },
+      {
+        "code": "BTN",
+        "name": "不丹努尔特鲁姆",
+        "symbol": "BTN",
+        "englishName": "Bhutanese Ngultrum"
+      },
+      {
+        "code": "MVR",
+        "name": "马尔代夫拉菲亚",
+        "symbol": "MVR",
+        "englishName": "Maldivian Rufiyaa"
+      },
+      {
+        "code": "AFN",
+        "name": "阿富汗尼",
+        "symbol": "AFN",
+        "englishName": "Afghan Afghani"
+      },
+      {
+        "code": "KZT",
+        "name": "哈萨克斯坦坚戈",
+        "symbol": "₸",
+        "englishName": "Kazakhstani Tenge"
+      },
+      {
+        "code": "UZS",
+        "name": "乌兹别克斯坦索姆",
+        "symbol": "UZS",
+        "englishName": "Uzbekistani Som"
+      },
+      {
+        "code": "TJS",
+        "name": "塔吉克斯坦索莫尼",
+        "symbol": "TJS",
+        "englishName": "Tajikistani Somoni"
+      },
+      {
+        "code": "TMT",
+        "name": "土库曼斯坦马纳特",
+        "symbol": "TMT",
+        "englishName": "Turkmenistani Manat"
+      },
+      {
+        "code": "KGS",
+        "name": "吉尔吉斯斯坦索姆",
+        "symbol": "KGS",
+        "englishName": "Kyrgyzstani Som"
+      },
+      {
+        "code": "AED",
+        "name": "阿联酋迪拉姆",
+        "symbol": "د.إ",
+        "englishName": "Emirati Dirham"
+      },
+      {
+        "code": "SAR",
+        "name": "沙特里亚尔",
+        "symbol": "﷼",
+        "englishName": "Saudi Arabian Riyal"
+      },
+      {
+        "code": "ILS",
+        "name": "以色列新谢克尔",
+        "symbol": "₪",
+        "englishName": "Israeli Shekel"
+      },
+      {
+        "code": "TRY",
+        "name": "土耳其里拉",
+        "symbol": "₺",
+        "englishName": "Turkish Lira"
+      },
+      {
+        "code": "QAR",
+        "name": "卡塔尔里亚尔",
+        "symbol": "﷼",
+        "englishName": "Qatari Riyal"
+      },
+      {
+        "code": "KWD",
+        "name": "科威特第纳尔",
+        "symbol": "د.ك",
+        "englishName": "Kuwaiti Dinar"
+      },
+      {
+        "code": "BHD",
+        "name": "巴林第纳尔",
+        "symbol": ".د.ب",
+        "englishName": "Bahraini Dinar"
+      },
+      {
+        "code": "OMR",
+        "name": "阿曼里亚尔",
+        "symbol": "﷼",
+        "englishName": "Omani Rial"
+      },
+      {
+        "code": "JOD",
+        "name": "约旦第纳尔",
+        "symbol": "د.ا",
+        "englishName": "Jordanian Dinar"
+      },
+      {
+        "code": "LBP",
+        "name": "黎巴嫩镑",
+        "symbol": "LBP",
+        "englishName": "Lebanese Pound"
+      },
+      {
+        "code": "IQD",
+        "name": "伊拉克第纳尔",
+        "symbol": "IQD",
+        "englishName": "Iraqi Dinar"
+      },
+      {
+        "code": "IRR",
+        "name": "伊朗里亚尔",
+        "symbol": "IRR",
+        "englishName": "Iranian Rial"
+      },
+      {
+        "code": "YER",
+        "name": "也门里亚尔",
+        "symbol": "YER",
+        "englishName": "Yemeni Rial"
+      },
+      {
+        "code": "SYP",
+        "name": "叙利亚镑",
+        "symbol": "SYP",
+        "englishName": "Syrian Pound"
+      },
+      {
+        "code": "GEL",
+        "name": "格鲁吉亚拉里",
+        "symbol": "₾",
+        "englishName": "Georgian Lari"
+      },
+      {
+        "code": "AMD",
+        "name": "亚美尼亚德拉姆",
+        "symbol": "֏",
+        "englishName": "Armenian Dram"
+      },
+      {
+        "code": "AZN",
+        "name": "阿塞拜疆马纳特",
+        "symbol": "₼",
+        "englishName": "Azerbaijan Manat"
+      },
+      {
+        "code": "EUR",
+        "name": "欧元",
+        "symbol": "€",
+        "englishName": "Euro"
+      },
+      {
+        "code": "GBP",
+        "name": "英镑",
+        "symbol": "£",
+        "englishName": "British Pound"
+      },
+      {
+        "code": "CHF",
+        "name": "瑞士法郎",
+        "symbol": "CHF",
+        "englishName": "Swiss Franc"
+      },
+      {
+        "code": "SEK",
+        "name": "瑞典克朗",
+        "symbol": "kr",
+        "englishName": "Swedish Krona"
+      },
+      {
+        "code": "NOK",
+        "name": "挪威克朗",
+        "symbol": "kr",
+        "englishName": "Norwegian Krone"
+      },
+      {
+        "code": "DKK",
+        "name": "丹麦克朗",
+        "symbol": "kr",
+        "englishName": "Danish Krone"
+      },
+      {
+        "code": "PLN",
+        "name": "波兰兹罗提",
+        "symbol": "zł",
+        "englishName": "Polish Zloty"
+      },
+      {
+        "code": "CZK",
+        "name": "捷克克朗",
+        "symbol": "Kč",
+        "englishName": "Czech Koruna"
+      },
+      {
+        "code": "HUF",
+        "name": "匈牙利福林",
+        "symbol": "Ft",
+        "englishName": "Hungarian Forint"
+      },
+      {
+        "code": "RUB",
+        "name": "俄罗斯卢布",
+        "symbol": "₽",
+        "englishName": "Russian Ruble"
+      },
+      {
+        "code": "BYN",
+        "name": "白俄罗斯卢布",
+        "symbol": "Br",
+        "englishName": "Belarusian Ruble"
+      },
+      {
+        "code": "UAH",
+        "name": "乌克兰格里夫纳",
+        "symbol": "₴",
+        "englishName": "Ukrainian Hryvnia"
+      },
+      {
+        "code": "RON",
+        "name": "罗马尼亚列伊",
+        "symbol": "lei",
+        "englishName": "Romanian Leu"
+      },
+      {
+        "code": "BGN",
+        "name": "保加利亚列弗",
+        "symbol": "лв",
+        "englishName": "Bulgarian Lev"
+      },
+      {
+        "code": "RSD",
+        "name": "塞尔维亚第纳尔",
+        "symbol": "RSD",
+        "englishName": "Serbian Dinar"
+      },
+      {
+        "code": "ISK",
+        "name": "冰岛克朗",
+        "symbol": "kr",
+        "englishName": "Icelandic Krona"
+      },
+      {
+        "code": "MDL",
+        "name": "摩尔多瓦列伊",
+        "symbol": "MDL",
+        "englishName": "Moldovan Leu"
+      },
+      {
+        "code": "ALL",
+        "name": "阿尔巴尼亚列克",
+        "symbol": "ALL",
+        "englishName": "Albanian Lek"
+      },
+      {
+        "code": "MKD",
+        "name": "北马其顿第纳尔",
+        "symbol": "MKD",
+        "englishName": "Macedonian Denar"
+      },
+      {
+        "code": "BAM",
+        "name": "波黑可兑换马克",
+        "symbol": "BAM",
+        "englishName": "Bosnian Convertible Mark"
+      },
+      {
+        "code": "GIP",
+        "name": "直布罗陀镑",
+        "symbol": "GIP",
+        "englishName": "Gibraltar Pound"
+      },
+      {
+        "code": "USD",
+        "name": "美元",
+        "symbol": "$",
+        "englishName": "US Dollar"
+      },
+      {
+        "code": "CAD",
+        "name": "加元",
+        "symbol": "C$",
+        "englishName": "Canadian Dollar"
+      },
+      {
+        "code": "MXN",
+        "name": "墨西哥比索",
+        "symbol": "MX$",
+        "englishName": "Mexican Peso"
+      },
+      {
+        "code": "GTQ",
+        "name": "危地马拉格查尔",
+        "symbol": "GTQ",
+        "englishName": "Guatemalan Quetzal"
+      },
+      {
+        "code": "HNL",
+        "name": "洪都拉斯伦皮拉",
+        "symbol": "HNL",
+        "englishName": "Honduran Lempira"
+      },
+      {
+        "code": "NIO",
+        "name": "尼加拉瓜科多巴",
+        "symbol": "NIO",
+        "englishName": "Nicaraguan Cordoba"
+      },
+      {
+        "code": "CRC",
+        "name": "哥斯达黎加科朗",
+        "symbol": "CRC",
+        "englishName": "Costa Rican Colon"
+      },
+      {
+        "code": "PAB",
+        "name": "巴拿马巴波亚",
+        "symbol": "PAB",
+        "englishName": "Panamanian Balboa"
+      },
+      {
+        "code": "DOP",
+        "name": "多米尼加比索",
+        "symbol": "DOP",
+        "englishName": "Dominican Peso"
+      },
+      {
+        "code": "CUP",
+        "name": "古巴比索",
+        "symbol": "CUP",
+        "englishName": "Cuban Peso"
+      },
+      {
+        "code": "JMD",
+        "name": "牙买加元",
+        "symbol": "J$",
+        "englishName": "Jamaican Dollar"
+      },
+      {
+        "code": "TTD",
+        "name": "特立尼达和多巴哥元",
+        "symbol": "TT$",
+        "englishName": "Trinidadian Dollar"
+      },
+      {
+        "code": "BSD",
+        "name": "巴哈马元",
+        "symbol": "BSD",
+        "englishName": "Bahamian Dollar"
+      },
+      {
+        "code": "BBD",
+        "name": "巴巴多斯元",
+        "symbol": "BBD",
+        "englishName": "Barbadian or Bajan Dollar"
+      },
+      {
+        "code": "BZD",
+        "name": "伯利兹元",
+        "symbol": "BZD",
+        "englishName": "Belizean Dollar"
+      },
+      {
+        "code": "HTG",
+        "name": "海地古德",
+        "symbol": "HTG",
+        "englishName": "Haitian Gourde"
+      },
+      {
+        "code": "KYD",
+        "name": "开曼群岛元",
+        "symbol": "KYD",
+        "englishName": "Caymanian Dollar"
+      },
+      {
+        "code": "AWG",
+        "name": "阿鲁巴弗罗林",
+        "symbol": "AWG",
+        "englishName": "Aruban or Dutch Guilder"
+      },
+      {
+        "code": "BMD",
+        "name": "百慕大元",
+        "symbol": "BMD",
+        "englishName": "Bermudian Dollar"
+      },
+      {
+        "code": "BRL",
+        "name": "巴西雷亚尔",
+        "symbol": "R$",
+        "englishName": "Brazilian Real"
+      },
+      {
+        "code": "ARS",
+        "name": "阿根廷比索",
+        "symbol": "$",
+        "englishName": "Argentine Peso"
+      },
+      {
+        "code": "CLP",
+        "name": "智利比索",
+        "symbol": "$",
+        "englishName": "Chilean Peso"
+      },
+      {
+        "code": "COP",
+        "name": "哥伦比亚比索",
+        "symbol": "$",
+        "englishName": "Colombian Peso"
+      },
+      {
+        "code": "PEN",
+        "name": "秘鲁索尔",
+        "symbol": "S/",
+        "englishName": "Peruvian Sol"
+      },
+      {
+        "code": "UYU",
+        "name": "乌拉圭比索",
+        "symbol": "$U",
+        "englishName": "Uruguayan Peso"
+      },
+      {
+        "code": "PYG",
+        "name": "巴拉圭瓜拉尼",
+        "symbol": "₲",
+        "englishName": "Paraguayan Guarani"
+      },
+      {
+        "code": "BOB",
+        "name": "玻利维亚诺",
+        "symbol": "Bs",
+        "englishName": "Bolivian Bolíviano"
+      },
+      {
+        "code": "VES",
+        "name": "委内瑞拉玻利瓦尔",
+        "symbol": "VES",
+        "englishName": "Venezuelan Bolívar"
+      },
+      {
+        "code": "GYD",
+        "name": "圭亚那元",
+        "symbol": "GYD",
+        "englishName": "Guyanese Dollar"
+      },
+      {
+        "code": "SRD",
+        "name": "苏里南元",
+        "symbol": "SRD",
+        "englishName": "Surinamese Dollar"
+      },
+      {
+        "code": "AUD",
+        "name": "澳元",
+        "symbol": "A$",
+        "englishName": "Australian Dollar"
+      },
+      {
+        "code": "NZD",
+        "name": "新西兰元",
+        "symbol": "NZ$",
+        "englishName": "New Zealand Dollar"
+      },
+      {
+        "code": "FJD",
+        "name": "斐济元",
+        "symbol": "FJ$",
+        "englishName": "Fijian Dollar"
+      },
+      {
+        "code": "PGK",
+        "name": "巴布亚新几内亚基那",
+        "symbol": "PGK",
+        "englishName": "Papua New Guinean Kina"
+      },
+      {
+        "code": "SBD",
+        "name": "所罗门群岛元",
+        "symbol": "SBD",
+        "englishName": "Solomon Islander Dollar"
+      },
+      {
+        "code": "TOP",
+        "name": "汤加潘加",
+        "symbol": "TOP",
+        "englishName": "Tongan Pa'anga"
+      },
+      {
+        "code": "VUV",
+        "name": "瓦努阿图瓦图",
+        "symbol": "VUV",
+        "englishName": "Ni-Vanuatu Vatu"
+      },
+      {
+        "code": "WST",
+        "name": "萨摩亚塔拉",
+        "symbol": "WST",
+        "englishName": "Samoan Tala"
+      },
+      {
+        "code": "ZAR",
+        "name": "南非兰特",
+        "symbol": "R",
+        "englishName": "South African Rand"
+      },
+      {
+        "code": "EGP",
+        "name": "埃及镑",
+        "symbol": "E£",
+        "englishName": "Egyptian Pound"
+      },
+      {
+        "code": "NGN",
+        "name": "尼日利亚奈拉",
+        "symbol": "₦",
+        "englishName": "Nigerian Naira"
+      },
+      {
+        "code": "KES",
+        "name": "肯尼亚先令",
+        "symbol": "KSh",
+        "englishName": "Kenyan Shilling"
+      },
+      {
+        "code": "GHS",
+        "name": "加纳塞地",
+        "symbol": "₵",
+        "englishName": "Ghanaian Cedi"
+      },
+      {
+        "code": "MAD",
+        "name": "摩洛哥迪拉姆",
+        "symbol": "DH",
+        "englishName": "Moroccan Dirham"
+      },
+      {
+        "code": "DZD",
+        "name": "阿尔及利亚第纳尔",
+        "symbol": "DZD",
+        "englishName": "Algerian Dinar"
+      },
+      {
+        "code": "TND",
+        "name": "突尼斯第纳尔",
+        "symbol": "TND",
+        "englishName": "Tunisian Dinar"
+      },
+      {
+        "code": "LYD",
+        "name": "利比亚第纳尔",
+        "symbol": "LYD",
+        "englishName": "Libyan Dinar"
+      },
+      {
+        "code": "ETB",
+        "name": "埃塞俄比亚比尔",
+        "symbol": "ETB",
+        "englishName": "Ethiopian Birr"
+      },
+      {
+        "code": "UGX",
+        "name": "乌干达先令",
+        "symbol": "USh",
+        "englishName": "Ugandan Shilling"
+      },
+      {
+        "code": "TZS",
+        "name": "坦桑尼亚先令",
+        "symbol": "TSh",
+        "englishName": "Tanzanian Shilling"
+      },
+      {
+        "code": "RWF",
+        "name": "卢旺达法郎",
+        "symbol": "RWF",
+        "englishName": "Rwandan Franc"
+      },
+      {
+        "code": "MUR",
+        "name": "毛里求斯卢比",
+        "symbol": "₨",
+        "englishName": "Mauritian Rupee"
+      },
+      {
+        "code": "BWP",
+        "name": "博茨瓦纳普拉",
+        "symbol": "BWP",
+        "englishName": "Botswana Pula"
+      },
+      {
+        "code": "NAD",
+        "name": "纳米比亚元",
+        "symbol": "N$",
+        "englishName": "Namibian Dollar"
+      },
+      {
+        "code": "ZMW",
+        "name": "赞比亚克瓦查",
+        "symbol": "ZMW",
+        "englishName": "Zambian Kwacha"
+      },
+      {
+        "code": "MWK",
+        "name": "马拉维克瓦查",
+        "symbol": "MWK",
+        "englishName": "Malawian Kwacha"
+      },
+      {
+        "code": "MZN",
+        "name": "莫桑比克梅蒂卡尔",
+        "symbol": "MZN",
+        "englishName": "Mozambican Metical"
+      },
+      {
+        "code": "AOA",
+        "name": "安哥拉宽扎",
+        "symbol": "AOA",
+        "englishName": "Angolan Kwanza"
+      },
+      {
+        "code": "CDF",
+        "name": "刚果法郎",
+        "symbol": "CDF",
+        "englishName": "Congolese Franc"
+      },
+      {
+        "code": "GMD",
+        "name": "冈比亚达拉西",
+        "symbol": "GMD",
+        "englishName": "Gambian Dalasi"
+      },
+      {
+        "code": "GNF",
+        "name": "几内亚法郎",
+        "symbol": "GNF",
+        "englishName": "Guinean Franc"
+      },
+      {
+        "code": "LRD",
+        "name": "利比里亚元",
+        "symbol": "LRD",
+        "englishName": "Liberian Dollar"
+      },
+      {
+        "code": "SLE",
+        "name": "塞拉利昂利昂",
+        "symbol": "SLE",
+        "englishName": "Sierra Leonean Leone"
+      },
+      {
+        "code": "SDG",
+        "name": "苏丹镑",
+        "symbol": "SDG",
+        "englishName": "Sudanese Pound"
+      },
+      {
+        "code": "SSP",
+        "name": "南苏丹镑",
+        "symbol": "SSP",
+        "englishName": "South Sudanese Pound"
+      },
+      {
+        "code": "SOS",
+        "name": "索马里先令",
+        "symbol": "SOS",
+        "englishName": "Somali Shilling"
+      },
+      {
+        "code": "DJF",
+        "name": "吉布提法郎",
+        "symbol": "DJF",
+        "englishName": "Djiboutian Franc"
+      },
+      {
+        "code": "ERN",
+        "name": "厄立特里亚纳克法",
+        "symbol": "ERN",
+        "englishName": "Eritrean Nakfa"
+      },
+      {
+        "code": "BIF",
+        "name": "布隆迪法郎",
+        "symbol": "BIF",
+        "englishName": "Burundian Franc"
+      },
+      {
+        "code": "CVE",
+        "name": "佛得角埃斯库多",
+        "symbol": "CVE",
+        "englishName": "Cape Verdean Escudo"
+      },
+      {
+        "code": "STN",
+        "name": "圣多美多布拉",
+        "symbol": "STN",
+        "englishName": "Sao Tomean Dobra"
+      },
+      {
+        "code": "SCR",
+        "name": "塞舌尔卢比",
+        "symbol": "SCR",
+        "englishName": "Seychellois Rupee"
+      },
+      {
+        "code": "KMF",
+        "name": "科摩罗法郎",
+        "symbol": "KMF",
+        "englishName": "Comorian Franc"
+      },
+      {
+        "code": "LSL",
+        "name": "莱索托洛蒂",
+        "symbol": "LSL",
+        "englishName": "Basotho Loti"
+      },
+      {
+        "code": "SZL",
+        "name": "斯威士兰里兰吉尼",
+        "symbol": "SZL",
+        "englishName": "Swazi Lilangeni"
+      },
+      {
+        "code": "MGA",
+        "name": "马达加斯加阿里亚里",
+        "symbol": "MGA",
+        "englishName": "Malagasy Ariary"
+      },
+      {
+        "code": "MRU",
+        "name": "毛里塔尼亚乌吉亚",
+        "symbol": "MRU",
+        "englishName": "Mauritanian Ouguiya"
+      }
+    ]
+  },
+  "fitness": {
+    "source": "https://github.com/hasaneyldrm/exercises-dataset",
+    "source_commit": "7455efae41b330c265e7cd4b78dfa848e7ce5ebd",
+    "exercises": [
+      {
+        "id": "0025",
+        "body_part": "chest"
+      },
+      {
+        "id": "0047",
+        "body_part": "chest"
+      },
+      {
+        "id": "0289",
+        "body_part": "chest"
+      },
+      {
+        "id": "0314",
+        "body_part": "chest"
+      },
+      {
+        "id": "0577",
+        "body_part": "chest"
+      },
+      {
+        "id": "0662",
+        "body_part": "chest"
+      },
+      {
+        "id": "0652",
+        "body_part": "back"
+      },
+      {
+        "id": "0017",
+        "body_part": "back"
+      },
+      {
+        "id": "0027",
+        "body_part": "back"
+      },
+      {
+        "id": "0292",
+        "body_part": "back"
+      },
+      {
+        "id": "0861",
+        "body_part": "back"
+      },
+      {
+        "id": "0198",
+        "body_part": "back"
+      },
+      {
+        "id": "0213",
+        "body_part": "back"
+      },
+      {
+        "id": "0091",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0405",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0334",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0215",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0031",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0294",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0313",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0201",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0200",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0019",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0043",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0032",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0054",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0336",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0739",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0585",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0599",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1373",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0549",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0274",
+        "body_part": "waist"
+      },
+      {
+        "id": "0472",
+        "body_part": "waist"
+      },
+      {
+        "id": "0735",
+        "body_part": "waist"
+      },
+      {
+        "id": "2135",
+        "body_part": "waist"
+      },
+      {
+        "id": "0488",
+        "body_part": "back"
+      },
+      {
+        "id": "0001",
+        "body_part": "waist"
+      },
+      {
+        "id": "0002",
+        "body_part": "waist"
+      },
+      {
+        "id": "0003",
+        "body_part": "waist"
+      },
+      {
+        "id": "1512",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0006",
+        "body_part": "waist"
+      },
+      {
+        "id": "0007",
+        "body_part": "back"
+      },
+      {
+        "id": "1368",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "3293",
+        "body_part": "back"
+      },
+      {
+        "id": "3294",
+        "body_part": "chest"
+      },
+      {
+        "id": "2355",
+        "body_part": "waist"
+      },
+      {
+        "id": "2333",
+        "body_part": "waist"
+      },
+      {
+        "id": "3214",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3204",
+        "body_part": "waist"
+      },
+      {
+        "id": "0009",
+        "body_part": "chest"
+      },
+      {
+        "id": "0011",
+        "body_part": "waist"
+      },
+      {
+        "id": "0010",
+        "body_part": "waist"
+      },
+      {
+        "id": "1708",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1709",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1710",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0012",
+        "body_part": "waist"
+      },
+      {
+        "id": "0013",
+        "body_part": "waist"
+      },
+      {
+        "id": "0014",
+        "body_part": "waist"
+      },
+      {
+        "id": "0015",
+        "body_part": "back"
+      },
+      {
+        "id": "0016",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1713",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1714",
+        "body_part": "waist"
+      },
+      {
+        "id": "1716",
+        "body_part": "chest"
+      },
+      {
+        "id": "1712",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1758",
+        "body_part": "waist"
+      },
+      {
+        "id": "1431",
+        "body_part": "back"
+      },
+      {
+        "id": "1432",
+        "body_part": "back"
+      },
+      {
+        "id": "0018",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2364",
+        "body_part": "chest"
+      },
+      {
+        "id": "3220",
+        "body_part": "cardio"
+      },
+      {
+        "id": "3672",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1314",
+        "body_part": "back"
+      },
+      {
+        "id": "3297",
+        "body_part": "back"
+      },
+      {
+        "id": "1405",
+        "body_part": "back"
+      },
+      {
+        "id": "1473",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0020",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0968",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0969",
+        "body_part": "waist"
+      },
+      {
+        "id": "0970",
+        "body_part": "back"
+      },
+      {
+        "id": "0971",
+        "body_part": "waist"
+      },
+      {
+        "id": "1254",
+        "body_part": "chest"
+      },
+      {
+        "id": "0980",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0972",
+        "body_part": "waist"
+      },
+      {
+        "id": "0974",
+        "body_part": "back"
+      },
+      {
+        "id": "0975",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0976",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3117",
+        "body_part": "back"
+      },
+      {
+        "id": "3116",
+        "body_part": "back"
+      },
+      {
+        "id": "0977",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0978",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1408",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0979",
+        "body_part": "waist"
+      },
+      {
+        "id": "0981",
+        "body_part": "waist"
+      },
+      {
+        "id": "0983",
+        "body_part": "back"
+      },
+      {
+        "id": "0985",
+        "body_part": "waist"
+      },
+      {
+        "id": "0984",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1002",
+        "body_part": "waist"
+      },
+      {
+        "id": "0986",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0987",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0988",
+        "body_part": "back"
+      },
+      {
+        "id": "0989",
+        "body_part": "chest"
+      },
+      {
+        "id": "0990",
+        "body_part": "back"
+      },
+      {
+        "id": "0991",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0992",
+        "body_part": "waist"
+      },
+      {
+        "id": "0993",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0994",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0996",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1011",
+        "body_part": "waist"
+      },
+      {
+        "id": "0997",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1018",
+        "body_part": "back"
+      },
+      {
+        "id": "0998",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0999",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1000",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1001",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1004",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1003",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1005",
+        "body_part": "waist"
+      },
+      {
+        "id": "1022",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1007",
+        "body_part": "waist"
+      },
+      {
+        "id": "1008",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1009",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1023",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1010",
+        "body_part": "back"
+      },
+      {
+        "id": "1012",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1369",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1013",
+        "body_part": "back"
+      },
+      {
+        "id": "1014",
+        "body_part": "waist"
+      },
+      {
+        "id": "1015",
+        "body_part": "waist"
+      },
+      {
+        "id": "1016",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1017",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0023",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0024",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0026",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1316",
+        "body_part": "back"
+      },
+      {
+        "id": "2407",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0028",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0029",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0030",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0033",
+        "body_part": "chest"
+      },
+      {
+        "id": "0034",
+        "body_part": "back"
+      },
+      {
+        "id": "0035",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1255",
+        "body_part": "chest"
+      },
+      {
+        "id": "0036",
+        "body_part": "chest"
+      },
+      {
+        "id": "0037",
+        "body_part": "back"
+      },
+      {
+        "id": "0038",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1370",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0039",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0041",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0040",
+        "body_part": "chest"
+      },
+      {
+        "id": "0042",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1461",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1462",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1545",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1409",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3562",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0044",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0045",
+        "body_part": "chest"
+      },
+      {
+        "id": "0046",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1436",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1719",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0048",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0049",
+        "body_part": "back"
+      },
+      {
+        "id": "0050",
+        "body_part": "chest"
+      },
+      {
+        "id": "0051",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0052",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0053",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1410",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1435",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1720",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0055",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0056",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0057",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0058",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0059",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0061",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0060",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0063",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0064",
+        "body_part": "back"
+      },
+      {
+        "id": "0065",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0066",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0067",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0068",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0069",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1411",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1412",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "3017",
+        "body_part": "back"
+      },
+      {
+        "id": "1751",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0070",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0071",
+        "body_part": "waist"
+      },
+      {
+        "id": "0072",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0073",
+        "body_part": "back"
+      },
+      {
+        "id": "0022",
+        "body_part": "back"
+      },
+      {
+        "id": "0074",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0075",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0076",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0078",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0077",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0079",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "2187",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0080",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0118",
+        "body_part": "back"
+      },
+      {
+        "id": "1256",
+        "body_part": "chest"
+      },
+      {
+        "id": "1257",
+        "body_part": "chest"
+      },
+      {
+        "id": "1317",
+        "body_part": "back"
+      },
+      {
+        "id": "1721",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0081",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0082",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0084",
+        "body_part": "waist"
+      },
+      {
+        "id": "0083",
+        "body_part": "waist"
+      },
+      {
+        "id": "0085",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0086",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0087",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0088",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1371",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1718",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0089",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0090",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0092",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0094",
+        "body_part": "waist"
+      },
+      {
+        "id": "0095",
+        "body_part": "back"
+      },
+      {
+        "id": "0096",
+        "body_part": "waist"
+      },
+      {
+        "id": "0098",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0097",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1756",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0099",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2799",
+        "body_part": "waist"
+      },
+      {
+        "id": "2800",
+        "body_part": "waist"
+      },
+      {
+        "id": "0100",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0101",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2810",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0102",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2798",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0103",
+        "body_part": "waist"
+      },
+      {
+        "id": "0104",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0105",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1372",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0106",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1456",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2414",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0107",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0108",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0109",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0110",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0111",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0112",
+        "body_part": "waist"
+      },
+      {
+        "id": "1629",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1457",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0113",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0114",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0115",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0116",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0117",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3305",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0120",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0119",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0121",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0122",
+        "body_part": "chest"
+      },
+      {
+        "id": "1258",
+        "body_part": "chest"
+      },
+      {
+        "id": "0124",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0123",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0126",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0125",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0127",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3212",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0128",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3360",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1259",
+        "body_part": "chest"
+      },
+      {
+        "id": "0129",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1399",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0130",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3019",
+        "body_part": "back"
+      },
+      {
+        "id": "3639",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1770",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0139",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0140",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0137",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3543",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3544",
+        "body_part": "waist"
+      },
+      {
+        "id": "1771",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1769",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3168",
+        "body_part": "back"
+      },
+      {
+        "id": "3167",
+        "body_part": "back"
+      },
+      {
+        "id": "3156",
+        "body_part": "back"
+      },
+      {
+        "id": "3158",
+        "body_part": "back"
+      },
+      {
+        "id": "3162",
+        "body_part": "back"
+      },
+      {
+        "id": "3161",
+        "body_part": "back"
+      },
+      {
+        "id": "3166",
+        "body_part": "back"
+      },
+      {
+        "id": "3165",
+        "body_part": "back"
+      },
+      {
+        "id": "0138",
+        "body_part": "waist"
+      },
+      {
+        "id": "1374",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "2466",
+        "body_part": "waist"
+      },
+      {
+        "id": "1160",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0870",
+        "body_part": "waist"
+      },
+      {
+        "id": "1494",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0148",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0149",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3235",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0150",
+        "body_part": "back"
+      },
+      {
+        "id": "0151",
+        "body_part": "chest"
+      },
+      {
+        "id": "1630",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1631",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0152",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0153",
+        "body_part": "back"
+      },
+      {
+        "id": "0154",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0155",
+        "body_part": "chest"
+      },
+      {
+        "id": "0868",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0157",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0158",
+        "body_part": "chest"
+      },
+      {
+        "id": "1260",
+        "body_part": "chest"
+      },
+      {
+        "id": "1261",
+        "body_part": "chest"
+      },
+      {
+        "id": "0159",
+        "body_part": "back"
+      },
+      {
+        "id": "1632",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0160",
+        "body_part": "back"
+      },
+      {
+        "id": "0161",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0162",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0164",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0165",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1722",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0167",
+        "body_part": "back"
+      },
+      {
+        "id": "0168",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0169",
+        "body_part": "chest"
+      },
+      {
+        "id": "1318",
+        "body_part": "back"
+      },
+      {
+        "id": "0171",
+        "body_part": "chest"
+      },
+      {
+        "id": "0170",
+        "body_part": "chest"
+      },
+      {
+        "id": "0172",
+        "body_part": "back"
+      },
+      {
+        "id": "0173",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0174",
+        "body_part": "waist"
+      },
+      {
+        "id": "0860",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0175",
+        "body_part": "waist"
+      },
+      {
+        "id": "3697",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0176",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2330",
+        "body_part": "back"
+      },
+      {
+        "id": "0177",
+        "body_part": "back"
+      },
+      {
+        "id": "2616",
+        "body_part": "back"
+      },
+      {
+        "id": "0178",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0179",
+        "body_part": "chest"
+      },
+      {
+        "id": "0180",
+        "body_part": "back"
+      },
+      {
+        "id": "1634",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0182",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0184",
+        "body_part": "back"
+      },
+      {
+        "id": "0185",
+        "body_part": "chest"
+      },
+      {
+        "id": "0186",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0188",
+        "body_part": "chest"
+      },
+      {
+        "id": "0189",
+        "body_part": "back"
+      },
+      {
+        "id": "0190",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1262",
+        "body_part": "chest"
+      },
+      {
+        "id": "1263",
+        "body_part": "chest"
+      },
+      {
+        "id": "1264",
+        "body_part": "chest"
+      },
+      {
+        "id": "1265",
+        "body_part": "chest"
+      },
+      {
+        "id": "1266",
+        "body_part": "chest"
+      },
+      {
+        "id": "0191",
+        "body_part": "chest"
+      },
+      {
+        "id": "0192",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1633",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1267",
+        "body_part": "chest"
+      },
+      {
+        "id": "3563",
+        "body_part": "back"
+      },
+      {
+        "id": "1635",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0193",
+        "body_part": "back"
+      },
+      {
+        "id": "1723",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1636",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1637",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0194",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1319",
+        "body_part": "back"
+      },
+      {
+        "id": "0195",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1268",
+        "body_part": "chest"
+      },
+      {
+        "id": "0196",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0197",
+        "body_part": "back"
+      },
+      {
+        "id": "1638",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0199",
+        "body_part": "back"
+      },
+      {
+        "id": "0202",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0203",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0204",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0205",
+        "body_part": "back"
+      },
+      {
+        "id": "0873",
+        "body_part": "waist"
+      },
+      {
+        "id": "0206",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2406",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1413",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0209",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0210",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0207",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0208",
+        "body_part": "back"
+      },
+      {
+        "id": "1320",
+        "body_part": "back"
+      },
+      {
+        "id": "1321",
+        "body_part": "back"
+      },
+      {
+        "id": "1322",
+        "body_part": "back"
+      },
+      {
+        "id": "1639",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1724",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1725",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1726",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1640",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1323",
+        "body_part": "back"
+      },
+      {
+        "id": "0211",
+        "body_part": "waist"
+      },
+      {
+        "id": "2144",
+        "body_part": "chest"
+      },
+      {
+        "id": "0212",
+        "body_part": "waist"
+      },
+      {
+        "id": "1641",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0214",
+        "body_part": "back"
+      },
+      {
+        "id": "1642",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1643",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0216",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2399",
+        "body_part": "waist"
+      },
+      {
+        "id": "0218",
+        "body_part": "back"
+      },
+      {
+        "id": "0219",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0220",
+        "body_part": "back"
+      },
+      {
+        "id": "0222",
+        "body_part": "waist"
+      },
+      {
+        "id": "0221",
+        "body_part": "waist"
+      },
+      {
+        "id": "0223",
+        "body_part": "waist"
+      },
+      {
+        "id": "1717",
+        "body_part": "back"
+      },
+      {
+        "id": "1644",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0224",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1375",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0225",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0226",
+        "body_part": "waist"
+      },
+      {
+        "id": "0874",
+        "body_part": "waist"
+      },
+      {
+        "id": "0227",
+        "body_part": "chest"
+      },
+      {
+        "id": "0228",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0229",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0230",
+        "body_part": "waist"
+      },
+      {
+        "id": "0231",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1376",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0232",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0233",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1727",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0234",
+        "body_part": "back"
+      },
+      {
+        "id": "0235",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0236",
+        "body_part": "back"
+      },
+      {
+        "id": "1269",
+        "body_part": "chest"
+      },
+      {
+        "id": "0238",
+        "body_part": "back"
+      },
+      {
+        "id": "0237",
+        "body_part": "back"
+      },
+      {
+        "id": "0239",
+        "body_part": "back"
+      },
+      {
+        "id": "0240",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2464",
+        "body_part": "back"
+      },
+      {
+        "id": "0241",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2405",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0242",
+        "body_part": "waist"
+      },
+      {
+        "id": "0243",
+        "body_part": "waist"
+      },
+      {
+        "id": "0862",
+        "body_part": "waist"
+      },
+      {
+        "id": "0244",
+        "body_part": "back"
+      },
+      {
+        "id": "1645",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1728",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0245",
+        "body_part": "back"
+      },
+      {
+        "id": "1270",
+        "body_part": "chest"
+      },
+      {
+        "id": "1324",
+        "body_part": "back"
+      },
+      {
+        "id": "0246",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1325",
+        "body_part": "back"
+      },
+      {
+        "id": "0247",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1407",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1377",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1378",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0248",
+        "body_part": "back"
+      },
+      {
+        "id": "2963",
+        "body_part": "waist"
+      },
+      {
+        "id": "1548",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1271",
+        "body_part": "chest"
+      },
+      {
+        "id": "0251",
+        "body_part": "chest"
+      },
+      {
+        "id": "1430",
+        "body_part": "chest"
+      },
+      {
+        "id": "2462",
+        "body_part": "chest"
+      },
+      {
+        "id": "1272",
+        "body_part": "chest"
+      },
+      {
+        "id": "3216",
+        "body_part": "chest"
+      },
+      {
+        "id": "1326",
+        "body_part": "back"
+      },
+      {
+        "id": "0253",
+        "body_part": "back"
+      },
+      {
+        "id": "0257",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1273",
+        "body_part": "chest"
+      },
+      {
+        "id": "0258",
+        "body_part": "chest"
+      },
+      {
+        "id": "1327",
+        "body_part": "back"
+      },
+      {
+        "id": "0259",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2398",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0260",
+        "body_part": "waist"
+      },
+      {
+        "id": "1468",
+        "body_part": "waist"
+      },
+      {
+        "id": "0262",
+        "body_part": "waist"
+      },
+      {
+        "id": "0267",
+        "body_part": "waist"
+      },
+      {
+        "id": "0271",
+        "body_part": "waist"
+      },
+      {
+        "id": "0272",
+        "body_part": "waist"
+      },
+      {
+        "id": "3016",
+        "body_part": "waist"
+      },
+      {
+        "id": "3769",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2331",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0276",
+        "body_part": "waist"
+      },
+      {
+        "id": "0277",
+        "body_part": "waist"
+      },
+      {
+        "id": "0279",
+        "body_part": "chest"
+      },
+      {
+        "id": "0282",
+        "body_part": "waist"
+      },
+      {
+        "id": "1274",
+        "body_part": "chest"
+      },
+      {
+        "id": "0283",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0284",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1275",
+        "body_part": "chest"
+      },
+      {
+        "id": "0285",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2403",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1646",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1647",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1648",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0286",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1649",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1650",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2137",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0287",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0288",
+        "body_part": "chest"
+      },
+      {
+        "id": "0290",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0291",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0293",
+        "body_part": "back"
+      },
+      {
+        "id": "1651",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1652",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1653",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2401",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1654",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1655",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1656",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1201",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0295",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1731",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0296",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0297",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3635",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0298",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1657",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0299",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2136",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0300",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0301",
+        "body_part": "chest"
+      },
+      {
+        "id": "0302",
+        "body_part": "chest"
+      },
+      {
+        "id": "0303",
+        "body_part": "chest"
+      },
+      {
+        "id": "1276",
+        "body_part": "chest"
+      },
+      {
+        "id": "1617",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0305",
+        "body_part": "back"
+      },
+      {
+        "id": "0304",
+        "body_part": "back"
+      },
+      {
+        "id": "0306",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0307",
+        "body_part": "chest"
+      },
+      {
+        "id": "1437",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0308",
+        "body_part": "chest"
+      },
+      {
+        "id": "1277",
+        "body_part": "chest"
+      },
+      {
+        "id": "1732",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0310",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0309",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0311",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1760",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1659",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0312",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2402",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1664",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3545",
+        "body_part": "chest"
+      },
+      {
+        "id": "0315",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0316",
+        "body_part": "chest"
+      },
+      {
+        "id": "0318",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0317",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0319",
+        "body_part": "chest"
+      },
+      {
+        "id": "1278",
+        "body_part": "chest"
+      },
+      {
+        "id": "0320",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0321",
+        "body_part": "chest"
+      },
+      {
+        "id": "1618",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0322",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1279",
+        "body_part": "chest"
+      },
+      {
+        "id": "1280",
+        "body_part": "chest"
+      },
+      {
+        "id": "1619",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1620",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0323",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1281",
+        "body_part": "chest"
+      },
+      {
+        "id": "1282",
+        "body_part": "chest"
+      },
+      {
+        "id": "0324",
+        "body_part": "chest"
+      },
+      {
+        "id": "1283",
+        "body_part": "chest"
+      },
+      {
+        "id": "0325",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0326",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0327",
+        "body_part": "back"
+      },
+      {
+        "id": "0328",
+        "body_part": "chest"
+      },
+      {
+        "id": "0329",
+        "body_part": "back"
+      },
+      {
+        "id": "3542",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0330",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0331",
+        "body_part": "chest"
+      },
+      {
+        "id": "1733",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3541",
+        "body_part": "back"
+      },
+      {
+        "id": "0332",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0333",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1734",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1660",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0335",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1658",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0337",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1729",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0338",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0863",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0339",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0340",
+        "body_part": "chest"
+      },
+      {
+        "id": "2470",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0341",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0343",
+        "body_part": "chest"
+      },
+      {
+        "id": "0342",
+        "body_part": "chest"
+      },
+      {
+        "id": "0344",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0345",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0346",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0347",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "2705",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1284",
+        "body_part": "chest"
+      },
+      {
+        "id": "1328",
+        "body_part": "back"
+      },
+      {
+        "id": "0348",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1735",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0349",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "2706",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1661",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0350",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0351",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1662",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0352",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1285",
+        "body_part": "chest"
+      },
+      {
+        "id": "1286",
+        "body_part": "chest"
+      },
+      {
+        "id": "0353",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1287",
+        "body_part": "chest"
+      },
+      {
+        "id": "1288",
+        "body_part": "chest"
+      },
+      {
+        "id": "1736",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1663",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1621",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1289",
+        "body_part": "chest"
+      },
+      {
+        "id": "0354",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0355",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0356",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1290",
+        "body_part": "chest"
+      },
+      {
+        "id": "1665",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1666",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1291",
+        "body_part": "chest"
+      },
+      {
+        "id": "0358",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0359",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1622",
+        "body_part": "chest"
+      },
+      {
+        "id": "1414",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1667",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1668",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1669",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1415",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0361",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0360",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3888",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1670",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1671",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0362",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0363",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0364",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1672",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1292",
+        "body_part": "chest"
+      },
+      {
+        "id": "0365",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0366",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1441",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0367",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0368",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0369",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1329",
+        "body_part": "back"
+      },
+      {
+        "id": "1623",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0370",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0371",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0372",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1673",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1293",
+        "body_part": "chest"
+      },
+      {
+        "id": "0373",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0374",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1674",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0375",
+        "body_part": "chest"
+      },
+      {
+        "id": "1294",
+        "body_part": "chest"
+      },
+      {
+        "id": "1295",
+        "body_part": "chest"
+      },
+      {
+        "id": "1700",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0376",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2292",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0377",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0378",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0380",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0379",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0381",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0382",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1624",
+        "body_part": "chest"
+      },
+      {
+        "id": "0383",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1330",
+        "body_part": "back"
+      },
+      {
+        "id": "1331",
+        "body_part": "back"
+      },
+      {
+        "id": "2327",
+        "body_part": "back"
+      },
+      {
+        "id": "0384",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1675",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0385",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1459",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0386",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2397",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0387",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1676",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0388",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3546",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0389",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2317",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1730",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1737",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1677",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0390",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3547",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1379",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0391",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0392",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1678",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0393",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0394",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0396",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0395",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0397",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1679",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0398",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0399",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0400",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1380",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1381",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0401",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0402",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0403",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1738",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0404",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2188",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0406",
+        "body_part": "back"
+      },
+      {
+        "id": "0407",
+        "body_part": "waist"
+      },
+      {
+        "id": "0408",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3664",
+        "body_part": "back"
+      },
+      {
+        "id": "3548",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0409",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1757",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2805",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0410",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0411",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0413",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3560",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0414",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0415",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1739",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2143",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1740",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1741",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0416",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0417",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0418",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0419",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2321",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0420",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0421",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0422",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1680",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0423",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0424",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0425",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0426",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0427",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0428",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0429",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0430",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2293",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1684",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0431",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2796",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2812",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0432",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0433",
+        "body_part": "chest"
+      },
+      {
+        "id": "0434",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2808",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2803",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0436",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1742",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1743",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0437",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1765",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0864",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "5201",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0438",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0439",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2294",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2189",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1167",
+        "body_part": "chest"
+      },
+      {
+        "id": "3287",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1772",
+        "body_part": "back"
+      },
+      {
+        "id": "0443",
+        "body_part": "waist"
+      },
+      {
+        "id": "3292",
+        "body_part": "back"
+      },
+      {
+        "id": "1332",
+        "body_part": "back"
+      },
+      {
+        "id": "1333",
+        "body_part": "back"
+      },
+      {
+        "id": "1334",
+        "body_part": "back"
+      },
+      {
+        "id": "1335",
+        "body_part": "back"
+      },
+      {
+        "id": "1336",
+        "body_part": "back"
+      },
+      {
+        "id": "1744",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1559",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1338",
+        "body_part": "back"
+      },
+      {
+        "id": "1339",
+        "body_part": "back"
+      },
+      {
+        "id": "1341",
+        "body_part": "back"
+      },
+      {
+        "id": "1342",
+        "body_part": "back"
+      },
+      {
+        "id": "1382",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "3241",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "3240",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1416",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1417",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1296",
+        "body_part": "chest"
+      },
+      {
+        "id": "1343",
+        "body_part": "back"
+      },
+      {
+        "id": "1560",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1745",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1746",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1747",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3010",
+        "body_part": "back"
+      },
+      {
+        "id": "1748",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1344",
+        "body_part": "back"
+      },
+      {
+        "id": "1682",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1749",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0445",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1627",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0446",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0447",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0448",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2186",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0449",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0450",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0451",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0452",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1458",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0453",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0454",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1628",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2404",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2432",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2741",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2133",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0455",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "3303",
+        "body_part": "waist"
+      },
+      {
+        "id": "0456",
+        "body_part": "waist"
+      },
+      {
+        "id": "0457",
+        "body_part": "waist"
+      },
+      {
+        "id": "0458",
+        "body_part": "chest"
+      },
+      {
+        "id": "0459",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1472",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3470",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3194",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2429",
+        "body_part": "waist"
+      },
+      {
+        "id": "3301",
+        "body_part": "waist"
+      },
+      {
+        "id": "3296",
+        "body_part": "waist"
+      },
+      {
+        "id": "3295",
+        "body_part": "back"
+      },
+      {
+        "id": "0464",
+        "body_part": "waist"
+      },
+      {
+        "id": "3315",
+        "body_part": "waist"
+      },
+      {
+        "id": "3299",
+        "body_part": "waist"
+      },
+      {
+        "id": "3327",
+        "body_part": "chest"
+      },
+      {
+        "id": "0466",
+        "body_part": "back"
+      },
+      {
+        "id": "3561",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3523",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3193",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0467",
+        "body_part": "waist"
+      },
+      {
+        "id": "0469",
+        "body_part": "waist"
+      },
+      {
+        "id": "1383",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1384",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "3221",
+        "body_part": "cardio"
+      },
+      {
+        "id": "3202",
+        "body_part": "waist"
+      },
+      {
+        "id": "1511",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2139",
+        "body_part": "chest"
+      },
+      {
+        "id": "3218",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3215",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3302",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0471",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1764",
+        "body_part": "waist"
+      },
+      {
+        "id": "1761",
+        "body_part": "waist"
+      },
+      {
+        "id": "0473",
+        "body_part": "waist"
+      },
+      {
+        "id": "0474",
+        "body_part": "waist"
+      },
+      {
+        "id": "0475",
+        "body_part": "waist"
+      },
+      {
+        "id": "0476",
+        "body_part": "waist"
+      },
+      {
+        "id": "3636",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0484",
+        "body_part": "waist"
+      },
+      {
+        "id": "1418",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3234",
+        "body_part": "chest"
+      },
+      {
+        "id": "0489",
+        "body_part": "back"
+      },
+      {
+        "id": "3289",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1471",
+        "body_part": "waist"
+      },
+      {
+        "id": "3698",
+        "body_part": "waist"
+      },
+      {
+        "id": "0490",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0491",
+        "body_part": "waist"
+      },
+      {
+        "id": "0492",
+        "body_part": "chest"
+      },
+      {
+        "id": "0493",
+        "body_part": "chest"
+      },
+      {
+        "id": "3785",
+        "body_part": "chest"
+      },
+      {
+        "id": "0494",
+        "body_part": "chest"
+      },
+      {
+        "id": "3011",
+        "body_part": "chest"
+      },
+      {
+        "id": "0495",
+        "body_part": "waist"
+      },
+      {
+        "id": "1564",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0496",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2400",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0499",
+        "body_part": "back"
+      },
+      {
+        "id": "2300",
+        "body_part": "back"
+      },
+      {
+        "id": "2298",
+        "body_part": "back"
+      },
+      {
+        "id": "0497",
+        "body_part": "back"
+      },
+      {
+        "id": "0498",
+        "body_part": "back"
+      },
+      {
+        "id": "1419",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1297",
+        "body_part": "chest"
+      },
+      {
+        "id": "0500",
+        "body_part": "chest"
+      },
+      {
+        "id": "0501",
+        "body_part": "cardio"
+      },
+      {
+        "id": "3224",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0507",
+        "body_part": "waist"
+      },
+      {
+        "id": "0508",
+        "body_part": "waist"
+      },
+      {
+        "id": "2612",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0514",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0513",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0517",
+        "body_part": "waist"
+      },
+      {
+        "id": "0518",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0520",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0519",
+        "body_part": "chest"
+      },
+      {
+        "id": "0521",
+        "body_part": "back"
+      },
+      {
+        "id": "0522",
+        "body_part": "back"
+      },
+      {
+        "id": "0523",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0524",
+        "body_part": "waist"
+      },
+      {
+        "id": "0525",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0526",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0527",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0528",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0529",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0530",
+        "body_part": "waist"
+      },
+      {
+        "id": "0531",
+        "body_part": "chest"
+      },
+      {
+        "id": "0532",
+        "body_part": "waist"
+      },
+      {
+        "id": "0533",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0534",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0535",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0536",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0537",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1298",
+        "body_part": "chest"
+      },
+      {
+        "id": "0538",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0539",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0540",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0541",
+        "body_part": "back"
+      },
+      {
+        "id": "0542",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0543",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0544",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0545",
+        "body_part": "chest"
+      },
+      {
+        "id": "0546",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1438",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0547",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0548",
+        "body_part": "back"
+      },
+      {
+        "id": "0550",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0551",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0552",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0553",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1345",
+        "body_part": "back"
+      },
+      {
+        "id": "0554",
+        "body_part": "waist"
+      },
+      {
+        "id": "0555",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0558",
+        "body_part": "back"
+      },
+      {
+        "id": "3640",
+        "body_part": "waist"
+      },
+      {
+        "id": "1420",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1346",
+        "body_part": "back"
+      },
+      {
+        "id": "3239",
+        "body_part": "waist"
+      },
+      {
+        "id": "3211",
+        "body_part": "chest"
+      },
+      {
+        "id": "3288",
+        "body_part": "chest"
+      },
+      {
+        "id": "3418",
+        "body_part": "back"
+      },
+      {
+        "id": "3419",
+        "body_part": "waist"
+      },
+      {
+        "id": "0562",
+        "body_part": "waist"
+      },
+      {
+        "id": "3237",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3300",
+        "body_part": "waist"
+      },
+      {
+        "id": "2271",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0570",
+        "body_part": "waist"
+      },
+      {
+        "id": "1576",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2287",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0571",
+        "body_part": "back"
+      },
+      {
+        "id": "0572",
+        "body_part": "back"
+      },
+      {
+        "id": "0573",
+        "body_part": "back"
+      },
+      {
+        "id": "0574",
+        "body_part": "back"
+      },
+      {
+        "id": "3200",
+        "body_part": "back"
+      },
+      {
+        "id": "0575",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2289",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0576",
+        "body_part": "chest"
+      },
+      {
+        "id": "0578",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1300",
+        "body_part": "chest"
+      },
+      {
+        "id": "1253",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0579",
+        "body_part": "back"
+      },
+      {
+        "id": "0580",
+        "body_part": "back"
+      },
+      {
+        "id": "1439",
+        "body_part": "back"
+      },
+      {
+        "id": "2288",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "1615",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0581",
+        "body_part": "back"
+      },
+      {
+        "id": "2286",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2611",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1299",
+        "body_part": "chest"
+      },
+      {
+        "id": "1479",
+        "body_part": "chest"
+      },
+      {
+        "id": "0582",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0583",
+        "body_part": "waist"
+      },
+      {
+        "id": "0584",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0586",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3195",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0587",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0588",
+        "body_part": "back"
+      },
+      {
+        "id": "0589",
+        "body_part": "back"
+      },
+      {
+        "id": "1356",
+        "body_part": "back"
+      },
+      {
+        "id": "1347",
+        "body_part": "back"
+      },
+      {
+        "id": "0590",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0591",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0592",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1614",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2285",
+        "body_part": "back"
+      },
+      {
+        "id": "2736",
+        "body_part": "back"
+      },
+      {
+        "id": "1616",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1348",
+        "body_part": "back"
+      },
+      {
+        "id": "0593",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1349",
+        "body_part": "back"
+      },
+      {
+        "id": "2315",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "2335",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0594",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1452",
+        "body_part": "waist"
+      },
+      {
+        "id": "0595",
+        "body_part": "waist"
+      },
+      {
+        "id": "3760",
+        "body_part": "waist"
+      },
+      {
+        "id": "1451",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0596",
+        "body_part": "chest"
+      },
+      {
+        "id": "3759",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0597",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0598",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0600",
+        "body_part": "waist"
+      },
+      {
+        "id": "0602",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0601",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1350",
+        "body_part": "back"
+      },
+      {
+        "id": "1385",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0603",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0869",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "2318",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0604",
+        "body_part": "back"
+      },
+      {
+        "id": "0605",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "3758",
+        "body_part": "chest"
+      },
+      {
+        "id": "0606",
+        "body_part": "back"
+      },
+      {
+        "id": "1351",
+        "body_part": "back"
+      },
+      {
+        "id": "0607",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1313",
+        "body_part": "back"
+      },
+      {
+        "id": "0609",
+        "body_part": "back"
+      },
+      {
+        "id": "3013",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1352",
+        "body_part": "back"
+      },
+      {
+        "id": "3582",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1688",
+        "body_part": "waist"
+      },
+      {
+        "id": "0613",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2312",
+        "body_part": "waist"
+      },
+      {
+        "id": "0620",
+        "body_part": "waist"
+      },
+      {
+        "id": "0865",
+        "body_part": "waist"
+      },
+      {
+        "id": "1301",
+        "body_part": "chest"
+      },
+      {
+        "id": "0624",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1353",
+        "body_part": "back"
+      },
+      {
+        "id": "1302",
+        "body_part": "chest"
+      },
+      {
+        "id": "1303",
+        "body_part": "chest"
+      },
+      {
+        "id": "1304",
+        "body_part": "chest"
+      },
+      {
+        "id": "1305",
+        "body_part": "chest"
+      },
+      {
+        "id": "1312",
+        "body_part": "chest"
+      },
+      {
+        "id": "1701",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1354",
+        "body_part": "back"
+      },
+      {
+        "id": "1750",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0627",
+        "body_part": "back"
+      },
+      {
+        "id": "3217",
+        "body_part": "chest"
+      },
+      {
+        "id": "1421",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0628",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0630",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0631",
+        "body_part": "back"
+      },
+      {
+        "id": "1401",
+        "body_part": "back"
+      },
+      {
+        "id": "2328",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1403",
+        "body_part": "neck"
+      },
+      {
+        "id": "0634",
+        "body_part": "waist"
+      },
+      {
+        "id": "1495",
+        "body_part": "waist"
+      },
+      {
+        "id": "0635",
+        "body_part": "waist"
+      },
+      {
+        "id": "0636",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0637",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1355",
+        "body_part": "back"
+      },
+      {
+        "id": "0638",
+        "body_part": "back"
+      },
+      {
+        "id": "0639",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0640",
+        "body_part": "waist"
+      },
+      {
+        "id": "1773",
+        "body_part": "back"
+      },
+      {
+        "id": "1386",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1387",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1476",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0641",
+        "body_part": "waist"
+      },
+      {
+        "id": "0642",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0643",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3147",
+        "body_part": "waist"
+      },
+      {
+        "id": "1422",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1388",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "3662",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1306",
+        "body_part": "chest"
+      },
+      {
+        "id": "1687",
+        "body_part": "waist"
+      },
+      {
+        "id": "1389",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "3119",
+        "body_part": "waist"
+      },
+      {
+        "id": "3132",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0648",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3665",
+        "body_part": "waist"
+      },
+      {
+        "id": "3203",
+        "body_part": "waist"
+      },
+      {
+        "id": "1707",
+        "body_part": "waist"
+      },
+      {
+        "id": "0651",
+        "body_part": "back"
+      },
+      {
+        "id": "0650",
+        "body_part": "waist"
+      },
+      {
+        "id": "1689",
+        "body_part": "chest"
+      },
+      {
+        "id": "3638",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1307",
+        "body_part": "chest"
+      },
+      {
+        "id": "0653",
+        "body_part": "chest"
+      },
+      {
+        "id": "0655",
+        "body_part": "chest"
+      },
+      {
+        "id": "0656",
+        "body_part": "chest"
+      },
+      {
+        "id": "0659",
+        "body_part": "chest"
+      },
+      {
+        "id": "0658",
+        "body_part": "chest"
+      },
+      {
+        "id": "0660",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0661",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0663",
+        "body_part": "chest"
+      },
+      {
+        "id": "1467",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3145",
+        "body_part": "chest"
+      },
+      {
+        "id": "0664",
+        "body_part": "waist"
+      },
+      {
+        "id": "3533",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3201",
+        "body_part": "waist"
+      },
+      {
+        "id": "3552",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0666",
+        "body_part": "chest"
+      },
+      {
+        "id": "0668",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0669",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0670",
+        "body_part": "back"
+      },
+      {
+        "id": "1582",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3236",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3007",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3123",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3124",
+        "body_part": "chest"
+      },
+      {
+        "id": "3006",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3122",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3144",
+        "body_part": "back"
+      },
+      {
+        "id": "0872",
+        "body_part": "waist"
+      },
+      {
+        "id": "0672",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0673",
+        "body_part": "back"
+      },
+      {
+        "id": "0674",
+        "body_part": "back"
+      },
+      {
+        "id": "0675",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1423",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3663",
+        "body_part": "waist"
+      },
+      {
+        "id": "0677",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2571",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0678",
+        "body_part": "back"
+      },
+      {
+        "id": "2208",
+        "body_part": "back"
+      },
+      {
+        "id": "2204",
+        "body_part": "waist"
+      },
+      {
+        "id": "2205",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2202",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2206",
+        "body_part": "waist"
+      },
+      {
+        "id": "2203",
+        "body_part": "chest"
+      },
+      {
+        "id": "2209",
+        "body_part": "chest"
+      },
+      {
+        "id": "2207",
+        "body_part": "back"
+      },
+      {
+        "id": "0680",
+        "body_part": "back"
+      },
+      {
+        "id": "0685",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0684",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1585",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0687",
+        "body_part": "waist"
+      },
+      {
+        "id": "3012",
+        "body_part": "back"
+      },
+      {
+        "id": "3021",
+        "body_part": "chest"
+      },
+      {
+        "id": "0688",
+        "body_part": "back"
+      },
+      {
+        "id": "3219",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1390",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1424",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0689",
+        "body_part": "waist"
+      },
+      {
+        "id": "0690",
+        "body_part": "back"
+      },
+      {
+        "id": "2567",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0691",
+        "body_part": "waist"
+      },
+      {
+        "id": "1587",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0697",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1766",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0696",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3222",
+        "body_part": "cardio"
+      },
+      {
+        "id": "3656",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1763",
+        "body_part": "back"
+      },
+      {
+        "id": "3699",
+        "body_part": "waist"
+      },
+      {
+        "id": "0699",
+        "body_part": "chest"
+      },
+      {
+        "id": "1774",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0705",
+        "body_part": "waist"
+      },
+      {
+        "id": "0709",
+        "body_part": "waist"
+      },
+      {
+        "id": "0710",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1358",
+        "body_part": "back"
+      },
+      {
+        "id": "3667",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1775",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0716",
+        "body_part": "neck"
+      },
+      {
+        "id": "0717",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0721",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0720",
+        "body_part": "back"
+      },
+      {
+        "id": "3213",
+        "body_part": "waist"
+      },
+      {
+        "id": "0725",
+        "body_part": "chest"
+      },
+      {
+        "id": "3645",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0727",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0730",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1759",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1489",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3679",
+        "body_part": "waist"
+      },
+      {
+        "id": "3361",
+        "body_part": "cardio"
+      },
+      {
+        "id": "2142",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3671",
+        "body_part": "cardio"
+      },
+      {
+        "id": "3304",
+        "body_part": "back"
+      },
+      {
+        "id": "1425",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0738",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1464",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1463",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0740",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1391",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0741",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0742",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0743",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2334",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0744",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1392",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1496",
+        "body_part": "waist"
+      },
+      {
+        "id": "0746",
+        "body_part": "back"
+      },
+      {
+        "id": "0747",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0748",
+        "body_part": "chest"
+      },
+      {
+        "id": "0749",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1359",
+        "body_part": "back"
+      },
+      {
+        "id": "0750",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0751",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0752",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0753",
+        "body_part": "chest"
+      },
+      {
+        "id": "0754",
+        "body_part": "chest"
+      },
+      {
+        "id": "1433",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3281",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0755",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0756",
+        "body_part": "waist"
+      },
+      {
+        "id": "0757",
+        "body_part": "chest"
+      },
+      {
+        "id": "0758",
+        "body_part": "chest"
+      },
+      {
+        "id": "0759",
+        "body_part": "chest"
+      },
+      {
+        "id": "0760",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1434",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1683",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1625",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1752",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1626",
+        "body_part": "chest"
+      },
+      {
+        "id": "0761",
+        "body_part": "back"
+      },
+      {
+        "id": "1360",
+        "body_part": "back"
+      },
+      {
+        "id": "1393",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0762",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0763",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1394",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1361",
+        "body_part": "back"
+      },
+      {
+        "id": "0764",
+        "body_part": "chest"
+      },
+      {
+        "id": "1395",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0765",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1426",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0766",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0767",
+        "body_part": "back"
+      },
+      {
+        "id": "0768",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0769",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0770",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0771",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0772",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0773",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0774",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3142",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1396",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "0775",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1308",
+        "body_part": "chest"
+      },
+      {
+        "id": "1309",
+        "body_part": "chest"
+      },
+      {
+        "id": "0776",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0777",
+        "body_part": "waist"
+      },
+      {
+        "id": "1362",
+        "body_part": "back"
+      },
+      {
+        "id": "0778",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1363",
+        "body_part": "back"
+      },
+      {
+        "id": "2329",
+        "body_part": "waist"
+      },
+      {
+        "id": "2368",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0786",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1705",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1685",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1686",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2297",
+        "body_part": "waist"
+      },
+      {
+        "id": "3291",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "3669",
+        "body_part": "back"
+      },
+      {
+        "id": "0788",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "1490",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1397",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1398",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1599",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0794",
+        "body_part": "back"
+      },
+      {
+        "id": "1364",
+        "body_part": "back"
+      },
+      {
+        "id": "0795",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0796",
+        "body_part": "waist"
+      },
+      {
+        "id": "3223",
+        "body_part": "cardio"
+      },
+      {
+        "id": "2138",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0798",
+        "body_part": "cardio"
+      },
+      {
+        "id": "3314",
+        "body_part": "waist"
+      },
+      {
+        "id": "3298",
+        "body_part": "waist"
+      },
+      {
+        "id": "1427",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0803",
+        "body_part": "chest"
+      },
+      {
+        "id": "0805",
+        "body_part": "waist"
+      },
+      {
+        "id": "0806",
+        "body_part": "chest"
+      },
+      {
+        "id": "0807",
+        "body_part": "waist"
+      },
+      {
+        "id": "0808",
+        "body_part": "back"
+      },
+      {
+        "id": "0809",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3433",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3318",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1753",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2459",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0811",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0814",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0812",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0813",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0815",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0816",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0817",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0871",
+        "body_part": "waist"
+      },
+      {
+        "id": "0818",
+        "body_part": "back"
+      },
+      {
+        "id": "1466",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "2802",
+        "body_part": "waist"
+      },
+      {
+        "id": "2801",
+        "body_part": "waist"
+      },
+      {
+        "id": "3231",
+        "body_part": "back"
+      },
+      {
+        "id": "1365",
+        "body_part": "back"
+      },
+      {
+        "id": "1366",
+        "body_part": "back"
+      },
+      {
+        "id": "3420",
+        "body_part": "waist"
+      },
+      {
+        "id": "0826",
+        "body_part": "waist"
+      },
+      {
+        "id": "2141",
+        "body_part": "cardio"
+      },
+      {
+        "id": "3655",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1460",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3666",
+        "body_part": "cardio"
+      },
+      {
+        "id": "2311",
+        "body_part": "cardio"
+      },
+      {
+        "id": "0830",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "2987",
+        "body_part": "back"
+      },
+      {
+        "id": "3643",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0832",
+        "body_part": "waist"
+      },
+      {
+        "id": "3670",
+        "body_part": "waist"
+      },
+      {
+        "id": "0833",
+        "body_part": "lower legs"
+      },
+      {
+        "id": "1310",
+        "body_part": "chest"
+      },
+      {
+        "id": "0834",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0866",
+        "body_part": "waist"
+      },
+      {
+        "id": "0835",
+        "body_part": "back"
+      },
+      {
+        "id": "3641",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "3644",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "3286",
+        "body_part": "back"
+      },
+      {
+        "id": "3312",
+        "body_part": "back"
+      },
+      {
+        "id": "3290",
+        "body_part": "back"
+      },
+      {
+        "id": "0840",
+        "body_part": "waist"
+      },
+      {
+        "id": "0841",
+        "body_part": "back"
+      },
+      {
+        "id": "0844",
+        "body_part": "shoulders"
+      },
+      {
+        "id": "0846",
+        "body_part": "waist"
+      },
+      {
+        "id": "0845",
+        "body_part": "waist"
+      },
+      {
+        "id": "2371",
+        "body_part": "waist"
+      },
+      {
+        "id": "0847",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0849",
+        "body_part": "waist"
+      },
+      {
+        "id": "0850",
+        "body_part": "waist"
+      },
+      {
+        "id": "0851",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0852",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0853",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0854",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "3313",
+        "body_part": "chest"
+      },
+      {
+        "id": "3642",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "0856",
+        "body_part": "chest"
+      },
+      {
+        "id": "1754",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1755",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "1767",
+        "body_part": "upper arms"
+      },
+      {
+        "id": "0857",
+        "body_part": "waist"
+      },
+      {
+        "id": "3637",
+        "body_part": "cardio"
+      },
+      {
+        "id": "1429",
+        "body_part": "back"
+      },
+      {
+        "id": "1367",
+        "body_part": "back"
+      },
+      {
+        "id": "1311",
+        "body_part": "chest"
+      },
+      {
+        "id": "2363",
+        "body_part": "chest"
+      },
+      {
+        "id": "0858",
+        "body_part": "waist"
+      },
+      {
+        "id": "1604",
+        "body_part": "upper legs"
+      },
+      {
+        "id": "1428",
+        "body_part": "lower arms"
+      },
+      {
+        "id": "0859",
+        "body_part": "lower arms"
+      }
+    ]
+  }
+}

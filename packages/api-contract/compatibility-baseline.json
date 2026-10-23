@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "snapshots": [
+    {
+      "id": "supported-2.0.0-20261019",
+      "version": "2.0.0",
+      "status": "supported",
+      "path": "packages/api-contract/compatibility-baseline.openapi.json",
+      "sha256": "7ed70f54005e270f36c619f64fe1c77c8a24057e356f6324e48edb65cdd6fa05",
+      "review": "用户明确授权客户端、服务端、接口和数据库同步彻底退役不计入统计功能，并授权按客户端分类删除规则彻底移除保留交易为未分类的删除模式，无兼容分支。2.0.0 为本次尚未发布的统一支持契约，终止旧字段、统计过滤参数和 uncategorize 删除模式的支持承诺；HTTP /api/v1 路径保持，快照不表示已生产发布。 用户明确授权只支持当前统一协议：分类归属能力协商头及旧客户端回退退役，快照 category_tombstones 必填，账号完整快照删除无归属的 deleted_category_ids 重复镜像；保留按授权账本和所有者隔离的当前分类语义。"
+    }
+  ]
+}

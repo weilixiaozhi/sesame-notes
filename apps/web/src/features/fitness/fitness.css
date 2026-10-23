@@ -1,0 +1,854 @@
+.fitness-page {
+  display: grid;
+  gap: 20px;
+}
+.fitness-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  gap: 24px;
+  overflow-x: auto;
+}
+.fitness-tabs button {
+  color: var(--text-secondary);
+  border: 0;
+  background: none;
+  padding: 12px 2px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.fitness-tabs button[aria-current='page'] {
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+.fitness-content,
+.fitness-form {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.fitness-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.fitness-section-heading h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.fitness-section-heading p,
+.fitness-template-card p {
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.65;
+  font-size: 14px;
+}
+.fitness-workout-list {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.fitness-workout-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto 18px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.fitness-workout-row:last-child {
+  border-bottom: 0;
+}
+.fitness-workout-row-text {
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+}
+.fitness-rest-row {
+  grid-template-columns: 40px minmax(0, 1fr);
+  cursor: default;
+}
+.fitness-workout-row:hover,
+.fitness-template-card:is(button):hover {
+  background: var(--surface-secondary);
+}
+.fitness-row-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: var(--surface-secondary);
+  color: var(--primary);
+}
+.fitness-row-main {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.fitness-row-main strong {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+.fitness-row-main > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.fitness-status {
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+.fitness-status-in_progress {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.fitness-status-completed {
+  color: var(--text);
+}
+.fitness-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
+}
+.fitness-template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  text-align: left;
+  padding: 18px;
+  color: var(--text);
+  min-width: 0;
+}
+button.fitness-template-card {
+  cursor: pointer;
+}
+.fitness-template-card h3 {
+  margin: 0;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.fitness-card-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 13px;
+  color: var(--primary);
+}
+.fitness-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.fitness-tag {
+  color: var(--primary);
+  font-size: 12px;
+  padding: 4px 8px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-radius: 4px;
+}
+.fitness-help {
+  width: 100%;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.fitness-help > summary {
+  width: fit-content;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.fitness-help > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.fitness-help > p {
+  margin: 8px 0 0;
+}
+.fitness-help > .fitness-plan-outline {
+  margin-top: 8px;
+}
+.fitness-exercise-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-3);
+}
+.fitness-personal-template-card {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 6px 12px;
+  align-items: center;
+}
+.fitness-personal-template-card > .fitness-row-icon {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: 36px;
+  height: 36px;
+}
+.fitness-personal-template-card > :not(.fitness-row-icon) {
+  grid-column: 2;
+}
+.fitness-exercise-card h3,
+.fitness-personal-template-card h3 {
+  font-size: 15px;
+}
+.fitness-exercise-card p {
+  font-size: var(--text-xs);
+}
+.fitness-exercise-card {
+  display: grid;
+  grid-template-columns: calc(var(--space-6) * 4) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+}
+.fitness-exercise-card > :not(.fitness-exercise-thumbnail) {
+  grid-column: 2;
+  min-width: 0;
+}
+.fitness-exercise-card h3 {
+  align-self: end;
+}
+.fitness-exercise-card h3 > svg {
+  display: inline;
+  margin-right: var(--space-1);
+  color: var(--primary);
+}
+.fitness-exercise-card p {
+  align-self: start;
+}
+.fitness-exercise-thumbnail {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  width: calc(var(--space-6) * 4);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-secondary);
+}
+.fitness-exercise-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.fitness-exercise-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  color: var(--muted);
+}
+.fitness-exercise-placeholder small {
+  font-size: var(--text-xs);
+}
+.fitness-subheading {
+  margin: 12px 0 0;
+  font-size: 18px;
+}
+.fitness-info {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--primary);
+  border-radius: 4px;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.fitness-muted {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 0;
+}
+.fitness-notice {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--primary);
+  padding: 12px 16px;
+  background: var(--surface-secondary);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.fitness-notice > span {
+  flex: 1;
+}
+.fitness-notice > button {
+  color: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+}
+.fitness-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.fitness-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.fitness-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.fitness-row h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.fitness-editor-exercises {
+  display: grid;
+  gap: 20px;
+}
+.fitness-exercise-edit {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.fitness-set-edit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  border: 0;
+  padding: 12px 0;
+  margin: 0;
+  border-top: 1px solid var(--border);
+}
+.fitness-set-edit legend {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding-right: 8px;
+}
+.fitness-check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.fitness-check input {
+  width: auto;
+}
+.fitness-add-exercise {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+}
+.fitness-add-exercise > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.fitness-detail-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.fitness-detail-metrics strong {
+  color: var(--text);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.fitness-exercise-list {
+  display: grid;
+  gap: 20px;
+}
+.fitness-exercise-list h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+.fitness-sets-view {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.fitness-sets-view > div {
+  display: grid;
+  grid-template-columns: 65px 1fr 65px 16px;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.fitness-sets-view > div:first-child {
+  border-top: 0;
+}
+.fitness-sets-view > div > span:nth-child(2) {
+  overflow-wrap: anywhere;
+}
+.fitness-official-exercises {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.fitness-official-exercises li {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  background: var(--surface-secondary);
+  border-radius: 8px;
+}
+.fitness-official-exercises li strong {
+  font-size: 14px;
+}
+.fitness-official-exercises li span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.fitness-plan-day {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.fitness-plan-day > h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.fitness-plan-outline {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.fitness-load-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+@media (max-width: 640px) {
+  .fitness-page {
+    gap: 16px;
+  }
+  .fitness-tabs {
+    gap: 20px;
+  }
+  .fitness-section-heading {
+    align-items: start;
+  }
+  .fitness-section-heading p {
+    font-size: 12px;
+  }
+  .fitness-workout-row {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    padding: 12px;
+    gap: 8px;
+  }
+  .fitness-workout-row > svg {
+    display: none;
+  }
+  .fitness-workout-row-text {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .fitness-rest-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+  .fitness-row-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .fitness-row-main > span {
+    overflow-wrap: anywhere;
+  }
+  .fitness-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .fitness-template-card {
+    padding: 16px;
+  }
+  .fitness-exercise-edit {
+    padding: 12px;
+  }
+  .fitness-sets-view > div {
+    grid-template-columns: 48px 1fr 42px 16px;
+    font-size: 12px;
+  }
+}
+.fitness-inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fitness-search-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto;
+  gap: 12px;
+  align-items: end;
+}
+.fitness-search-bar > :first-child {
+  min-width: 0;
+}
+.fitness-search-bar > .fitness-check {
+  min-height: 40px;
+}
+.fitness-search-input {
+  position: relative;
+}
+.fitness-search-input > svg {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  color: var(--text-secondary);
+}
+.fitness-search-input > input {
+  padding-left: 38px;
+}
+.fitness-exercise-image {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--surface-secondary);
+  margin: auto;
+}
+.fitness-instructions {
+  margin: 0;
+  padding-left: 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.9;
+}
+.fitness-instructions li {
+  padding-bottom: 8px;
+}
+.fitness-rest-control {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface-secondary);
+  border-radius: 12px;
+}
+.fitness-rest-control h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.fitness-countdown {
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  color: var(--primary);
+}
+.fitness-period-tabs,
+.fitness-date-navigation {
+  align-items: center;
+  gap: 8px;
+}
+.fitness-date-navigation {
+  align-items: end;
+}
+.fitness-stat-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.fitness-stat-cards article {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.fitness-stat-cards article > svg {
+  color: var(--primary);
+}
+.fitness-stat-cards article > span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.fitness-stat-cards strong {
+  font-size: 25px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.fitness-stat-cards small {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+.fitness-analytics-card {
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+}
+.fitness-analytics-card > h3 {
+  margin-top: 0;
+}
+.fitness-duration-chart svg {
+  width: 100%;
+  max-height: 280px;
+}
+.fitness-duration-chart text {
+  font-size: 11px;
+  fill: var(--text-secondary);
+}
+.fitness-duration-chart summary {
+  cursor: pointer;
+  color: var(--primary);
+  margin: 12px 0;
+}
+.fitness-stats-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.fitness-stats-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.fitness-stats-table th,
+.fitness-stats-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.fitness-anatomy-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 0.75fr);
+  gap: 20px;
+  align-items: center;
+}
+.fitness-body-map {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+.fitness-body-map figure {
+  margin: 0;
+  flex: 1;
+  max-width: 200px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.fitness-body-map svg {
+  width: 100%;
+}
+.fitness-body-outline {
+  fill: var(--surface-secondary);
+  stroke: var(--border);
+  stroke-width: 0.6;
+}
+.fitness-body-map g[role='button'] {
+  cursor: pointer;
+}
+.fitness-body-map g[role='button']:is(:focus, .is-selected) > g {
+  stroke: var(--primary);
+  stroke-width: 1.4;
+}
+.fitness-part-list {
+  display: grid;
+  gap: 8px;
+}
+.fitness-part-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+}
+.fitness-part-list button[aria-pressed='true'] {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+}
+.fitness-stat-exercises {
+  display: grid;
+  margin-top: 24px;
+}
+.fitness-stat-exercises > div {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.fitness-stat-exercises > div > span:nth-child(2) {
+  color: var(--text-secondary);
+}
+.fitness-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.fitness-calendar-weekday {
+  padding: 12px 4px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.fitness-calendar-day {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  min-height: 104px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 12px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.fitness-calendar-day.is-outside {
+  color: var(--text-secondary);
+  background: var(--background);
+}
+.fitness-calendar-day[aria-current='date'] > span {
+  color: var(--primary);
+  font-weight: 700;
+}
+.fitness-calendar-day[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px var(--primary);
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+}
+.fitness-calendar-marks {
+  display: grid;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--primary);
+}
+.fitness-rest-mark {
+  color: var(--text-secondary);
+}
+.fitness-history-rest {
+  grid-column: 1/-1;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+@media (max-width: 640px) {
+  .fitness-search-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .fitness-search-bar > :first-child {
+    grid-column: 1 / -1;
+  }
+  .fitness-stat-cards {
+    gap: 8px;
+  }
+  .fitness-stat-cards article {
+    padding: 12px;
+    gap: 8px;
+  }
+  .fitness-stat-cards strong {
+    font-size: 17px;
+  }
+  .fitness-analytics-card {
+    padding: 16px;
+  }
+  .fitness-anatomy-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .fitness-part-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fitness-part-list button {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .fitness-stat-exercises > div {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  .fitness-stat-exercises > div > span:nth-child(2) {
+    grid-row: 2;
+  }
+  .fitness-calendar-day {
+    padding: 8px 4px;
+    min-height: 80px;
+    gap: 8px;
+  }
+  .fitness-calendar-marks {
+    font-size: 10px;
+  }
+}
+.fitness-date-navigation {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px auto;
+  max-width: 460px;
+  width: 100%;
+}
+.fitness-date-navigation input {
+  min-width: 0;
+  width: 100%;
+}
+.fitness-period-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .fitness-analytics-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .fitness-period-tabs > button {
+    flex: 1;
+  }
+  .fitness-duration-chart text {
+    font-size: 24px;
+  }
+}

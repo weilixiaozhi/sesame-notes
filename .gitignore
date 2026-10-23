@@ -1,0 +1,95 @@
+# ============================================================
+# sesame-notes 项目 .gitignore
+# 规则按类别分组，便于维护与排查。
+# 注意：git 的 .gitignore 不支持行内注释，所有说明均独占一行。
+# ============================================================
+
+# ---------- 1. 操作系统 / 通用杂项 ----------
+# 各操作系统、编辑器、构建工具产生的临时与缓存文件，与项目代码无关
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.bak
+*.orig
+*.log
+
+# ---------- 2. IDE / AI 编程助手 ----------
+# 本地 IDE 配置与 AI 工具工作目录：含本机路径与对话上下文，不应入库
+.idea/
+*.iml
+*.ipr
+*.iws
+.ai/*
+.claude/
+.vscode/
+
+# ---------- 3. Node / pnpm monorepo ----------
+# 依赖与工具链缓存，均可由 pnpm install 重新生成
+node_modules/
+**/node_modules/
+.turbo/
+.next/
+*.tsbuildinfo
+.pnpm-store/
+
+# ---------- 4. 构建 / 测试产物 ----------
+# 各包构建产物与覆盖率报告，均可由构建 / 测试命令重新生成
+dist/
+**/dist/
+build/
+coverage/
+.eslintcache
+.prettiercache
+playwright-report/
+test-results/
+Temp/
+
+# ---------- 5. Secrets / 环境变量 ----------
+# 含数据库密码、JWT 密钥等敏感信息，任何情况下不得入库
+# 例外：显式 test/prod 示例可入库；真实 .env / .env.prod 仍然忽略
+.env
+.env.local
+.env.*
+!.env.example
+!.env.test.example
+!.env.prod.example
+# 私钥及签名容器可能含部署凭据；公共证书和证书链仍可按需入库。
+*.key
+*.p12
+*.pfx
+*.p8
+*privkey*.pem
+*private*.pem
+*-key.pem
+*_key.pem
+*.key.pem
+id_rsa
+id_ed25519
+
+# ---------- 6. 数据库 / 运行时数据 ----------
+# data/ 为头像等运行时文件目录；本地数据、测试存储和部署状态不入库。
+data/
+!/data/
+/data/*
+# 只公开共同目录的版本化输入和说明，其余运行时数据继续忽略。
+!/data/catalogs/
+/data/catalogs/*
+!/data/catalogs/mobile-catalogs.v1.json
+!/data/catalogs/README.md
+.e2e-storage/
+.openapi-storage/
+.test-storage/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+# 数据库转储与应用备份包含用户数据，不能随源码发布。
+*.dump
+*.sql.gz
+*.snbak

@@ -1,0 +1,167 @@
+.transaction-editor-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  gap: var(--space-6);
+}
+
+.transaction-editor-amount-surface {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(152px, 0.8fr);
+  gap: var(--space-4) var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.transaction-editor-amount,
+.transaction-editor-currency {
+  min-width: 0;
+}
+
+.transaction-editor-amount .field-label,
+.transaction-editor-currency .field-label {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.transaction-editor-amount input {
+  min-height: 62px;
+  padding: var(--space-1) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+
+.transaction-editor-amount input::placeholder {
+  color: var(--muted);
+  font-size: var(--text-lg);
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.transaction-editor-currency .currency-picker-trigger {
+  min-height: 44px;
+  margin-top: var(--space-3);
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.transaction-editor-currency .currency-picker-trigger > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.transaction-editor-full-amount {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  min-width: 0;
+}
+
+.transaction-editor-full-amount span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.transaction-editor-full-amount strong {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.transaction-editor-conversion {
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.transaction-editor-conversion .button {
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: left;
+  font-size: var(--text-xs);
+}
+
+.transaction-editor-aa {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.transaction-editor-aa summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.transaction-editor-aa details[open] summary {
+  margin-bottom: var(--space-4);
+  color: var(--text);
+}
+
+.transaction-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.transaction-editor-actions .button-primary {
+  min-width: 132px;
+}
+
+@media (max-width: 760px) {
+  .transaction-editor-dialog .dialog-body {
+    background: var(--surface);
+  }
+
+  .transaction-editor-fields {
+    gap: var(--space-5);
+  }
+
+  .transaction-editor-amount-surface {
+    grid-template-columns: minmax(0, 1fr) minmax(100px, 0.75fr);
+    gap: var(--space-3);
+  }
+
+  .transaction-editor-amount input {
+    min-height: 60px;
+    font-size: 34px;
+  }
+
+  .transaction-editor-dialog .dialog-heading {
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top));
+    padding-bottom: var(--space-2);
+  }
+
+  .transaction-editor-dialog .dialog-heading h2 {
+    font-size: var(--text-lg);
+  }
+
+  .transaction-editor-currency .currency-picker-trigger {
+    margin-top: 0;
+  }
+
+  .transaction-editor-actions .button {
+    min-height: 48px;
+  }
+
+  .transaction-editor-actions .button-primary {
+    flex: 1;
+  }
+}

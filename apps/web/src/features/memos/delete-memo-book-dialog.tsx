@@ -1,0 +1,127 @@
+import { useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { unwrap } from '@sesame-notes/api-client';
+import { api, pushChange, useSession } from '../../lib/session';
+import { useDraftClose } from '../../components/use-draft-close';
+import { Button, Dialog, ErrorState, Field, LoadingState } from '../../components/ui';
+import type { MemoBook } from './memo-content';
+
+/** 仅在用户确认名称后提交整本删除；固定快照游标保护其他设备的新修改。 */
+export function DeleteMemoBookDialog({
+  book,
+  onClose,
+  onDeleted,
+}: {
+  book: MemoBook;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const { session } = useSession();
+  const queryClient = useQueryClient();
+  const writing = useRef(false);
+  const [confirmationName, setConfirmationName] = useState('');
+  const snapshot = useQuery({
+    queryKey: ['account', session!.user.user_id, 'memo-delete-snapshot', book.id],
+    enabled: () => !writing.current,
+    gcTime: 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async ({ signal }) =>
+      unwrap(
+        await api.GET('/api/v1/sync/memo-books/full', {
+          signal,
+          params: { query: { memo_book_id: book.id, sync_id: book.sync_id } },
+        }),
+      ),
+  });
+  const attempt = useRef({ cursor: '', mutationId: crypto.randomUUID(), updatedAt: new Date().toISOString() });
+  const remove = useMutation({
+    mutationFn: async () => {
+      const data = snapshot.data;
+      if (!data || confirmationName !== data.memo_book.name) throw new Error('请填写本子完整名称以确认删除');
+      if (attempt.current.cursor !== data.server_cursor)
+        attempt.current = {
+          cursor: data.server_cursor,
+          mutationId: crypto.randomUUID(),
+          updatedAt: new Date().toISOString(),
+        };
+      writing.current = true;
+      await queryClient.cancelQueries({
+        queryKey: ['account', session!.user.user_id, 'memo-delete-snapshot', book.id],
+      });
+      try {
+        await pushChange({
+          mutation_id: attempt.current.mutationId,
+          entity_type: 'memo_book',
+          entity_id: book.id,
+          ledger_id: null,
+          day_book_id: null,
+          memo_book_id: book.id,
+          sync_id: data.memo_book.sync_id,
+          base_revision: data.memo_book.revision,
+          updated_at: attempt.current.updatedAt,
+          action: 'delete',
+          payload: { expected_full_cursor: data.server_cursor },
+        });
+      } catch (error) {
+        writing.current = false;
+        throw error;
+      }
+    },
+  });
+  const { close, confirmation, finish } = useDraftClose(false, remove.isPending, onClose);
+  return (
+    <Dialog
+      open
+      title="删除整个备忘录本？"
+      onClose={close}
+      description="本内所有内容都会从云端删除，并同步到其他设备。请仔细确认。"
+    >
+      {snapshot.isPending ? (
+        <LoadingState label="正在核对整本最新内容…" />
+      ) : snapshot.isError ? (
+        <ErrorState
+          error={snapshot.error}
+          retry={() => {
+            void snapshot.refetch();
+          }}
+        />
+      ) : (
+        <div className="stack">
+          <p>
+            “{snapshot.data.memo_book.name}”中共有 <strong>{snapshot.data.memo_entries.length}</strong> 条备忘录。
+          </p>
+          <Field label="输入本子完整名称以确认">
+            <input
+              value={confirmationName}
+              autoComplete="off"
+              disabled={remove.isPending}
+              onChange={(event) => setConfirmationName(event.target.value)}
+            />
+          </Field>
+          {remove.isError && (
+            <ErrorState
+              error={remove.error}
+              retry={() => {
+                setConfirmationName('');
+                remove.reset();
+                void snapshot.refetch();
+              }}
+            />
+          )}
+          <div className="dialog-actions">
+            <Button
+              variant="danger"
+              disabled={remove.isPending || snapshot.isFetching || confirmationName !== snapshot.data.memo_book.name}
+              onClick={() => remove.mutate(undefined, { onSuccess: () => finish(onDeleted) })}
+            >
+              {remove.isPending ? '删除中…' : '删除整个本子'}
+            </Button>
+          </div>
+        </div>
+      )}
+      {confirmation}
+    </Dialog>
+  );
+}

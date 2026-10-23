@@ -1,0 +1,87 @@
+# ============================================================
+# sesame-notes 项目 .dockerignore
+# 仅忽略「构建上下文」中无需进入镜像的文件，可显著减小构建上下文、
+# 加速 docker build 的 context 传输。
+# 注意：不可忽略 Dockerfile 实际 COPY 的内容
+#       （package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json
+#         apps/ packages/ 等），否则构建会失败。
+# ============================================================
+
+# ---------- 1. 版本控制 / CI / IDE / AI 工具 ----------
+.git
+.gitignore
+.gitattributes
+.github/
+.idea/
+.vscode/
+.ai/*
+.claude/
+*.iml
+
+# ---------- 2. 环境变量 / Secrets ----------
+# 运行时配置由 docker compose env / docker run -e 注入，无需打进镜像
+.env
+.env.local
+.env.*
+.env.example
+# 私钥、签名容器和 SSH 私钥不进入镜像构建上下文。
+*.key
+*.p12
+*.pfx
+*.p8
+*privkey*.pem
+*private*.pem
+*-key.pem
+*_key.pem
+*.key.pem
+id_rsa
+id_ed25519
+
+# ---------- 3. 本地开发数据（勿打进镜像） ----------
+# 容器内持久化数据统一走 volume（/data），本地 data/ 不打包
+data/
+.e2e-storage/
+.openapi-storage/
+.test-storage/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.dump
+*.sql.gz
+*.snbak
+
+# ---------- 4. 依赖与构建产物 ----------
+# 依赖在 Dockerfile build 阶段由 pnpm install 重装，
+# 构建产物（dist）由 tsc 重新生成，均无需进 context
+**/node_modules
+**/dist
+**/.turbo
+**/.next
+*.tsbuildinfo
+.pnpm-store/
+
+# ---------- 5. 测试 / 覆盖率 / 质量配置 ----------
+# 构建类型检查需要完整测试源码及初始化类型声明；仅排除报告和本地质量配置。
+coverage/
+.prettierignore
+eslint.config.js
+
+# ---------- 6. 文档 / 日志 / 临时 / 系统杂项 ----------
+docs/
+Temp/
+*.md
+# 上游授权声明原文随镜像与网页产物发布。
+!third_party/exercises-dataset/NOTICE.md
+**/*.log
+*.tmp
+*.bak
+*.orig
+*.swp
+*.swo
+Thumbs.db
+.DS_Store

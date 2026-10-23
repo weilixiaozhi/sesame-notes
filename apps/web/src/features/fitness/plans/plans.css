@@ -1,0 +1,94 @@
+.fitness-plan-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+}
+.plan-card-heading {
+  width: 100%;
+}
+.plan-card-actions {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: auto;
+}
+.plan-card-primary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.plan-card-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.plan-card-delete {
+  margin-left: auto;
+}
+.plan-cycle-control {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+.plan-cycle-control > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.plan-days-editor {
+  display: grid;
+  gap: 12px;
+}
+.plan-day-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.plan-day-order {
+  display: flex;
+  gap: 2px;
+  padding-bottom: 4px;
+}
+.plan-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.plan-history {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.plan-history li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px;
+  background: var(--surface-secondary);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.plan-history strong {
+  color: var(--text);
+}
+@media (max-width: 480px) {
+  .plan-day-row {
+    padding: 10px;
+  }
+  .plan-day-order {
+    flex-direction: column;
+    padding: 0;
+  }
+  .plan-day-order button {
+    min-height: 32px;
+    padding: 5px;
+  }
+}

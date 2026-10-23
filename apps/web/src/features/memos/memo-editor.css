@@ -1,0 +1,5 @@
+/* Quill 标题选项保留原本层级大小，使用中文语义标签。 */
+.memo-editor .ql-snow .ql-picker.ql-header .ql-picker-label::before,
+.memo-editor .ql-snow .ql-picker.ql-header .ql-picker-item::before {
+  content: attr(data-label);
+}

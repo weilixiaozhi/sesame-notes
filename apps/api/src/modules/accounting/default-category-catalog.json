@@ -1,0 +1,630 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "file": "lib/utils/default_category_keys.dart",
+      "sha256": "fafbc6a82f169b6e8745096dfcc3e1d90fc66db7e9a0641eb4b52c4736d2960a"
+    },
+    {
+      "file": "lib/shared/services/seed_service.dart",
+      "sha256": "8afdf41260753a15a84365fbd8ec137d0b790b45ecd5e9dff22f9ef5a4fc9940"
+    },
+    { "file": "lib/l10n/app_zh.arb", "sha256": "f670162181660609740ebe2dafc155828802e54ebd1983835f60a32528cda611" },
+    {
+      "file": "lib/utils/default_category_ids.dart",
+      "sha256": "f8f6619b39f40602abe199cbd92d9ed4d96515e59bd72389b6ccf1f8d9a2578d"
+    }
+  ],
+  "items": [
+    {
+      "key": "dining",
+      "id": "ffec6471-df8b-5bb3-8a05-93ef863ca958",
+      "name": "餐饮",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 0,
+      "parent_id": null,
+      "icon": "utensils"
+    },
+    {
+      "key": "dining_breakfast",
+      "id": "02d2cbc5-0298-5dea-ae85-f4616e0eafc2",
+      "name": "早餐",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "ffec6471-df8b-5bb3-8a05-93ef863ca958",
+      "icon": "sandwich"
+    },
+    {
+      "key": "dining_lunch",
+      "id": "8e557f0c-e127-5aac-9a9b-ef70559d6b19",
+      "name": "午餐",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "ffec6471-df8b-5bb3-8a05-93ef863ca958",
+      "icon": "salad"
+    },
+    {
+      "key": "dining_dinner",
+      "id": "b2ace52b-5dad-5b9e-bf52-6148ee1980da",
+      "name": "晚餐",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "ffec6471-df8b-5bb3-8a05-93ef863ca958",
+      "icon": "soup"
+    },
+    {
+      "key": "beverage",
+      "id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+      "name": "饮料",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 1,
+      "parent_id": null,
+      "icon": "milk"
+    },
+    {
+      "key": "beverage_milk_tea",
+      "id": "43c5651e-c2b4-56ad-98d1-727d81cec8ac",
+      "name": "奶茶",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+      "icon": "cupSoda"
+    },
+    {
+      "key": "beverage_coffee",
+      "id": "fff1a2a4-b5d7-551b-aef1-a0482938eec4",
+      "name": "咖啡",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+      "icon": "coffee"
+    },
+    {
+      "key": "beverage_juice",
+      "id": "a82f3dbc-18e4-5e00-8ff9-60ed35e6cd98",
+      "name": "果汁",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+      "icon": "glassWater"
+    },
+    {
+      "key": "beverage_soda",
+      "id": "8970a7b9-bf96-55e0-8fe6-3cd483598d65",
+      "name": "汽水",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 3,
+      "parent_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+      "icon": "beer"
+    },
+    {
+      "key": "beverage_water",
+      "id": "6319dc3d-095a-50a2-ab12-fb099d2d0f31",
+      "name": "矿泉水",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 4,
+      "parent_id": "5df946e0-5d7b-5cc0-aab9-ea20316f5f93",
+      "icon": "glassWater"
+    },
+    {
+      "key": "shopping",
+      "id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+      "name": "购物",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 2,
+      "parent_id": null,
+      "icon": "shoppingCart"
+    },
+    {
+      "key": "shopping_supermarket",
+      "id": "96f9ca91-8ad3-5ec8-b40a-5a7ef7404d14",
+      "name": "超市",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+      "icon": "shoppingCart"
+    },
+    {
+      "key": "shopping_clothing",
+      "id": "3846fffd-dc18-566e-86dc-b649016e7cec",
+      "name": "服装",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+      "icon": "shirt"
+    },
+    {
+      "key": "shopping_shoes",
+      "id": "15be13f4-9478-5f67-a9d5-883568ca5d46",
+      "name": "鞋子",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+      "icon": "footprints"
+    },
+    {
+      "key": "shopping_bag",
+      "id": "59f9abfd-7a38-5297-9b5c-cf4ea6ed538b",
+      "name": "包包",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 3,
+      "parent_id": "ec29a35c-4562-5954-b5d2-60f4625d5f99",
+      "icon": "shoppingBag"
+    },
+    {
+      "key": "transport",
+      "id": "512859af-c24d-5b60-a237-b7d974eaffec",
+      "name": "交通",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 3,
+      "parent_id": null,
+      "icon": "bus"
+    },
+    {
+      "key": "transport_transitcard",
+      "id": "21fdf6cc-8b18-57d3-81ff-e0e6d37b943a",
+      "name": "交通卡充值",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "512859af-c24d-5b60-a237-b7d974eaffec",
+      "icon": "walletCards"
+    },
+    {
+      "key": "transport_taxi",
+      "id": "4a5c221a-b79b-5acf-8450-fb2dbfc7b179",
+      "name": "打车",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "512859af-c24d-5b60-a237-b7d974eaffec",
+      "icon": "car"
+    },
+    {
+      "key": "transport_parking",
+      "id": "296afb83-2957-5e69-b600-c07888dd81ee",
+      "name": "停车费",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "512859af-c24d-5b60-a237-b7d974eaffec",
+      "icon": "parkingCircle"
+    },
+    {
+      "key": "transport_fuel",
+      "id": "b52bf0f1-4ee6-59b2-8f48-fe83418ef49f",
+      "name": "加油",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 3,
+      "parent_id": "512859af-c24d-5b60-a237-b7d974eaffec",
+      "icon": "fuel"
+    },
+    {
+      "key": "communication",
+      "id": "0938ad4a-b8d5-5cf2-b3a8-763ce9d7f4c4",
+      "name": "通讯",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 4,
+      "parent_id": null,
+      "icon": "phone"
+    },
+    {
+      "key": "fruit",
+      "id": "a9ba1d1c-1307-5189-95d6-caa0dacd7d7b",
+      "name": "水果",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 5,
+      "parent_id": null,
+      "icon": "apple"
+    },
+    {
+      "key": "snacks",
+      "id": "92937ddc-e454-5e91-953a-0af335d9d469",
+      "name": "零食",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 6,
+      "parent_id": null,
+      "icon": "lollipop"
+    },
+    {
+      "key": "sports",
+      "id": "a13cf817-17d8-5733-8af7-fa4ec1fa362b",
+      "name": "运动",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 7,
+      "parent_id": null,
+      "icon": "dumbbell"
+    },
+    {
+      "key": "pets",
+      "id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+      "name": "宠物",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 8,
+      "parent_id": null,
+      "icon": "dog"
+    },
+    {
+      "key": "pets_food",
+      "id": "6c5151de-257f-5e9f-abb7-338b78e1cef6",
+      "name": "宠物食品",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+      "icon": "bone"
+    },
+    {
+      "key": "pets_supplies",
+      "id": "fd9bf2d3-6317-52b8-94df-cfa2a066f93e",
+      "name": "宠物用品",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+      "icon": "boxes"
+    },
+    {
+      "key": "pets_medical",
+      "id": "23edba07-53f6-5fef-9a67-d9b894861794",
+      "name": "宠物医疗",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+      "icon": "stethoscope"
+    },
+    {
+      "key": "pets_grooming",
+      "id": "585caae6-2c4d-5156-8a16-a2380f204fc6",
+      "name": "宠物美容",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 3,
+      "parent_id": "05eef9fa-3c64-5bd7-9048-c0a97f0fcd41",
+      "icon": "showerHead"
+    },
+    {
+      "key": "housing",
+      "id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+      "name": "住房",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 9,
+      "parent_id": null,
+      "icon": "building2"
+    },
+    {
+      "key": "housing_utilities",
+      "id": "400c5326-ba62-5dfd-bea3-c53a4ce4cb7b",
+      "name": "水电煤",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+      "icon": "zap"
+    },
+    {
+      "key": "housing_property",
+      "id": "2fbbc1ac-b6ef-57cd-9031-1399706be5b9",
+      "name": "物业费",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+      "icon": "building"
+    },
+    {
+      "key": "housing_rent",
+      "id": "67d2d94d-0726-5152-aa34-0ded96348f44",
+      "name": "房租",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+      "icon": "key"
+    },
+    {
+      "key": "housing_mortgage",
+      "id": "5c7207af-c09d-5a7d-9af2-d05a7f2a6cf1",
+      "name": "房贷",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 3,
+      "parent_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+      "icon": "landmark"
+    },
+    {
+      "key": "housing_broadband",
+      "id": "9f511b4b-ae97-5ff9-9b31-d769692a90e3",
+      "name": "宽带",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 4,
+      "parent_id": "da377fd1-ecfc-5913-8819-65b13a84925b",
+      "icon": "wifi"
+    },
+    {
+      "key": "transfer",
+      "id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+      "name": "转账",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 10,
+      "parent_id": null,
+      "icon": "handCoins"
+    },
+    {
+      "key": "transfer_livingcost",
+      "id": "9a2c4726-13fc-5cfe-9f86-2e63d2803bad",
+      "name": "生活费",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+      "icon": "heartHandshake"
+    },
+    {
+      "key": "transfer_family",
+      "id": "2d171f77-4caa-58cf-a887-aeab8172b5ed",
+      "name": "家庭",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+      "icon": "users"
+    },
+    {
+      "key": "transfer_parents",
+      "id": "59f0772c-cf83-5de5-9802-c0c0ab88ed38",
+      "name": "父母",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+      "icon": "users2"
+    },
+    {
+      "key": "transfer_lover",
+      "id": "4741981e-e87c-547e-8b9a-eff97c889fd1",
+      "name": "恋人",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 3,
+      "parent_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+      "icon": "heart"
+    },
+    {
+      "key": "transfer_borrowmoney",
+      "id": "25fb86ba-cd2f-5507-a0e1-d8cec501fd00",
+      "name": "借钱",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 4,
+      "parent_id": "1249a4d4-43d7-50a7-b5e1-f701e9df68b1",
+      "icon": "coins"
+    },
+    {
+      "key": "subscription",
+      "id": "961e3602-ad43-5c82-af2f-4202def6098c",
+      "name": "订阅服务",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 11,
+      "parent_id": null,
+      "icon": "calendarClock"
+    },
+    {
+      "key": "subscription_video",
+      "id": "057658c8-29f9-57f0-a989-67763c551e92",
+      "name": "视频会员",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "961e3602-ad43-5c82-af2f-4202def6098c",
+      "icon": "playCircle"
+    },
+    {
+      "key": "subscription_music",
+      "id": "61e2fe39-484a-517c-9378-2818dfa0a5fb",
+      "name": "音乐会员",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "961e3602-ad43-5c82-af2f-4202def6098c",
+      "icon": "music"
+    },
+    {
+      "key": "entertainment",
+      "id": "e0315338-f078-5f93-9227-373acba72456",
+      "name": "娱乐",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 12,
+      "parent_id": null,
+      "icon": "partyPopper"
+    },
+    {
+      "key": "entertainment_movie",
+      "id": "9ce2dc2a-972e-5441-b2f3-bc7e31c72d48",
+      "name": "电影",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "e0315338-f078-5f93-9227-373acba72456",
+      "icon": "clapperboard"
+    },
+    {
+      "key": "entertainment_ktv",
+      "id": "0c2855e2-6c95-5bc4-9cab-1e63e6154c4a",
+      "name": "KTV",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "e0315338-f078-5f93-9227-373acba72456",
+      "icon": "mic"
+    },
+    {
+      "key": "entertainment_amusement",
+      "id": "a3f3062c-51cf-5376-9ff3-fba3d9ed3db0",
+      "name": "游乐场",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "e0315338-f078-5f93-9227-373acba72456",
+      "icon": "ferrisWheel"
+    },
+    {
+      "key": "education",
+      "id": "591c233c-e6e2-5a61-92d6-5676aa2c8168",
+      "name": "教育",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 13,
+      "parent_id": null,
+      "icon": "graduationCap"
+    },
+    {
+      "key": "education_books",
+      "id": "04d0df3a-6839-5303-a969-717eb8337dba",
+      "name": "书籍",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "591c233c-e6e2-5a61-92d6-5676aa2c8168",
+      "icon": "bookOpen"
+    },
+    {
+      "key": "education_learning",
+      "id": "826307fd-4c88-5563-a004-913831ec0568",
+      "name": "学习",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "591c233c-e6e2-5a61-92d6-5676aa2c8168",
+      "icon": "library"
+    },
+    {
+      "key": "gift",
+      "id": "20724e51-e4e5-52c2-ac07-12308bdd93a0",
+      "name": "送礼",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 14,
+      "parent_id": null,
+      "icon": "gift"
+    },
+    {
+      "key": "game",
+      "id": "4338eb66-6a81-5a68-8d30-09d0592b07d5",
+      "name": "游戏",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 15,
+      "parent_id": null,
+      "icon": "gamepad2"
+    },
+    {
+      "key": "beauty",
+      "id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+      "name": "美容",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 16,
+      "parent_id": null,
+      "icon": "sparkles"
+    },
+    {
+      "key": "beauty_skincare",
+      "id": "002b36a1-98e9-5550-b451-734d3b96d65e",
+      "name": "护肤品",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 0,
+      "parent_id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+      "icon": "smile"
+    },
+    {
+      "key": "beauty_cosmetics",
+      "id": "22fd9bbe-dc72-5842-b469-8c1b066b7e2e",
+      "name": "化妆品",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 1,
+      "parent_id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+      "icon": "palette"
+    },
+    {
+      "key": "beauty_salon",
+      "id": "7730e10e-0c3e-59e1-959a-27e615bfbc16",
+      "name": "剪发",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 2,
+      "parent_id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+      "icon": "scissors"
+    },
+    {
+      "key": "beauty_nail",
+      "id": "ddd6e5c5-e860-5aa1-811e-4bc451763e6d",
+      "name": "美甲",
+      "kind": "expense",
+      "level": 2,
+      "sort_order": 3,
+      "parent_id": "6c3ee0f3-0d88-50df-8707-4c81b7be41aa",
+      "icon": "hand"
+    },
+    {
+      "key": "medical",
+      "id": "1aaf1de7-d76b-5d4a-8e65-7ea7db0f39b9",
+      "name": "医疗",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 17,
+      "parent_id": null,
+      "icon": "cross"
+    },
+    {
+      "key": "digital",
+      "id": "4e7ce64f-38e0-5fbc-9478-ee19190a9e4a",
+      "name": "数码",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 18,
+      "parent_id": null,
+      "icon": "smartphone"
+    },
+    {
+      "key": "other",
+      "id": "8899479b-cc3a-58be-af71-c78b1041c480",
+      "name": "其他",
+      "kind": "expense",
+      "level": 1,
+      "sort_order": 19,
+      "parent_id": null,
+      "icon": "package"
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+name: sesame-notes-prod
+
+# prod 环境的 API 与 PostgreSQL 使用独立的数据库、容器和持久卷。
+# 上线前使用 python3 scripts/deploy/deployment-preflight.py --environment prod 只读核对现有镜像、数据库及卷挂载。
+
+services:
+  postgres:
+    image: sesame-notes-prod-postgres:prod-17-${POSTGRES_IMAGE_REVISION:?请在 prod 的 --env-file 中设置当前 PostgreSQL 镜像 ID 的裸 64 位 sha256}
+    pull_policy: never
+    environment:
+      POSTGRES_DB: sesame_notes_prod
+      POSTGRES_USER: sesame
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 prod 的 --env-file 中设置 POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sesame -d sesame_notes_prod']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+
+  db-init:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: sesame-notes-prod-api:prod-${PROD_IMAGE_TAG:?请在 prod 的 --env-file 中设置已核实的不可变 API 镜像标识}
+    pull_policy: never
+    environment:
+      SESAME_ENV: prod
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?请在 prod 的 --env-file 中设置经过 URI 编码的 DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET:?请在 prod 的 --env-file 中设置 JWT_SECRET}
+      STORAGE_PATH: /data
+    command: ['node', 'apps/api/prisma/setup.mjs']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+
+  api:
+    # 票据、实时连接与限流属于单实例；固定容器名使 compose 明确拒绝 scale api=N。
+    container_name: sesame-notes-prod-api
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: sesame-notes-prod-api:prod-${PROD_IMAGE_TAG:?请在 prod 的 --env-file 中设置已核实的不可变 API 镜像标识}
+    pull_policy: never
+    environment:
+      SESAME_ENV: prod
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: ${DATABASE_URL:?请在 prod 的 --env-file 中设置经过 URI 编码的 DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET:?请在 prod 的 --env-file 中设置 JWT_SECRET}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-900}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-2592000}
+      # 浏览器同源反代也必须显式列出允许的网页 HTTPS 来源。
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      ADMIN_ORIGINS: ${ADMIN_ORIGINS:-}
+      ADMIN_SESSION_TTL: ${ADMIN_SESSION_TTL:-28800}
+      ADMIN_SESSION_IDLE_TTL: ${ADMIN_SESSION_IDLE_TTL:-1800}
+      STORAGE_PATH: /data
+      # 更新仓库由部署配置提供；留空关闭更新入口，私有仓库另需只读 Token。
+      GITHUB_RELEASE_REPOSITORY: ${GITHUB_RELEASE_REPOSITORY:-}
+      GITHUB_RELEASE_TOKEN: ${GITHUB_RELEASE_TOKEN:-}
+      # 只信任宿主机反向代理所在网段转发头（默认覆盖 Docker bridge）；留空 = 不信任
+      TRUST_PROXY_CIDRS: ${TRUST_PROXY_CIDRS:-172.16.0.0/12}
+    ports:
+      # 仅宿主机本机可达，由宿主机 Nginx 等反向代理转发；公网不得绕过 TLS 直连 API
+      - '127.0.0.1:8080:8080'
+    volumes:
+      - api_data:/data
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      # DB-aware readiness：仅进程存活不足以判定可导流，必须探测数据库真实可用
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/api/v1/health/ready']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    # 应用覆盖快照排队、执行与资源释放预算，容器再保留 10 秒退出余量。
+    stop_grace_period: 90s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '5' }
+
+volumes:
+  # 仅连接名称明确的生产物理卷；目标卷缺失时直接失败。
+  pg_data:
+    external: true
+    name: sesame-notes-prod_pg_data
+  api_data:
+    external: true
+    name: sesame-notes-prod_api_data
+
+networks:
+  default:
+    name: sesame-notes-prod_default

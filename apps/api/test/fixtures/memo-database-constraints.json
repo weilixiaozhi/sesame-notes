@@ -1,0 +1,6 @@
+{
+  "memo_books.memo_books_shape_check": "CHECK (((type = ANY (ARRAY['normal'::text, 'credentials'::text])) AND (revision >= 1) AND (char_length(name) > 0)))",
+  "memo_entries.memo_entries_shape_check": "CHECK (((revision >= 1) AND (((book_type = 'normal'::text) AND (body_format IS NOT NULL) AND (body_format = 'delta_v1'::text) AND (body IS NOT NULL) AND (json_typeof(body) = 'object'::text) AND (order_key IS NULL)) OR ((book_type = 'credentials'::text) AND (body_format IS NOT NULL) AND (body_format = 'fields_v1'::text) AND (body IS NOT NULL) AND (json_typeof(body) = 'object'::text) AND (order_key IS NOT NULL) AND (order_key >= 0)))))",
+  "memo_entries.memo_entries_title_string_check": "CHECK ((json_typeof(title) = 'string'::text))",
+  "sync_changes.sync_changes_memo_scope_check": "CHECK (((((entity_type)::text = ANY ((ARRAY['memo_book'::character varying, 'memo_entry'::character varying])::text[])) AND ((scope)::text = 'user'::text) AND (user_id IS NOT NULL) AND (ledger_id IS NULL) AND (day_book_id IS NULL) AND (recipient_user_id IS NULL) AND (memo_book_id IS NOT NULL) AND (((entity_type)::text <> 'memo_book'::text) OR (entity_id = memo_book_id))) OR (((entity_type)::text <> ALL ((ARRAY['memo_book'::character varying, 'memo_entry'::character varying])::text[])) AND (memo_book_id IS NULL))))"
+}

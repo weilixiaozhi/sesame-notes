@@ -1,0 +1,174 @@
+.days-page {
+  container: days-page / inline-size;
+}
+.days-groups {
+  display: grid;
+  gap: var(--space-8);
+}
+.day-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.day-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.day-group-heading h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+.day-group-heading p,
+.day-group-title > span {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.days-page .day-card .card-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.days-page .day-card {
+  --day-accent: var(--primary);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--day-accent) 6%, var(--surface)), var(--surface) 60%);
+  border-top: 3px solid color-mix(in srgb, var(--day-accent) 45%, var(--surface));
+}
+.days-page .day-birthday {
+  --day-accent: var(--tone-rose);
+}
+.days-page .day-anniversary {
+  --day-accent: var(--tone-amber);
+}
+.days-page .day-card .badge {
+  color: var(--day-accent);
+  background: color-mix(in srgb, var(--day-accent) 10%, var(--surface));
+}
+.days-page .day-count {
+  color: var(--day-accent);
+  margin-block: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.days-page .day-card h3 {
+  font-size: var(--text-lg);
+}
+.days-page .day-card h3,
+.days-page .day-card p {
+  margin: 0;
+}
+.days-page .day-card-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  justify-content: space-between;
+}
+.days-page .day-calendar {
+  display: grid;
+  grid-template-columns: minmax(0, calc(var(--space-10) * 12)) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+.days-page .day-calendar-month {
+  padding: var(--space-3);
+}
+.days-page .day-calendar-navigation {
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+.days-page .day-calendar-navigation h2 {
+  margin: 0;
+  white-space: nowrap;
+  font-size: var(--text-lg);
+}
+.days-page .day-calendar-navigation > .button {
+  min-height: var(--space-8);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+}
+.days-page .day-calendar-navigation > .button:last-child {
+  margin-left: auto;
+}
+.days-page .day-calendar .calendar-grid {
+  gap: var(--space-1);
+}
+.days-page .day-calendar .calendar-weekday {
+  padding: var(--space-1) 0;
+  font-size: var(--text-xs);
+}
+.days-page .day-calendar .calendar-cell {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--space-10);
+  padding: var(--space-1);
+  border-radius: var(--radius);
+  font-size: var(--text-md);
+}
+.day-calendar-count {
+  position: absolute;
+  top: 0;
+  right: var(--space-1);
+  color: var(--primary);
+  font-size: var(--text-xs);
+}
+.day-calendar-selection {
+  min-width: 0;
+  padding-block: var(--space-3);
+}
+.day-calendar-selection h3 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+.day-calendar-selection h3 > span {
+  font-size: var(--text-sm);
+  font-weight: normal;
+}
+.day-calendar-record {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.day-calendar-record > strong {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-md);
+}
+.day-date-help {
+  font-size: var(--text-sm);
+}
+.day-date-help p {
+  margin: 0;
+}
+.day-date-help .day-date-help-title {
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+}
+.days-page .day-card h3 {
+  overflow-wrap: anywhere;
+}
+@container days-page (min-width: 1100px) {
+  .days-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@container days-page (max-width: 700px) {
+  .days-page .day-calendar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .day-calendar-selection {
+    padding-block: var(--space-2);
+  }
+}

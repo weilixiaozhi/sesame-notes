@@ -1,0 +1,2 @@
+# 迁移锁定文件：由 Prisma 维护，声明迁移使用的数据库提供方。
+provider = "postgresql"

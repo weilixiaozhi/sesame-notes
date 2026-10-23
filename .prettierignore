@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+packages/api-contract/openapi.json
+packages/api-client/src/generated
+data
+Temp
+apps/web/public/fitness

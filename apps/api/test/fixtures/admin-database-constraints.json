@@ -1,0 +1,15 @@
+{
+  "admin_accounts.admin_accounts_deleted_disabled": "CHECK (((deleted_at IS NULL) OR (NOT is_enabled)))",
+  "admin_accounts.admin_accounts_email_canonical_check": "CHECK (((email IS NULL) OR (((email)::text = lower(btrim((email)::text))) AND ((email)::text ~ '^[a-z0-9.!#$%&''*+/=?^_`{|}~-]+@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'::text))))",
+  "admin_accounts.admin_accounts_failed_attempts_nonnegative": "CHECK ((failed_login_attempts >= 0))",
+  "admin_accounts.admin_accounts_identity_type_known": "CHECK (((identity_type)::text = ANY ((ARRAY['super_admin'::character varying, 'standard_user'::character varying])::text[])))",
+  "admin_accounts.admin_accounts_phone_canonical_check": "CHECK (((phone IS NULL) OR ((phone)::text ~ '^\\+[1-9][0-9]{5,14}$'::text)))",
+  "admin_accounts.admin_accounts_username_normalized": "CHECK (((username)::text ~ '^[a-z][a-z0-9._-]{3,31}$'::text))",
+  "admin_accounts.admin_accounts_version_positive": "CHECK ((version > 0))",
+  "admin_groups.admin_groups_deleted_disabled": "CHECK (((deleted_at IS NULL) OR (NOT is_enabled)))",
+  "admin_groups.admin_groups_name_nonempty": "CHECK ((length(btrim((name)::text)) > 0))",
+  "admin_groups.admin_groups_pages_allowed": "CHECK ((page_ids <@ ARRAY['users'::text, 'audit'::text, 'analytics'::text, 'fitness_exercises'::text, 'fitness_templates'::text, 'fitness_plans'::text]))",
+  "admin_groups.admin_groups_permissions_allowed": "CHECK ((permissions <@ ARRAY['users:read'::text, 'users:write'::text, 'devices:read'::text, 'devices:revoke'::text, 'audit:read'::text, 'status:read'::text, 'analytics:read'::text, 'fitness:read'::text, 'fitness:write'::text]))",
+  "admin_groups.admin_groups_read_dependencies": "CHECK ((((NOT ('users:write'::text = ANY (permissions))) OR ('users:read'::text = ANY (permissions))) AND ((NOT ('devices:read'::text = ANY (permissions))) OR ('users:read'::text = ANY (permissions))) AND ((NOT ('devices:revoke'::text = ANY (permissions))) OR ('devices:read'::text = ANY (permissions))) AND ((NOT ('users'::text = ANY (page_ids))) OR ('users:read'::text = ANY (permissions))) AND ((NOT ('audit'::text = ANY (page_ids))) OR ('audit:read'::text = ANY (permissions))) AND ((NOT ('analytics'::text = ANY (page_ids))) OR ('analytics:read'::text = ANY (permissions))) AND ((NOT ('fitness:write'::text = ANY (permissions))) OR ('fitness:read'::text = ANY (permissions))) AND ((NOT (page_ids && ARRAY['fitness_exercises'::text, 'fitness_templates'::text, 'fitness_plans'::text])) OR ('fitness:read'::text = ANY (permissions)))))",
+  "admin_groups.admin_groups_version_positive": "CHECK ((version > 0))"
+}

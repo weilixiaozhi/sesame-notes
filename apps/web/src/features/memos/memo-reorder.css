@@ -1,0 +1,16 @@
+.memo-reorder-grip {
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.memo-reorder-grip:active {
+  cursor: grabbing;
+}
+.memo-credential-draggable.memo-is-dragging {
+  border-color: var(--primary);
+  background: var(--selected);
+}
+.memo-reorder-progress {
+  margin: 0;
+  font-size: var(--text-sm);
+}

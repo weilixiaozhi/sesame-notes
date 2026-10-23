@@ -1,0 +1,1109 @@
+{
+  "source": "https://github.com/google/libphonenumber/blob/d1457634c3d95e570dad433ee0ab400beb343a56/resources/PhoneNumberMetadata.xml",
+  "copyright": "Copyright (C) 2009 The Libphonenumber Authors",
+  "license": "Apache-2.0",
+  "modification_notice": "从上游 XML 提取区号资料并整理为包含地区标签的 JSON 目录；完整许可见 third_party/libphonenumber/LICENSE。",
+  "entries": [
+    {
+      "code": "+86",
+      "label": "中国大陆",
+      "regions": ["CN"]
+    },
+    {
+      "code": "+852",
+      "label": "中国香港",
+      "regions": ["HK"]
+    },
+    {
+      "code": "+853",
+      "label": "中国澳门",
+      "regions": ["MO"]
+    },
+    {
+      "code": "+886",
+      "label": "中国台湾",
+      "regions": ["TW"]
+    },
+    {
+      "code": "+1",
+      "label": "美国 / 加拿大",
+      "regions": [
+        "AG",
+        "AI",
+        "AS",
+        "BB",
+        "BM",
+        "BS",
+        "CA",
+        "DM",
+        "DO",
+        "GD",
+        "GU",
+        "JM",
+        "KN",
+        "KY",
+        "LC",
+        "MP",
+        "MS",
+        "PR",
+        "SX",
+        "TC",
+        "TT",
+        "US",
+        "VC",
+        "VG",
+        "VI"
+      ]
+    },
+    {
+      "code": "+44",
+      "label": "英国",
+      "regions": ["GB", "GG", "IM", "JE"]
+    },
+    {
+      "code": "+81",
+      "label": "日本",
+      "regions": ["JP"]
+    },
+    {
+      "code": "+82",
+      "label": "韩国",
+      "regions": ["KR"]
+    },
+    {
+      "code": "+65",
+      "label": "新加坡",
+      "regions": ["SG"]
+    },
+    {
+      "code": "+61",
+      "label": "澳大利亚",
+      "regions": ["AU", "CC", "CX"]
+    },
+    {
+      "code": "+7",
+      "label": "哈萨克斯坦 / 俄罗斯",
+      "regions": ["KZ", "RU"]
+    },
+    {
+      "code": "+20",
+      "label": "埃及",
+      "regions": ["EG"]
+    },
+    {
+      "code": "+27",
+      "label": "南非",
+      "regions": ["ZA"]
+    },
+    {
+      "code": "+30",
+      "label": "希腊",
+      "regions": ["GR"]
+    },
+    {
+      "code": "+31",
+      "label": "荷兰",
+      "regions": ["NL"]
+    },
+    {
+      "code": "+32",
+      "label": "比利时",
+      "regions": ["BE"]
+    },
+    {
+      "code": "+33",
+      "label": "法国",
+      "regions": ["FR"]
+    },
+    {
+      "code": "+34",
+      "label": "西班牙",
+      "regions": ["ES"]
+    },
+    {
+      "code": "+36",
+      "label": "匈牙利",
+      "regions": ["HU"]
+    },
+    {
+      "code": "+39",
+      "label": "意大利 / 梵蒂冈",
+      "regions": ["IT", "VA"]
+    },
+    {
+      "code": "+40",
+      "label": "罗马尼亚",
+      "regions": ["RO"]
+    },
+    {
+      "code": "+41",
+      "label": "瑞士",
+      "regions": ["CH"]
+    },
+    {
+      "code": "+43",
+      "label": "奥地利",
+      "regions": ["AT"]
+    },
+    {
+      "code": "+45",
+      "label": "丹麦",
+      "regions": ["DK"]
+    },
+    {
+      "code": "+46",
+      "label": "瑞典",
+      "regions": ["SE"]
+    },
+    {
+      "code": "+47",
+      "label": "挪威 / 斯瓦尔巴和扬马延",
+      "regions": ["NO", "SJ"]
+    },
+    {
+      "code": "+48",
+      "label": "波兰",
+      "regions": ["PL"]
+    },
+    {
+      "code": "+49",
+      "label": "德国",
+      "regions": ["DE"]
+    },
+    {
+      "code": "+51",
+      "label": "秘鲁",
+      "regions": ["PE"]
+    },
+    {
+      "code": "+52",
+      "label": "墨西哥",
+      "regions": ["MX"]
+    },
+    {
+      "code": "+53",
+      "label": "古巴",
+      "regions": ["CU"]
+    },
+    {
+      "code": "+54",
+      "label": "阿根廷",
+      "regions": ["AR"]
+    },
+    {
+      "code": "+55",
+      "label": "巴西",
+      "regions": ["BR"]
+    },
+    {
+      "code": "+56",
+      "label": "智利",
+      "regions": ["CL"]
+    },
+    {
+      "code": "+57",
+      "label": "哥伦比亚",
+      "regions": ["CO"]
+    },
+    {
+      "code": "+58",
+      "label": "委内瑞拉",
+      "regions": ["VE"]
+    },
+    {
+      "code": "+60",
+      "label": "马来西亚",
+      "regions": ["MY"]
+    },
+    {
+      "code": "+62",
+      "label": "印度尼西亚",
+      "regions": ["ID"]
+    },
+    {
+      "code": "+63",
+      "label": "菲律宾",
+      "regions": ["PH"]
+    },
+    {
+      "code": "+64",
+      "label": "新西兰",
+      "regions": ["NZ"]
+    },
+    {
+      "code": "+66",
+      "label": "泰国",
+      "regions": ["TH"]
+    },
+    {
+      "code": "+84",
+      "label": "越南",
+      "regions": ["VN"]
+    },
+    {
+      "code": "+90",
+      "label": "土耳其",
+      "regions": ["TR"]
+    },
+    {
+      "code": "+91",
+      "label": "印度",
+      "regions": ["IN"]
+    },
+    {
+      "code": "+92",
+      "label": "巴基斯坦",
+      "regions": ["PK"]
+    },
+    {
+      "code": "+93",
+      "label": "阿富汗",
+      "regions": ["AF"]
+    },
+    {
+      "code": "+94",
+      "label": "斯里兰卡",
+      "regions": ["LK"]
+    },
+    {
+      "code": "+95",
+      "label": "缅甸",
+      "regions": ["MM"]
+    },
+    {
+      "code": "+98",
+      "label": "伊朗",
+      "regions": ["IR"]
+    },
+    {
+      "code": "+211",
+      "label": "南苏丹",
+      "regions": ["SS"]
+    },
+    {
+      "code": "+212",
+      "label": "西撒哈拉 / 摩洛哥",
+      "regions": ["EH", "MA"]
+    },
+    {
+      "code": "+213",
+      "label": "阿尔及利亚",
+      "regions": ["DZ"]
+    },
+    {
+      "code": "+216",
+      "label": "突尼斯",
+      "regions": ["TN"]
+    },
+    {
+      "code": "+218",
+      "label": "利比亚",
+      "regions": ["LY"]
+    },
+    {
+      "code": "+220",
+      "label": "冈比亚",
+      "regions": ["GM"]
+    },
+    {
+      "code": "+221",
+      "label": "塞内加尔",
+      "regions": ["SN"]
+    },
+    {
+      "code": "+222",
+      "label": "毛里塔尼亚",
+      "regions": ["MR"]
+    },
+    {
+      "code": "+223",
+      "label": "马里",
+      "regions": ["ML"]
+    },
+    {
+      "code": "+224",
+      "label": "几内亚",
+      "regions": ["GN"]
+    },
+    {
+      "code": "+225",
+      "label": "科特迪瓦",
+      "regions": ["CI"]
+    },
+    {
+      "code": "+226",
+      "label": "布基纳法索",
+      "regions": ["BF"]
+    },
+    {
+      "code": "+227",
+      "label": "尼日尔",
+      "regions": ["NE"]
+    },
+    {
+      "code": "+228",
+      "label": "多哥",
+      "regions": ["TG"]
+    },
+    {
+      "code": "+229",
+      "label": "贝宁",
+      "regions": ["BJ"]
+    },
+    {
+      "code": "+230",
+      "label": "毛里求斯",
+      "regions": ["MU"]
+    },
+    {
+      "code": "+231",
+      "label": "利比里亚",
+      "regions": ["LR"]
+    },
+    {
+      "code": "+232",
+      "label": "塞拉利昂",
+      "regions": ["SL"]
+    },
+    {
+      "code": "+233",
+      "label": "加纳",
+      "regions": ["GH"]
+    },
+    {
+      "code": "+234",
+      "label": "尼日利亚",
+      "regions": ["NG"]
+    },
+    {
+      "code": "+235",
+      "label": "乍得",
+      "regions": ["TD"]
+    },
+    {
+      "code": "+236",
+      "label": "中非共和国",
+      "regions": ["CF"]
+    },
+    {
+      "code": "+237",
+      "label": "喀麦隆",
+      "regions": ["CM"]
+    },
+    {
+      "code": "+238",
+      "label": "佛得角",
+      "regions": ["CV"]
+    },
+    {
+      "code": "+239",
+      "label": "圣多美和普林西比",
+      "regions": ["ST"]
+    },
+    {
+      "code": "+240",
+      "label": "赤道几内亚",
+      "regions": ["GQ"]
+    },
+    {
+      "code": "+241",
+      "label": "加蓬",
+      "regions": ["GA"]
+    },
+    {
+      "code": "+242",
+      "label": "刚果（布）",
+      "regions": ["CG"]
+    },
+    {
+      "code": "+243",
+      "label": "刚果（金）",
+      "regions": ["CD"]
+    },
+    {
+      "code": "+244",
+      "label": "安哥拉",
+      "regions": ["AO"]
+    },
+    {
+      "code": "+245",
+      "label": "几内亚比绍",
+      "regions": ["GW"]
+    },
+    {
+      "code": "+246",
+      "label": "英属印度洋领地",
+      "regions": ["IO"]
+    },
+    {
+      "code": "+247",
+      "label": "阿森松岛",
+      "regions": ["AC"]
+    },
+    {
+      "code": "+248",
+      "label": "塞舌尔",
+      "regions": ["SC"]
+    },
+    {
+      "code": "+249",
+      "label": "苏丹",
+      "regions": ["SD"]
+    },
+    {
+      "code": "+250",
+      "label": "卢旺达",
+      "regions": ["RW"]
+    },
+    {
+      "code": "+251",
+      "label": "埃塞俄比亚",
+      "regions": ["ET"]
+    },
+    {
+      "code": "+252",
+      "label": "索马里",
+      "regions": ["SO"]
+    },
+    {
+      "code": "+253",
+      "label": "吉布提",
+      "regions": ["DJ"]
+    },
+    {
+      "code": "+254",
+      "label": "肯尼亚",
+      "regions": ["KE"]
+    },
+    {
+      "code": "+255",
+      "label": "坦桑尼亚",
+      "regions": ["TZ"]
+    },
+    {
+      "code": "+256",
+      "label": "乌干达",
+      "regions": ["UG"]
+    },
+    {
+      "code": "+257",
+      "label": "布隆迪",
+      "regions": ["BI"]
+    },
+    {
+      "code": "+258",
+      "label": "莫桑比克",
+      "regions": ["MZ"]
+    },
+    {
+      "code": "+260",
+      "label": "赞比亚",
+      "regions": ["ZM"]
+    },
+    {
+      "code": "+261",
+      "label": "马达加斯加",
+      "regions": ["MG"]
+    },
+    {
+      "code": "+262",
+      "label": "留尼汪 / 马约特",
+      "regions": ["RE", "YT"]
+    },
+    {
+      "code": "+263",
+      "label": "津巴布韦",
+      "regions": ["ZW"]
+    },
+    {
+      "code": "+264",
+      "label": "纳米比亚",
+      "regions": ["NA"]
+    },
+    {
+      "code": "+265",
+      "label": "马拉维",
+      "regions": ["MW"]
+    },
+    {
+      "code": "+266",
+      "label": "莱索托",
+      "regions": ["LS"]
+    },
+    {
+      "code": "+267",
+      "label": "博茨瓦纳",
+      "regions": ["BW"]
+    },
+    {
+      "code": "+268",
+      "label": "斯威士兰",
+      "regions": ["SZ"]
+    },
+    {
+      "code": "+269",
+      "label": "科摩罗",
+      "regions": ["KM"]
+    },
+    {
+      "code": "+290",
+      "label": "圣赫勒拿 / 特里斯坦-达库尼亚群岛",
+      "regions": ["SH", "TA"]
+    },
+    {
+      "code": "+291",
+      "label": "厄立特里亚",
+      "regions": ["ER"]
+    },
+    {
+      "code": "+297",
+      "label": "阿鲁巴",
+      "regions": ["AW"]
+    },
+    {
+      "code": "+298",
+      "label": "法罗群岛",
+      "regions": ["FO"]
+    },
+    {
+      "code": "+299",
+      "label": "格陵兰",
+      "regions": ["GL"]
+    },
+    {
+      "code": "+350",
+      "label": "直布罗陀",
+      "regions": ["GI"]
+    },
+    {
+      "code": "+351",
+      "label": "葡萄牙",
+      "regions": ["PT"]
+    },
+    {
+      "code": "+352",
+      "label": "卢森堡",
+      "regions": ["LU"]
+    },
+    {
+      "code": "+353",
+      "label": "爱尔兰",
+      "regions": ["IE"]
+    },
+    {
+      "code": "+354",
+      "label": "冰岛",
+      "regions": ["IS"]
+    },
+    {
+      "code": "+355",
+      "label": "阿尔巴尼亚",
+      "regions": ["AL"]
+    },
+    {
+      "code": "+356",
+      "label": "马耳他",
+      "regions": ["MT"]
+    },
+    {
+      "code": "+357",
+      "label": "塞浦路斯",
+      "regions": ["CY"]
+    },
+    {
+      "code": "+358",
+      "label": "奥兰群岛 / 芬兰",
+      "regions": ["AX", "FI"]
+    },
+    {
+      "code": "+359",
+      "label": "保加利亚",
+      "regions": ["BG"]
+    },
+    {
+      "code": "+370",
+      "label": "立陶宛",
+      "regions": ["LT"]
+    },
+    {
+      "code": "+371",
+      "label": "拉脱维亚",
+      "regions": ["LV"]
+    },
+    {
+      "code": "+372",
+      "label": "爱沙尼亚",
+      "regions": ["EE"]
+    },
+    {
+      "code": "+373",
+      "label": "摩尔多瓦",
+      "regions": ["MD"]
+    },
+    {
+      "code": "+374",
+      "label": "亚美尼亚",
+      "regions": ["AM"]
+    },
+    {
+      "code": "+375",
+      "label": "白俄罗斯",
+      "regions": ["BY"]
+    },
+    {
+      "code": "+376",
+      "label": "安道尔",
+      "regions": ["AD"]
+    },
+    {
+      "code": "+377",
+      "label": "摩纳哥",
+      "regions": ["MC"]
+    },
+    {
+      "code": "+378",
+      "label": "圣马力诺",
+      "regions": ["SM"]
+    },
+    {
+      "code": "+380",
+      "label": "乌克兰",
+      "regions": ["UA"]
+    },
+    {
+      "code": "+381",
+      "label": "塞尔维亚",
+      "regions": ["RS"]
+    },
+    {
+      "code": "+382",
+      "label": "黑山",
+      "regions": ["ME"]
+    },
+    {
+      "code": "+383",
+      "label": "科索沃",
+      "regions": ["XK"]
+    },
+    {
+      "code": "+385",
+      "label": "克罗地亚",
+      "regions": ["HR"]
+    },
+    {
+      "code": "+386",
+      "label": "斯洛文尼亚",
+      "regions": ["SI"]
+    },
+    {
+      "code": "+387",
+      "label": "波斯尼亚和黑塞哥维那",
+      "regions": ["BA"]
+    },
+    {
+      "code": "+389",
+      "label": "北马其顿",
+      "regions": ["MK"]
+    },
+    {
+      "code": "+420",
+      "label": "捷克",
+      "regions": ["CZ"]
+    },
+    {
+      "code": "+421",
+      "label": "斯洛伐克",
+      "regions": ["SK"]
+    },
+    {
+      "code": "+423",
+      "label": "列支敦士登",
+      "regions": ["LI"]
+    },
+    {
+      "code": "+500",
+      "label": "福克兰群岛",
+      "regions": ["FK"]
+    },
+    {
+      "code": "+501",
+      "label": "伯利兹",
+      "regions": ["BZ"]
+    },
+    {
+      "code": "+502",
+      "label": "危地马拉",
+      "regions": ["GT"]
+    },
+    {
+      "code": "+503",
+      "label": "萨尔瓦多",
+      "regions": ["SV"]
+    },
+    {
+      "code": "+504",
+      "label": "洪都拉斯",
+      "regions": ["HN"]
+    },
+    {
+      "code": "+505",
+      "label": "尼加拉瓜",
+      "regions": ["NI"]
+    },
+    {
+      "code": "+506",
+      "label": "哥斯达黎加",
+      "regions": ["CR"]
+    },
+    {
+      "code": "+507",
+      "label": "巴拿马",
+      "regions": ["PA"]
+    },
+    {
+      "code": "+508",
+      "label": "圣皮埃尔和密克隆群岛",
+      "regions": ["PM"]
+    },
+    {
+      "code": "+509",
+      "label": "海地",
+      "regions": ["HT"]
+    },
+    {
+      "code": "+590",
+      "label": "圣巴泰勒米 / 瓜德罗普 / 法属圣马丁",
+      "regions": ["BL", "GP", "MF"]
+    },
+    {
+      "code": "+591",
+      "label": "玻利维亚",
+      "regions": ["BO"]
+    },
+    {
+      "code": "+592",
+      "label": "圭亚那",
+      "regions": ["GY"]
+    },
+    {
+      "code": "+593",
+      "label": "厄瓜多尔",
+      "regions": ["EC"]
+    },
+    {
+      "code": "+594",
+      "label": "法属圭亚那",
+      "regions": ["GF"]
+    },
+    {
+      "code": "+595",
+      "label": "巴拉圭",
+      "regions": ["PY"]
+    },
+    {
+      "code": "+596",
+      "label": "马提尼克",
+      "regions": ["MQ"]
+    },
+    {
+      "code": "+597",
+      "label": "苏里南",
+      "regions": ["SR"]
+    },
+    {
+      "code": "+598",
+      "label": "乌拉圭",
+      "regions": ["UY"]
+    },
+    {
+      "code": "+599",
+      "label": "荷属加勒比区 / 库拉索",
+      "regions": ["BQ", "CW"]
+    },
+    {
+      "code": "+670",
+      "label": "东帝汶",
+      "regions": ["TL"]
+    },
+    {
+      "code": "+672",
+      "label": "诺福克岛",
+      "regions": ["NF"]
+    },
+    {
+      "code": "+673",
+      "label": "文莱",
+      "regions": ["BN"]
+    },
+    {
+      "code": "+674",
+      "label": "瑙鲁",
+      "regions": ["NR"]
+    },
+    {
+      "code": "+675",
+      "label": "巴布亚新几内亚",
+      "regions": ["PG"]
+    },
+    {
+      "code": "+676",
+      "label": "汤加",
+      "regions": ["TO"]
+    },
+    {
+      "code": "+677",
+      "label": "所罗门群岛",
+      "regions": ["SB"]
+    },
+    {
+      "code": "+678",
+      "label": "瓦努阿图",
+      "regions": ["VU"]
+    },
+    {
+      "code": "+679",
+      "label": "斐济",
+      "regions": ["FJ"]
+    },
+    {
+      "code": "+680",
+      "label": "帕劳",
+      "regions": ["PW"]
+    },
+    {
+      "code": "+681",
+      "label": "瓦利斯和富图纳",
+      "regions": ["WF"]
+    },
+    {
+      "code": "+682",
+      "label": "库克群岛",
+      "regions": ["CK"]
+    },
+    {
+      "code": "+683",
+      "label": "纽埃",
+      "regions": ["NU"]
+    },
+    {
+      "code": "+685",
+      "label": "萨摩亚",
+      "regions": ["WS"]
+    },
+    {
+      "code": "+686",
+      "label": "基里巴斯",
+      "regions": ["KI"]
+    },
+    {
+      "code": "+687",
+      "label": "新喀里多尼亚",
+      "regions": ["NC"]
+    },
+    {
+      "code": "+688",
+      "label": "图瓦卢",
+      "regions": ["TV"]
+    },
+    {
+      "code": "+689",
+      "label": "法属波利尼西亚",
+      "regions": ["PF"]
+    },
+    {
+      "code": "+690",
+      "label": "托克劳",
+      "regions": ["TK"]
+    },
+    {
+      "code": "+691",
+      "label": "密克罗尼西亚",
+      "regions": ["FM"]
+    },
+    {
+      "code": "+692",
+      "label": "马绍尔群岛",
+      "regions": ["MH"]
+    },
+    {
+      "code": "+800",
+      "label": "国际免费电话",
+      "regions": ["001"]
+    },
+    {
+      "code": "+808",
+      "label": "国际分摊付费电话",
+      "regions": ["001"]
+    },
+    {
+      "code": "+850",
+      "label": "朝鲜",
+      "regions": ["KP"]
+    },
+    {
+      "code": "+855",
+      "label": "柬埔寨",
+      "regions": ["KH"]
+    },
+    {
+      "code": "+856",
+      "label": "老挝",
+      "regions": ["LA"]
+    },
+    {
+      "code": "+870",
+      "label": "Inmarsat 卫星电话",
+      "regions": ["001"]
+    },
+    {
+      "code": "+878",
+      "label": "VISIONng 国际通信",
+      "regions": ["001"]
+    },
+    {
+      "code": "+880",
+      "label": "孟加拉国",
+      "regions": ["BD"]
+    },
+    {
+      "code": "+881",
+      "label": "国际卫星电话",
+      "regions": ["001"]
+    },
+    {
+      "code": "+882",
+      "label": "国际网络",
+      "regions": ["001"]
+    },
+    {
+      "code": "+883",
+      "label": "国际网络",
+      "regions": ["001"]
+    },
+    {
+      "code": "+888",
+      "label": "联合国人道主义事务协调厅",
+      "regions": ["001"]
+    },
+    {
+      "code": "+960",
+      "label": "马尔代夫",
+      "regions": ["MV"]
+    },
+    {
+      "code": "+961",
+      "label": "黎巴嫩",
+      "regions": ["LB"]
+    },
+    {
+      "code": "+962",
+      "label": "约旦",
+      "regions": ["JO"]
+    },
+    {
+      "code": "+963",
+      "label": "叙利亚",
+      "regions": ["SY"]
+    },
+    {
+      "code": "+964",
+      "label": "伊拉克",
+      "regions": ["IQ"]
+    },
+    {
+      "code": "+965",
+      "label": "科威特",
+      "regions": ["KW"]
+    },
+    {
+      "code": "+966",
+      "label": "沙特阿拉伯",
+      "regions": ["SA"]
+    },
+    {
+      "code": "+967",
+      "label": "也门",
+      "regions": ["YE"]
+    },
+    {
+      "code": "+968",
+      "label": "阿曼",
+      "regions": ["OM"]
+    },
+    {
+      "code": "+970",
+      "label": "巴勒斯坦领土",
+      "regions": ["PS"]
+    },
+    {
+      "code": "+971",
+      "label": "阿拉伯联合酋长国",
+      "regions": ["AE"]
+    },
+    {
+      "code": "+972",
+      "label": "以色列",
+      "regions": ["IL"]
+    },
+    {
+      "code": "+973",
+      "label": "巴林",
+      "regions": ["BH"]
+    },
+    {
+      "code": "+974",
+      "label": "卡塔尔",
+      "regions": ["QA"]
+    },
+    {
+      "code": "+975",
+      "label": "不丹",
+      "regions": ["BT"]
+    },
+    {
+      "code": "+976",
+      "label": "蒙古",
+      "regions": ["MN"]
+    },
+    {
+      "code": "+977",
+      "label": "尼泊尔",
+      "regions": ["NP"]
+    },
+    {
+      "code": "+979",
+      "label": "国际付费电话",
+      "regions": ["001"]
+    },
+    {
+      "code": "+992",
+      "label": "塔吉克斯坦",
+      "regions": ["TJ"]
+    },
+    {
+      "code": "+993",
+      "label": "土库曼斯坦",
+      "regions": ["TM"]
+    },
+    {
+      "code": "+994",
+      "label": "阿塞拜疆",
+      "regions": ["AZ"]
+    },
+    {
+      "code": "+995",
+      "label": "格鲁吉亚",
+      "regions": ["GE"]
+    },
+    {
+      "code": "+996",
+      "label": "吉尔吉斯斯坦",
+      "regions": ["KG"]
+    },
+    {
+      "code": "+998",
+      "label": "乌兹别克斯坦",
+      "regions": ["UZ"]
+    }
+  ]
+}

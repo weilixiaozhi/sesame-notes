@@ -1,0 +1,99 @@
+.memos-page {
+  container: memos-page / inline-size;
+}
+.memo-name-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 200px;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input);
+  color: var(--text-secondary);
+}
+.memos-page .memo-name-search input {
+  min-width: 0;
+  width: 100%;
+  padding-inline: 0;
+  border: 0;
+  background: transparent;
+}
+.memo-name-search:focus-within {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+.memos-page .memo-name-search input:focus-visible {
+  outline: none;
+}
+.memo-sort-select {
+  width: auto;
+}
+.memo-create-action {
+  display: flex;
+}
+@container memos-page (max-width: 640px) {
+  .memo-name-search {
+    flex: 1 1 160px;
+  }
+}
+.memos-page .memo-card {
+  gap: var(--space-5);
+  min-height: 240px;
+  border-top: 3px solid color-mix(in srgb, var(--tone-amber) 45%, var(--surface));
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.memos-page .memo-card:hover {
+  border-color: color-mix(in srgb, var(--tone-amber) 45%, var(--border));
+  box-shadow: var(--shadow);
+}
+.memos-page .memo-credential-card {
+  min-height: 190px;
+  border-top-color: color-mix(in srgb, var(--primary) 45%, var(--surface));
+}
+.memos-page .memo-credential-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+.memos-page .memo-credential-draggable {
+  position: relative;
+}
+.memos-page .memo-credential-draggable > .memo-reorder-grip {
+  position: absolute;
+  inset-inline-start: var(--space-1);
+  top: var(--space-6);
+}
+.memos-page .memo-credential-draggable > .card-main {
+  margin-inline-start: calc(var(--space-10) + var(--space-3));
+  width: calc(100% - var(--space-10) - var(--space-3));
+}
+.memo-reorder-error .toolbar p {
+  flex: 1;
+  margin: 0;
+}
+.memos-page .memo-card .card-main {
+  flex: 1;
+}
+.memos-page .memo-card h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+.memos-page .memo-preview {
+  line-height: 1.9;
+}
+.memos-page .memo-card-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  gap: 8px;
+}
+.memos-page .memo-card-footer small {
+  flex: 1;
+  text-align: right;
+}
+@container memos-page (min-width: 1100px) {
+  .memo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

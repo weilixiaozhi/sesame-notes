@@ -1,0 +1,667 @@
+{
+  "schema_version": 1,
+  "content_version": 1,
+  "templates": [
+    {
+      "id": "11111111-1111-4111-8111-000000000001",
+      "revision": 1,
+      "name": { "zh": "三分化·胸三头", "zh_hant": "三分化·胸三頭", "en": "Split · Chest & triceps" },
+      "description": {
+        "zh": "胸部推举配合肱三头肌训练，适合作为常规三分化的推日。",
+        "zh_hant": "胸部推舉配合肱三頭肌訓練，適合作為常規三分化的推日。",
+        "en": "Chest pressing and triceps work for the push day of a classic three-way split."
+      },
+      "difficulty": "beginner",
+      "goals": {
+        "zh": ["增肌", "基础力量"],
+        "zh_hant": ["增肌", "基礎力量"],
+        "en": ["Hypertrophy", "Foundational strength"]
+      },
+      "duration_minutes": 45,
+      "equipment": ["barbell", "dumbbell", "cable", "body weight"],
+      "exercises": [
+        { "exercise_id": "0025", "sets": 4, "reps": 6, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0314",
+          "sets": 4,
+          "reps": 8,
+          "weight_kg": "8",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0251",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": null,
+          "weight_mode": "body_weight",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0200", "sets": 4, "reps": 8, "weight_kg": "10", "weight_mode": "total", "rest_seconds": 60 }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000002",
+      "revision": 1,
+      "name": { "zh": "三分化·背二头", "zh_hant": "三分化·背二頭", "en": "Split · Back & biceps" },
+      "description": {
+        "zh": "垂直拉与水平拉结合肱二头肌训练，覆盖背部主要拉力模式。",
+        "zh_hant": "垂直拉與水平拉結合肱二頭肌訓練，覆蓋背部主要拉力模式。",
+        "en": "Vertical and horizontal pulling combined with direct biceps work."
+      },
+      "difficulty": "beginner",
+      "goals": { "zh": ["增肌", "背部力量"], "zh_hant": ["增肌", "背部力量"], "en": ["Hypertrophy", "Back strength"] },
+      "duration_minutes": 55,
+      "equipment": ["cable", "dumbbell", "body weight"],
+      "exercises": [
+        {
+          "exercise_id": "0652",
+          "sets": 4,
+          "reps": 7,
+          "weight_kg": null,
+          "weight_mode": "body_weight",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0197", "sets": 5, "reps": 10, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "2616", "sets": 4, "reps": 10, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "0861", "sets": 4, "reps": 10, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0294",
+          "sets": 3,
+          "reps": 8,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0313",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000003",
+      "revision": 1,
+      "name": { "zh": "三分化·腿肩", "zh_hant": "三分化·腿肩", "en": "Split · Legs & shoulders" },
+      "description": {
+        "zh": "以下肢复合动作为主，搭配肩部推举和侧平举。",
+        "zh_hant": "以下肢複合動作為主，搭配肩部推舉和側平舉。",
+        "en": "Lower-body compound work followed by shoulder pressing and raises."
+      },
+      "difficulty": "beginner",
+      "goals": {
+        "zh": ["增肌", "下肢力量"],
+        "zh_hant": ["增肌", "下肢力量"],
+        "en": ["Hypertrophy", "Lower-body strength"]
+      },
+      "duration_minutes": 50,
+      "equipment": ["barbell", "dumbbell", "leverage machine"],
+      "exercises": [
+        { "exercise_id": "0043", "sets": 4, "reps": 6, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "0585", "sets": 4, "reps": 12, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0336",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0405",
+          "sets": 3,
+          "reps": 8,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0334",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "2292",
+          "sets": 3,
+          "reps": 15,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000004",
+      "revision": 1,
+      "name": { "zh": "全身·肩背", "zh_hant": "全身·肩背", "en": "Full body · Shoulders & back" },
+      "description": {
+        "zh": "以肩部和背部为重点的全身训练日。",
+        "zh_hant": "以肩部和背部為重點的全身訓練日。",
+        "en": "A full-body day emphasizing shoulders and back."
+      },
+      "difficulty": "beginner",
+      "goals": {
+        "zh": ["全身训练", "动作熟悉"],
+        "zh_hant": ["全身訓練", "動作熟悉"],
+        "en": ["Full-body training", "Movement practice"]
+      },
+      "duration_minutes": 40,
+      "equipment": ["dumbbell", "cable"],
+      "exercises": [
+        {
+          "exercise_id": "0405",
+          "sets": 3,
+          "reps": 8,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0334",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0861", "sets": 3, "reps": 12, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "0197", "sets": 3, "reps": 12, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0294",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "5",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000005",
+      "revision": 1,
+      "name": { "zh": "全身·下肢前侧", "zh_hant": "全身·下肢前側", "en": "Full body · Anterior legs" },
+      "description": {
+        "zh": "深蹲为主，兼顾胸、肩、髋后链和手臂。",
+        "zh_hant": "深蹲為主，兼顧胸、肩、髖後鏈和手臂。",
+        "en": "Squat-led training with chest, shoulders, posterior chain, and arms."
+      },
+      "difficulty": "beginner",
+      "goals": {
+        "zh": ["全身训练", "下肢力量"],
+        "zh_hant": ["全身訓練", "下肢力量"],
+        "en": ["Full-body training", "Lower-body strength"]
+      },
+      "duration_minutes": 45,
+      "equipment": ["barbell", "dumbbell"],
+      "exercises": [
+        { "exercise_id": "0043", "sets": 4, "reps": 5, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0314",
+          "sets": 3,
+          "reps": 8,
+          "weight_kg": "8",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0405",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0432",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "8",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0294",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "5",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000006",
+      "revision": 1,
+      "name": { "zh": "全身·胸腿", "zh_hant": "全身·胸腿", "en": "Full body · Chest & legs" },
+      "description": {
+        "zh": "胸部推举与单腿训练为主，搭配划船、肩和三头。",
+        "zh_hant": "胸部推舉與單腿訓練為主，搭配划船、肩和三頭。",
+        "en": "Chest pressing and unilateral leg work with rowing, shoulders, and triceps."
+      },
+      "difficulty": "beginner",
+      "goals": {
+        "zh": ["全身训练", "增肌"],
+        "zh_hant": ["全身訓練", "增肌"],
+        "en": ["Full-body training", "Hypertrophy"]
+      },
+      "duration_minutes": 50,
+      "equipment": ["barbell", "dumbbell", "cable"],
+      "exercises": [
+        { "exercise_id": "0025", "sets": 4, "reps": 5, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0308",
+          "sets": 3,
+          "reps": 15,
+          "weight_kg": "5",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0336",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0861", "sets": 4, "reps": 10, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0405",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0200", "sets": 3, "reps": 10, "weight_kg": "10", "weight_mode": "total", "rest_seconds": 60 }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000007",
+      "revision": 1,
+      "name": { "zh": "全身·背腿", "zh_hant": "全身·背腿", "en": "Full body · Back & legs" },
+      "description": {
+        "zh": "背部划船与腿举为主，搭配下拉、肩和肱二头肌。",
+        "zh_hant": "背部划船與腿舉為主，搭配下拉、肩和肱二頭肌。",
+        "en": "Rows and leg press with pulldowns, shoulders, and biceps."
+      },
+      "difficulty": "beginner",
+      "goals": {
+        "zh": ["全身训练", "背部力量"],
+        "zh_hant": ["全身訓練", "背部力量"],
+        "en": ["Full-body training", "Back strength"]
+      },
+      "duration_minutes": 45,
+      "equipment": ["barbell", "dumbbell", "cable", "sled machine"],
+      "exercises": [
+        { "exercise_id": "0027", "sets": 3, "reps": 6, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "0739", "sets": 3, "reps": 12, "weight_kg": "40", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "2616", "sets": 3, "reps": 10, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0405",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0313",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000008",
+      "revision": 1,
+      "name": { "zh": "全身·后链", "zh_hant": "全身·後鏈", "en": "Full body · Posterior chain" },
+      "description": {
+        "zh": "硬拉和腿弯举强化后链，搭配胸、肩后束和三头。",
+        "zh_hant": "硬拉和腿彎舉強化後鏈，搭配胸、肩後束和三頭。",
+        "en": "Deadlifts and leg curls emphasize the posterior chain with chest, rear delts, and triceps."
+      },
+      "difficulty": "intermediate",
+      "goals": {
+        "zh": ["全身训练", "后链力量"],
+        "zh_hant": ["全身訓練", "後鏈力量"],
+        "en": ["Full-body training", "Posterior-chain strength"]
+      },
+      "duration_minutes": 50,
+      "equipment": ["barbell", "dumbbell", "cable", "leverage machine", "body weight"],
+      "exercises": [
+        { "exercise_id": "0032", "sets": 4, "reps": 5, "weight_kg": "35", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0251",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": null,
+          "weight_mode": "body_weight",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0599", "sets": 3, "reps": 12, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "2292",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0380",
+          "sets": 3,
+          "reps": 15,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0200", "sets": 3, "reps": 12, "weight_kg": "10", "weight_mode": "total", "rest_seconds": 60 }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000009",
+      "revision": 1,
+      "name": { "zh": "五分化·胸", "zh_hant": "五分化·胸", "en": "Five-day split · Chest" },
+      "description": {
+        "zh": "以卧推为主的胸部训练日。",
+        "zh_hant": "以臥推為主的胸部訓練日。",
+        "en": "A bench-press-led chest day."
+      },
+      "difficulty": "intermediate",
+      "goals": {
+        "zh": ["胸部增肌", "推举力量"],
+        "zh_hant": ["胸部增肌", "推舉力量"],
+        "en": ["Chest hypertrophy", "Pressing strength"]
+      },
+      "duration_minutes": 50,
+      "equipment": ["barbell", "dumbbell", "body weight"],
+      "exercises": [
+        { "exercise_id": "0025", "sets": 4, "reps": 5, "weight_kg": "35", "weight_mode": "total", "rest_seconds": 150 },
+        {
+          "exercise_id": "0314",
+          "sets": 3,
+          "reps": 8,
+          "weight_kg": "10",
+          "weight_mode": "per_side",
+          "rest_seconds": 90
+        },
+        {
+          "exercise_id": "0251",
+          "sets": 4,
+          "reps": 12,
+          "weight_kg": null,
+          "weight_mode": "body_weight",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0662",
+          "sets": 5,
+          "reps": 15,
+          "weight_kg": null,
+          "weight_mode": "body_weight",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000010",
+      "revision": 1,
+      "name": { "zh": "五分化·背", "zh_hant": "五分化·背", "en": "Five-day split · Back" },
+      "description": {
+        "zh": "多角度下拉和划船组成的背部训练日。",
+        "zh_hant": "多角度下拉和划船組成的背部訓練日。",
+        "en": "A back day built around pulldowns and rows from several angles."
+      },
+      "difficulty": "intermediate",
+      "goals": {
+        "zh": ["背部增肌", "拉力"],
+        "zh_hant": ["背部增肌", "拉力"],
+        "en": ["Back hypertrophy", "Pulling strength"]
+      },
+      "duration_minutes": 60,
+      "equipment": ["cable", "dumbbell", "body weight"],
+      "exercises": [
+        {
+          "exercise_id": "0652",
+          "sets": 4,
+          "reps": 7,
+          "weight_kg": null,
+          "weight_mode": "body_weight",
+          "rest_seconds": 45
+        },
+        { "exercise_id": "0197", "sets": 4, "reps": 10, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 90 },
+        {
+          "exercise_id": "0861",
+          "sets": 4,
+          "reps": 10,
+          "weight_kg": "30",
+          "weight_mode": "total",
+          "rest_seconds": 120
+        },
+        { "exercise_id": "2616", "sets": 4, "reps": 10, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0292",
+          "sets": 4,
+          "reps": 10,
+          "weight_kg": "10",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000011",
+      "revision": 1,
+      "name": { "zh": "五分化·腿", "zh_hant": "五分化·腿", "en": "Five-day split · Legs" },
+      "description": {
+        "zh": "深蹲、腿屈伸、硬拉和弓步蹲组成的腿部训练日。",
+        "zh_hant": "深蹲、腿屈伸、硬拉和弓步蹲組成的腿部訓練日。",
+        "en": "A leg day combining squats, extensions, deadlifts, and lunges."
+      },
+      "difficulty": "intermediate",
+      "goals": {
+        "zh": ["腿部增肌", "下肢力量"],
+        "zh_hant": ["腿部增肌", "下肢力量"],
+        "en": ["Leg hypertrophy", "Lower-body strength"]
+      },
+      "duration_minutes": 55,
+      "equipment": ["barbell", "leverage machine"],
+      "exercises": [
+        { "exercise_id": "0043", "sets": 4, "reps": 8, "weight_kg": "35", "weight_mode": "total", "rest_seconds": 120 },
+        { "exercise_id": "0585", "sets": 4, "reps": 12, "weight_kg": "30", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "0032", "sets": 3, "reps": 12, "weight_kg": "35", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "0054", "sets": 3, "reps": 10, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000012",
+      "revision": 1,
+      "name": { "zh": "五分化·手臂腹", "zh_hant": "五分化·手臂腹", "en": "Five-day split · Arms & abs" },
+      "description": {
+        "zh": "肱二头、肱三头和腹肌的专项训练日。",
+        "zh_hant": "肱二頭、肱三頭和腹肌的專項訓練日。",
+        "en": "A focused biceps, triceps, and abdominal training day."
+      },
+      "difficulty": "intermediate",
+      "goals": { "zh": ["手臂增肌", "核心"], "zh_hant": ["手臂增肌", "核心"], "en": ["Arm hypertrophy", "Core"] },
+      "duration_minutes": 45,
+      "equipment": ["barbell", "dumbbell", "cable", "body weight"],
+      "exercises": [
+        {
+          "exercise_id": "0200",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": "12.5",
+          "weight_mode": "total",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0294",
+          "sets": 3,
+          "reps": 10,
+          "weight_kg": "6",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        { "exercise_id": "0031", "sets": 3, "reps": 10, "weight_kg": "15", "weight_mode": "total", "rest_seconds": 60 },
+        { "exercise_id": "0175", "sets": 4, "reps": 15, "weight_kg": "25", "weight_mode": "total", "rest_seconds": 60 },
+        {
+          "exercise_id": "0472",
+          "sets": 4,
+          "reps": 15,
+          "weight_kg": null,
+          "weight_mode": "body_weight",
+          "rest_seconds": 60
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-000000000013",
+      "revision": 1,
+      "name": { "zh": "五分化·肩", "zh_hant": "五分化·肩", "en": "Five-day split · Shoulders" },
+      "description": {
+        "zh": "肩部推举、侧平举、后束飞鸟和面拉组成的肩部训练日。",
+        "zh_hant": "肩部推舉、側平舉、後束飛鳥和面拉組成的肩部訓練日。",
+        "en": "Shoulder pressing, raises, rear-delt flyes, and face pulls."
+      },
+      "difficulty": "intermediate",
+      "goals": {
+        "zh": ["肩部增肌", "肩胛控制"],
+        "zh_hant": ["肩部增肌", "肩胛控制"],
+        "en": ["Shoulder hypertrophy", "Scapular control"]
+      },
+      "duration_minutes": 50,
+      "equipment": ["dumbbell", "cable"],
+      "exercises": [
+        {
+          "exercise_id": "0405",
+          "sets": 4,
+          "reps": 8,
+          "weight_kg": "8",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "2292",
+          "sets": 3,
+          "reps": 12,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0334",
+          "sets": 3,
+          "reps": 15,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0380",
+          "sets": 5,
+          "reps": 15,
+          "weight_kg": "4",
+          "weight_mode": "per_side",
+          "rest_seconds": 60
+        },
+        {
+          "exercise_id": "0233",
+          "sets": 4,
+          "reps": 15,
+          "weight_kg": "12.5",
+          "weight_mode": "total",
+          "rest_seconds": 60
+        }
+      ]
+    }
+  ],
+  "plans": [
+    {
+      "id": "22222222-2222-4222-8222-000000000001",
+      "revision": 1,
+      "name": { "zh": "常规三分化训练", "zh_hant": "常規三分化訓練", "en": "Classic three-way split" },
+      "description": {
+        "zh": "连续完成胸三头、背二头和腿肩训练后休息一天。建议先用保守重量熟悉动作，再按完成质量调整。",
+        "zh_hant": "連續完成胸三頭、背二頭和腿肩訓練後休息一天。建議先用保守重量熟悉動作，再按完成質量調整。",
+        "en": "Train chest and triceps, back and biceps, then legs and shoulders before one rest day. Start conservatively and adjust from performance."
+      },
+      "difficulty": "beginner",
+      "goals": {
+        "zh": ["全身增肌", "基础力量"],
+        "zh_hant": ["全身增肌", "基礎力量"],
+        "en": ["Full-body hypertrophy", "Foundational strength"]
+      },
+      "cycle_days": 4,
+      "days": [
+        { "day_index": 0, "template_id": "11111111-1111-4111-8111-000000000001" },
+        { "day_index": 1, "template_id": "11111111-1111-4111-8111-000000000002" },
+        { "day_index": 2, "template_id": "11111111-1111-4111-8111-000000000003" },
+        { "day_index": 3, "template_id": null }
+      ]
+    },
+    {
+      "id": "22222222-2222-4222-8222-000000000002",
+      "revision": 1,
+      "name": { "zh": "全身不分化", "zh_hant": "全身不分化", "en": "Full-body seven-day plan" },
+      "description": {
+        "zh": "一周五个全身训练日，侧重点依次变化，最后两天休息。训练频率较高，应根据恢复情况主动降重或减少组数。",
+        "zh_hant": "一週五個全身訓練日，側重點依次變化，最後兩天休息。訓練頻率較高，應根據恢復情況主動降重或減少組數。",
+        "en": "Five full-body days with rotating emphasis followed by two rest days. Reduce load or volume when recovery is insufficient."
+      },
+      "difficulty": "intermediate",
+      "goals": {
+        "zh": ["全身增肌", "训练容量"],
+        "zh_hant": ["全身增肌", "訓練容量"],
+        "en": ["Full-body hypertrophy", "Work capacity"]
+      },
+      "cycle_days": 7,
+      "days": [
+        { "day_index": 0, "template_id": "11111111-1111-4111-8111-000000000004" },
+        { "day_index": 1, "template_id": "11111111-1111-4111-8111-000000000005" },
+        { "day_index": 2, "template_id": "11111111-1111-4111-8111-000000000006" },
+        { "day_index": 3, "template_id": "11111111-1111-4111-8111-000000000007" },
+        { "day_index": 4, "template_id": "11111111-1111-4111-8111-000000000008" },
+        { "day_index": 5, "template_id": null },
+        { "day_index": 6, "template_id": null }
+      ]
+    },
+    {
+      "id": "22222222-2222-4222-8222-000000000003",
+      "revision": 1,
+      "name": { "zh": "五分化训练计划", "zh_hant": "五分化訓練計劃", "en": "Five-day body-part split" },
+      "description": {
+        "zh": "胸、背、腿、手臂腹肌和肩部各安排一天，最后两天休息。适合已有稳定动作基础的训练者。",
+        "zh_hant": "胸、背、腿、手臂腹肌和肩部各安排一天，最後兩天休息。適合已有穩定動作基礎的訓練者。",
+        "en": "One day each for chest, back, legs, arms and abs, and shoulders, followed by two rest days. Intended for experienced trainees."
+      },
+      "difficulty": "intermediate",
+      "goals": {
+        "zh": ["部位增肌", "专项容量"],
+        "zh_hant": ["部位增肌", "專項容量"],
+        "en": ["Body-part hypertrophy", "Targeted volume"]
+      },
+      "cycle_days": 7,
+      "days": [
+        { "day_index": 0, "template_id": "11111111-1111-4111-8111-000000000009" },
+        { "day_index": 1, "template_id": "11111111-1111-4111-8111-000000000010" },
+        { "day_index": 2, "template_id": "11111111-1111-4111-8111-000000000011" },
+        { "day_index": 3, "template_id": "11111111-1111-4111-8111-000000000012" },
+        { "day_index": 4, "template_id": "11111111-1111-4111-8111-000000000013" },
+        { "day_index": 5, "template_id": null },
+        { "day_index": 6, "template_id": null }
+      ]
+    }
+  ]
+}

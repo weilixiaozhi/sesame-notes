@@ -1,0 +1,264 @@
+/* 设计风格复用全站 token；明暗模式继续由独立的 data-theme 决定。 */
+:root[data-design-style='minimal'] {
+  --primary: #3e5363;
+  --primary-hover: #293e4f;
+  --background: #f7f8f9;
+  --surface: #ffffff;
+  --surface-secondary: #f0f3f5;
+  --input: #f3f5f6;
+  --text: #29343d;
+  --text-secondary: #64717b;
+  --muted: #64717b;
+  --border: #e0e6e9;
+  --selected: #eaf0f3;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: none;
+  --design-on-primary: #ffffff;
+  --design-on-danger: #ffffff;
+}
+
+:root[data-design-style='warm'] {
+  --primary: #496b51;
+  --primary-hover: #37563e;
+  --background: #f1eee6;
+  --surface: #fffdf7;
+  --surface-secondary: #eeefe5;
+  --input: #f5f4ec;
+  --text: #354236;
+  --text-secondary: #626e5f;
+  --muted: #626e5f;
+  --border: #dce0d2;
+  --selected: #e5ecdc;
+  --danger: #b32f42;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 2px 5px rgb(62 70 47 / 5%);
+  --tone-green: #4a795c;
+  --tone-amber: #937341;
+  --tone-rose: #9d6677;
+  --design-on-primary: #fffdf7;
+  --design-on-danger: #ffffff;
+  --design-paper-line: #ced9c3;
+  --design-heading-font: 'Iowan Old Style', 'Palatino Linotype', 'Songti SC', SimSun, serif;
+}
+
+:root[data-design-style='minimal'][data-theme='dark'] {
+  --primary: #adc4d3;
+  --primary-hover: #c4d5df;
+  --background: #191e23;
+  --surface: #232b32;
+  --surface-secondary: #2c3740;
+  --input: #2c3740;
+  --text: #e6edf2;
+  --text-secondary: #acbac5;
+  --muted: #acbac5;
+  --border: #3d4a55;
+  --selected: #344956;
+  --design-on-primary: #1d2d38;
+  --design-on-danger: #30171b;
+}
+
+:root[data-design-style='warm'][data-theme='dark'] {
+  --primary: #abc69b;
+  --primary-hover: #c1d7b3;
+  --background: #20251f;
+  --surface: #2c3329;
+  --surface-secondary: #384333;
+  --input: #354031;
+  --text: #e9edde;
+  --text-secondary: #b6c0ac;
+  --muted: #b6c0ac;
+  --border: #4c5946;
+  --selected: #40523a;
+  --danger: #f09a9f;
+  --shadow: 0 2px 5px rgb(0 0 0 / 12%);
+  --tone-green: #a3c399;
+  --tone-amber: #d1b789;
+  --tone-rose: #d6a3b2;
+  --design-on-primary: #24361f;
+  --design-on-danger: #30171b;
+  --design-paper-line: #65785a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-design-style='minimal']:not([data-theme='light']) {
+    --primary: #adc4d3;
+    --primary-hover: #c4d5df;
+    --background: #191e23;
+    --surface: #232b32;
+    --surface-secondary: #2c3740;
+    --input: #2c3740;
+    --text: #e6edf2;
+    --text-secondary: #acbac5;
+    --muted: #acbac5;
+    --border: #3d4a55;
+    --selected: #344956;
+    --design-on-primary: #1d2d38;
+    --design-on-danger: #30171b;
+  }
+
+  :root[data-design-style='warm']:not([data-theme='light']) {
+    --primary: #abc69b;
+    --primary-hover: #c1d7b3;
+    --background: #20251f;
+    --surface: #2c3329;
+    --surface-secondary: #384333;
+    --input: #354031;
+    --text: #e9edde;
+    --text-secondary: #b6c0ac;
+    --muted: #b6c0ac;
+    --border: #4c5946;
+    --selected: #40523a;
+    --danger: #f09a9f;
+    --shadow: 0 2px 5px rgb(0 0 0 / 12%);
+    --tone-green: #a3c399;
+    --tone-amber: #d1b789;
+    --tone-rose: #d6a3b2;
+    --design-on-primary: #24361f;
+    --design-on-danger: #30171b;
+    --design-paper-line: #65785a;
+  }
+}
+
+:root[data-design-style] .button-primary {
+  color: var(--design-on-primary);
+}
+
+:root[data-design-style] .button-danger {
+  color: var(--design-on-danger);
+}
+
+:root[data-design-style] :focus-visible {
+  outline-color: var(--primary);
+}
+
+:root[data-design-style] :is(input, select, textarea):hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+
+/* 极简清单以内容与细分隔为主，不为每个日期或每张笔记再围一层卡片。 */
+:root[data-design-style='minimal'] .topbar {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--background);
+  box-shadow: none;
+}
+
+:root[data-design-style='minimal'] .desktop-nav a {
+  border-radius: 0;
+}
+
+:root[data-design-style='minimal'] .desktop-nav a.active {
+  background: transparent;
+  box-shadow: inset 0 -1px 0 var(--primary);
+}
+
+:root[data-design-style='minimal'] .desktop-nav a > svg {
+  display: none;
+}
+
+:root[data-design-style='minimal'] .accounting-overview-summary {
+  background: transparent;
+  border-radius: 0;
+}
+
+:root[data-design-style='minimal'] .transaction-day-list {
+  padding-inline: 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-design-style='minimal'] .transaction-category-icon {
+  color: var(--text-secondary);
+  background: transparent;
+  border-radius: 0;
+}
+
+:root[data-design-style='minimal'] .memos-page .memo-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+:root[data-design-style='minimal'] .memos-page .memo-card,
+:root[data-design-style='minimal'] .days-page .day-card {
+  min-height: 0;
+  padding: var(--space-6) 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-design-style='minimal'] .memos-page .memo-card-footer,
+:root[data-design-style='minimal'] .days-page .day-card-footer {
+  border-top: 0;
+}
+
+:root[data-design-style='minimal'] .fitness-workout-list {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-design-style='minimal'] .fitness-workout-row {
+  padding-inline: 0;
+}
+
+:root[data-design-style='minimal'] .fitness-row-icon {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+/* 温暖手账保留同一本子页签结构，把纸页感放在阅读内容与标题上。 */
+:root[data-design-style='warm'] .page-heading h1,
+:root[data-design-style='warm'] .overview-card h2,
+:root[data-design-style='warm'] .memos-page .memo-card h3,
+:root[data-design-style='warm'] .days-page .day-card h3,
+:root[data-design-style='warm'] .fitness-section-heading h2 {
+  font-family: var(--design-heading-font);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+:root[data-design-style='warm'] .accounting-statistics {
+  border-left: 3px solid var(--design-paper-line);
+  border-radius: 3px var(--radius-lg) var(--radius-lg) 3px;
+  box-shadow: var(--shadow);
+}
+
+:root[data-design-style='warm'] .accounting-overview-summary {
+  background: var(--selected);
+}
+
+:root[data-design-style='warm'] .transaction-day-list,
+:root[data-design-style='warm'] .fitness-workout-list {
+  border-left: 3px solid var(--design-paper-line);
+  border-radius: 3px var(--radius) var(--radius) 3px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+:root[data-design-style='warm'] .memos-page .memo-card {
+  border-top-width: 1px;
+  border-left: 3px solid var(--design-paper-line);
+  border-radius: 3px var(--radius) var(--radius) 3px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+:root[data-design-style='warm'] .days-page .day-card {
+  border-top-color: var(--design-paper-line);
+  border-radius: 3px 3px var(--radius) var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}

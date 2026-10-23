@@ -1,0 +1,60 @@
+{
+  "valid": [
+    { "id": "empty", "body": { "ops": [{ "insert": "\n" }] }, "text": "\n" },
+    { "id": "blank-lines", "body": { "ops": [{ "insert": "\n\n\n" }] }, "text": "\n\n\n" },
+    {
+      "id": "unicode-whitespace",
+      "body": { "ops": [{ "insert": "  简体繁體 English 😀 é <>& \\ * _ [x]\t\n\n" }] },
+      "text": "  简体繁體 English 😀 é <>& \\ * _ [x]\t\n\n"
+    },
+    {
+      "id": "formatted",
+      "body": {
+        "ops": [
+          { "insert": "标题" },
+          { "insert": "\n", "attributes": { "header": 1 } },
+          { "insert": "加粗", "attributes": { "bold": true } },
+          { "insert": "与正文\n" },
+          { "insert": "有序" },
+          { "insert": "\n", "attributes": { "list": "ordered" } },
+          { "insert": "嵌套" },
+          { "insert": "\n", "attributes": { "list": "bullet", "indent": 1 } },
+          { "insert": "未完成" },
+          { "insert": "\n", "attributes": { "list": "unchecked", "indent": 0 } },
+          { "insert": "已完成" },
+          { "insert": "\n", "attributes": { "list": "checked", "indent": 5 } }
+        ]
+      },
+      "text": "标题\n加粗与正文\n有序\n嵌套\n未完成\n已完成\n"
+    }
+  ],
+  "invalid": [
+    { "id": "lone-high-surrogate", "body": { "ops": [{ "insert": "\ud800\n" }] } },
+    { "id": "lone-low-surrogate", "body": { "ops": [{ "insert": "\udc00\n" }] } },
+    { "id": "reversed-surrogates", "body": { "ops": [{ "insert": "\udc00\ud800\n" }] } },
+    { "id": "null", "body": null },
+    { "id": "missing-ops", "body": {} },
+    { "id": "empty-ops", "body": { "ops": [] } },
+    { "id": "missing-terminator", "body": { "ops": [{ "insert": "text" }] } },
+    { "id": "empty-insert", "body": { "ops": [{ "insert": "" }, { "insert": "\n" }] } },
+    { "id": "embed", "body": { "ops": [{ "insert": { "image": "invalid" } }, { "insert": "\n" }] } },
+    { "id": "retain", "body": { "ops": [{ "retain": 1 }, { "insert": "\n" }] } },
+    { "id": "delete", "body": { "ops": [{ "delete": 1 }, { "insert": "\n" }] } },
+    { "id": "extra-root", "body": { "ops": [{ "insert": "\n" }], "extra": true } },
+    { "id": "extra-operation", "body": { "ops": [{ "insert": "\n", "extra": true }] } },
+    { "id": "unknown-format", "body": { "ops": [{ "insert": "\n", "attributes": { "color": "red" } }] } },
+    { "id": "null-attributes", "body": { "ops": [{ "insert": "\n", "attributes": null }] } },
+    { "id": "bold-type", "body": { "ops": [{ "insert": "\n", "attributes": { "bold": 1 } }] } },
+    { "id": "header-range", "body": { "ops": [{ "insert": "\n", "attributes": { "header": 4 } }] } },
+    { "id": "header-type", "body": { "ops": [{ "insert": "\n", "attributes": { "header": "1" } }] } },
+    { "id": "indent-negative", "body": { "ops": [{ "insert": "\n", "attributes": { "indent": -1 } }] } },
+    { "id": "indent-overflow", "body": { "ops": [{ "insert": "\n", "attributes": { "indent": 6 } }] } },
+    { "id": "indent-fraction", "body": { "ops": [{ "insert": "\n", "attributes": { "indent": 1.5 } }] } },
+    { "id": "list-unknown", "body": { "ops": [{ "insert": "\n", "attributes": { "list": "task" } }] } },
+    { "id": "block-on-text", "body": { "ops": [{ "insert": "title\n", "attributes": { "header": 1 } }] } },
+    {
+      "id": "conflicting-blocks",
+      "body": { "ops": [{ "insert": "\n", "attributes": { "header": 1, "list": "ordered" } }] }
+    }
+  ]
+}

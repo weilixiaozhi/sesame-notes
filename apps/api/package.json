@@ -1,0 +1,52 @@
+{
+  "name": "@sesame-notes/api",
+  "version": "0.1.7",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/build-tools/clean-build-output.mjs apps/api/dist && tsc -p tsconfig.build.json",
+    "dev": "pnpm test:serve",
+    "test:serve": "tsx watch --env-file=../../.env.test src/server.ts",
+    "start": "node dist/server.js",
+    "test": "vitest run --config vitest.config.ts",
+    "test:config": "vitest run --config vitest.test-environment.config.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:setup": "node prisma/setup.mjs",
+    "db:setup:test": "node --env-file=../../.env.test prisma/setup.mjs --test-admin",
+    "db:migrate:dev": "prisma migrate dev",
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "fitness:catalog": "tsx scripts/generate-fitness-catalog.ts",
+    "postinstall": "prisma generate",
+    "db:seed": "tsx src/admin-bootstrap.ts",
+    "db:delete-account": "tsx src/account-delete.ts",
+    "db:admin:recover": "tsx src/admin-recover.ts",
+    "db:server:recover": "tsx src/server-recover.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "catalog:",
+    "@fastify/cors": "catalog:",
+    "@fastify/swagger": "catalog:",
+    "@fastify/websocket": "catalog:",
+    "@prisma/client": "catalog:",
+    "@sinclair/typebox": "catalog:",
+    "fastify": "catalog:",
+    "jose": "catalog:",
+    "prisma": "catalog:",
+    "sharp": "catalog:",
+    "tyme4ts": "catalog:"
+  },
+  "devDependencies": {
+    "@fastify/type-provider-typebox": "catalog:",
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "ws": "catalog:"
+  },
+  "files": [
+    "dist",
+    "prisma"
+  ]
+}

@@ -1,0 +1,25 @@
+.accounting-record-action {
+  min-width: 112px;
+}
+
+.accounting-floating-record-action {
+  position: fixed;
+  z-index: 40;
+  right: var(--space-4);
+  bottom: calc(var(--mobile-nav-height, 64px) + var(--space-4));
+  width: 136px;
+  max-width: calc(100vw - var(--space-8));
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: var(--text-md);
+  font-weight: 600;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+@media (max-width: 760px) {
+  /* 浮动入口不进入弹窗操作层；选择器或滑块保留焦点不会影响入口可见性。 */
+  body:has([role='dialog'][data-state='open']) .accounting-floating-record-action {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
