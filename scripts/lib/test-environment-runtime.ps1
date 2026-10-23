@@ -221,15 +221,40 @@ function Get-TestProcess {
 <# .SYNOPSIS 创建进程后立即登记身份，以便就绪检查失败时仍能安全定位和清理。 #>
 function Start-TestProcess {
     param([string]$Role, [string[]]$Arguments, [string]$Directory, [string]$Path, [string]$Fingerprint)
-    $Process = Start-Process -FilePath $Node -ArgumentList $Arguments -WorkingDirectory $Directory -WindowStyle Hidden -PassThru `
-        -RedirectStandardOutput (Join-Path $Runtime "$Role.stdout.log") -RedirectStandardError (Join-Path $Runtime "$Role.stderr.log")
+    $Process = $null
     try {
+        $OutputPath = Join-Path $Runtime "$Role.stdout.log"
+        $ErrorPath = Join-Path $Runtime "$Role.stderr.log"
+        # JSON 经标准输入传递，不借助 shell 解释参数；所有平台的子服务日志都直接连接文件。
+        # 独立 helper 在 Windows 隐藏窗口，在 Unix 创建独立会话，服务不持有启动终端的管道。
+        $Request = @{ arguments = @($Arguments); directory = $Directory; stdout = $OutputPath; stderr = $ErrorPath } | ConvertTo-Json -Compress
+        $Helper = Join-Path $PSScriptRoot 'start-detached-test-process.mjs'
+        $StartedAfter = [DateTime]::UtcNow.AddSeconds(-1)
+        $Result = $Request | & $Node $Helper
+        if ($LASTEXITCODE -ne 0) { throw '独立进程启动失败，请检查上方错误和运行日志。' }
+        $Receipt = $Result | ConvertFrom-Json -ErrorAction Stop
+        if (($Receipt.id -isnot [long] -and $Receipt.id -isnot [int]) -or $Receipt.id -le 0) {
+            throw '独立进程未返回有效 PID。'
+        }
+        $Candidate = Get-Process -Id $Receipt.id -ErrorAction Stop
+        $Executable = Get-Item -LiteralPath $Node -ErrorAction Stop
+        $ResolvedExecutable = if ($Executable.LinkType) { $Executable.ResolveLinkTarget($true).FullName } else { $Executable.FullName }
+        $SameExecutable = if ($IsWindows) { $Candidate.Path -ieq $ResolvedExecutable } else { $Candidate.Path -ceq $ResolvedExecutable }
+        if ($Candidate.ProcessName -cne 'node' -or -not $SameExecutable -or
+            $Candidate.StartTime.ToUniversalTime() -lt $StartedAfter) {
+            throw '独立进程身份无法确认，未接管或终止该 PID。'
+        }
+        $Process = $Candidate
         @{ root = $Root; role = $Role; id = $Process.Id; started = $Process.StartTime.ToUniversalTime().ToString('O');
-            executable = $Node; fingerprint = $Fingerprint } | ConvertTo-Json | Set-Content -LiteralPath $Path -Encoding utf8
+            executable = $Process.Path; fingerprint = $Fingerprint } | ConvertTo-Json | Set-Content -LiteralPath $Path -Encoding utf8 -ErrorAction Stop
         return $Process
     } catch {
-        if (-not $Process.HasExited) { $Process.Kill($true); $null = $Process.WaitForExit(10000) }
-        throw
+        $Failure = $_
+        if ($Process -and -not $Process.HasExited) {
+            try { $Process.Kill($true); $null = $Process.WaitForExit(10000) }
+            catch { [Console]::Error.WriteLine("清理已创建的 $Role 进程失败：$($_.Exception.Message)") }
+        }
+        throw [InvalidOperationException]::new("无法启动 $Role：$($Failure.Exception.Message)", $Failure.Exception)
     }
 }
 
@@ -243,13 +268,165 @@ function Stop-TestProcess {
     @{ root = $Root; role = $Role; id = $null } | ConvertTo-Json | Set-Content -LiteralPath $Path -Encoding utf8
 }
 
+<# .SYNOPSIS 识别 PowerShell 所在系统；不支持的系统必须停止，不能跳过监听身份检查。 #>
+function Get-TestRuntimePlatform {
+    try {
+        if ($IsWindows) { return 'Windows' }
+        if ($IsLinux) { return 'Linux' }
+        if ($IsMacOS) { return 'macOS' }
+        throw '统一测试启动入口仅支持 Windows、Linux 和 macOS。'
+    } catch { throw [PlatformNotSupportedException]::new($_.Exception.Message, $_.Exception) }
+}
+
+<# .SYNOPSIS 有限等待系统监听查询，分离标准输出与诊断信息并通过 ArgumentList 保留参数边界。 #>
+function Invoke-TestListenerCommand {
+    param([string]$Command, [string[]]$Arguments)
+    $Query = $null
+    try {
+        $Executable = (Get-Command $Command -CommandType Application -ErrorAction Stop).Source
+        $Info = [Diagnostics.ProcessStartInfo]::new($Executable)
+        $Info.UseShellExecute = $false
+        $Info.RedirectStandardOutput = $true
+        $Info.RedirectStandardError = $true
+        foreach ($Argument in $Arguments) { $Info.ArgumentList.Add($Argument) }
+        # 固定文本语言，解析依赖协议字段而非当前终端的区域设置。
+        $Info.Environment['LC_ALL'] = 'C'
+        $Query = [Diagnostics.Process]::Start($Info)
+        $OutputTask = $Query.StandardOutput.ReadToEndAsync()
+        $ErrorTask = $Query.StandardError.ReadToEndAsync()
+        if (-not $Query.WaitForExit(10000)) {
+            $Query.Kill($true)
+            $null = $Query.WaitForExit(10000)
+            throw "$Command 监听查询超时；未执行服务启动或停止操作。"
+        }
+        return @{ ExitCode = $Query.ExitCode; Output = $OutputTask.GetAwaiter().GetResult(); ErrorOutput = $ErrorTask.GetAwaiter().GetResult() }
+    } catch {
+        throw [InvalidOperationException]::new("无法执行 $Command 监听查询，请确认系统提供该工具并允许读取进程信息：$($_.Exception.Message)", $_.Exception)
+    } finally { if ($Query) { $Query.Dispose() } }
+}
+
+<# .SYNOPSIS 解析数值 TCP 端点，保留 IPv4、IPv6 和通配监听地址，拒绝错误端口或不明地址格式。 #>
+function ConvertFrom-TestListenerEndpoint {
+    param([string]$Endpoint, [int]$Port)
+    try {
+        if ($Endpoint -cnotmatch '^(?:\[(?<bracket>[^\]]+)\]|(?<plain>.+)):(?<port>[0-9]+)$' -or
+            [int]$Matches.port -ne $Port) { throw '监听端点与请求端口不一致或格式无效。' }
+        $Address = if ($Matches.bracket) { $Matches.bracket } else { $Matches.plain }
+        $ParsedAddress = $null
+        if ($Address -cne '*' -and -not [Net.IPAddress]::TryParse($Address, [ref]$ParsedAddress)) {
+            throw '监听地址不是数值 IP 或通配地址。'
+        }
+        return $Address
+    } catch { throw [InvalidOperationException]::new('无法解析系统返回的 TCP 监听端点。', $_.Exception) }
+}
+
+<# .SYNOPSIS 解析 ss 的无表头 TCP 监听结果；每条监听必须有可见的正整数 PID。 #>
+function ConvertFrom-TestSsListeners {
+    param([AllowEmptyString()][string]$Output, [int]$Port)
+    try {
+        foreach ($Line in @($Output -split '\r?\n' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
+            if ($Line -cnotmatch '^LISTEN\s+[0-9]+\s+[0-9]+\s+(?<local>\S+)\s+\S+\s*(?<owners>.*)$') {
+                throw 'ss 返回了无法识别的监听记录。'
+            }
+            $Endpoint = $Matches.local
+            $OwnerText = $Matches.owners.Trim()
+            $Address = ConvertFrom-TestListenerEndpoint $Endpoint $Port
+            if ($OwnerText -cnotmatch '^users:\(\("[^"]*",pid=[1-9][0-9]*,fd=[0-9]+\)(?:,\("[^"]*",pid=[1-9][0-9]*,fd=[0-9]+\))*\)$') {
+                throw 'ss 检测到监听，但进程 PID 不可见或身份字段格式无效；请核对系统权限后重试。'
+            }
+            $Owners = [regex]::Matches($OwnerText, ',pid=(?<id>[1-9][0-9]*),fd=')
+            foreach ($Owner in $Owners) {
+                [pscustomobject]@{ LocalAddress = $Address; LocalPort = $Port; OwningProcess = [int]$Owner.Groups['id'].Value }
+            }
+        }
+    } catch { throw [InvalidOperationException]::new("无法确认 Linux 端口 $Port 的监听身份：$($_.Exception.Message)", $_.Exception) }
+}
+
+<# .SYNOPSIS 解析 lsof 的 p/f/t/n 机器字段输出，确保每个端点都有明确的 PID、文件和地址族。 #>
+function ConvertFrom-TestLsofListeners {
+    param([AllowEmptyString()][string]$Output, [int]$Port)
+    try {
+        $Owner = $null
+        $FileDescriptor = $null
+        $Family = $null
+        $HasEndpoint = $false
+        foreach ($Line in @($Output -split '\r?\n' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })) {
+            if ($Line -cmatch '^p([1-9][0-9]*)$') {
+                if ($null -ne $Owner -and -not $HasEndpoint) { throw 'lsof 进程记录缺少监听端点。' }
+                $Owner = [int]$Matches[1]
+                $FileDescriptor = $null
+                $Family = $null
+                $HasEndpoint = $false
+            } elseif ($Line -cmatch '^f([0-9]+)$') {
+                if ($null -eq $Owner -or ($null -ne $FileDescriptor -and -not $HasEndpoint)) {
+                    throw 'lsof 文件记录缺少进程或监听端点。'
+                }
+                $FileDescriptor = $Matches[1]
+                $Family = $null
+                $HasEndpoint = $false
+            } elseif ($Line -cmatch '^t(IPv[46])$') {
+                if ($null -eq $FileDescriptor -or $null -ne $Family) { throw 'lsof 地址族字段不属于有效文件。' }
+                $Family = $Matches[1]
+            } elseif ($Line.StartsWith('n', [StringComparison]::Ordinal)) {
+                if ($null -eq $Owner -or $null -eq $FileDescriptor -or $null -eq $Family -or $HasEndpoint) {
+                    throw 'lsof 检测到监听，但进程 PID、文件或地址族不可确认。'
+                }
+                $Address = ConvertFrom-TestListenerEndpoint $Line.Substring(1) $Port
+                # lsof 用同一个星号表示 IPv4/IPv6 的通配绑定，借助文件类型还原真实监听地址。
+                if ($Address -ceq '*') { $Address = if ($Family -ceq 'IPv4') { '0.0.0.0' } else { '::' } }
+                $HasEndpoint = $true
+                [pscustomobject]@{ LocalAddress = $Address; LocalPort = $Port; OwningProcess = $Owner }
+            } else { throw 'lsof 返回了无法识别的监听字段。' }
+        }
+        if ($null -ne $Owner -and -not $HasEndpoint) { throw 'lsof 进程记录缺少监听端点。' }
+    } catch { throw [InvalidOperationException]::new("无法确认 macOS 端口 $Port 的监听身份：$($_.Exception.Message)", $_.Exception) }
+}
+
+<# .SYNOPSIS 使用系统原生工具读取同一格式的监听身份；任何查询或解析错误均不能当作端口空闲。 #>
+function Get-TestRuntimePortListeners {
+    param([ValidateRange(1, 65535)][int]$Port)
+    try {
+        switch (Get-TestRuntimePlatform) {
+            'Windows' {
+                # 不按端口向 CIM 发起筛选，避免“无匹配实例”与查询失败共用错误路径。
+                $Connections = @(Get-NetTCPConnection -ErrorAction Stop | Where-Object { $_.State -eq 'Listen' -and $_.LocalPort -eq $Port })
+                foreach ($Connection in $Connections) {
+                    if ([long]$Connection.OwningProcess -le 0 -or [string]::IsNullOrWhiteSpace($Connection.LocalAddress)) {
+                        throw '系统返回的监听记录缺少有效 PID 或地址。'
+                    }
+                    [pscustomobject]@{ LocalAddress = $Connection.LocalAddress; LocalPort = $Port; OwningProcess = [int]$Connection.OwningProcess }
+                }
+            }
+            'Linux' {
+                $Result = Invoke-TestListenerCommand 'ss' @('-H', '-ltnp', "sport = :$Port")
+                if ($Result.ExitCode -ne 0 -or -not [string]::IsNullOrWhiteSpace($Result.ErrorOutput)) {
+                    throw "ss 查询未成功（退出码 $($Result.ExitCode)）：$($Result.ErrorOutput)"
+                }
+                ConvertFrom-TestSsListeners $Result.Output $Port
+            }
+            'macOS' {
+                $Result = Invoke-TestListenerCommand 'lsof' @('-nP', '-a', "-iTCP:$Port", '-sTCP:LISTEN', '-Fpftn')
+                # lsof 仅在无匹配项且完全没有输出时以 1 返回；其他非零状态都不能解释为端口空闲。
+                if ($Result.ExitCode -eq 1 -and [string]::IsNullOrWhiteSpace($Result.Output) -and
+                    [string]::IsNullOrWhiteSpace($Result.ErrorOutput)) { return }
+                if ($Result.ExitCode -ne 0 -or -not [string]::IsNullOrWhiteSpace($Result.ErrorOutput)) {
+                    throw "lsof 查询未成功（退出码 $($Result.ExitCode)）：$($Result.ErrorOutput)"
+                }
+                ConvertFrom-TestLsofListeners $Result.Output $Port
+            }
+        }
+    } catch { throw [InvalidOperationException]::new("无法安全检查端口 $Port：$($_.Exception.Message)", $_.Exception) }
+}
+
 <# .SYNOPSIS 拒绝接管未知监听进程，避免验收启动误停其他应用。 #>
 function Assert-TestPort {
     param([int]$Port, [int[]]$AllowedIds = @())
-    $Listeners = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
-    if (@($Listeners | Where-Object { $_.OwningProcess -notin $AllowedIds }).Count) {
-        throw "端口 $Port 已由未登记的进程占用，脚本不会终止该进程。"
-    }
+    try {
+        $Listeners = @(Get-TestRuntimePortListeners $Port)
+        if (@($Listeners | Where-Object { $_.OwningProcess -notin $AllowedIds }).Count) {
+            throw "端口 $Port 已由未登记的进程占用，脚本不会终止该进程。"
+        }
+    } catch { throw [InvalidOperationException]::new("端口使用检查失败：$($_.Exception.Message)", $_.Exception) }
 }
 
 <# .SYNOPSIS 有限轮询服务与数据库就绪状态，失败时指向保留的运行日志。 #>
@@ -289,7 +466,7 @@ function Get-SharedTestApi {
     if ($Managed) {
         if ($Managed.state.fingerprint -cne $Fingerprint) { throw '.env.test 已变更，请运行 pnpm dev:test -Rebuild 更新共用 API。' }
         Assert-TestPort 8080 @($Managed.process.Id)
-        $Listeners = @(Get-NetTCPConnection -State Listen -LocalPort 8080 -ErrorAction SilentlyContinue)
+        $Listeners = @(Get-TestRuntimePortListeners 8080)
         if (-not @($Listeners | Where-Object { $_.OwningProcess -eq $Managed.process.Id -and $_.LocalAddress -eq '0.0.0.0' }).Count) {
             throw '已登记的共用 API 未监听 0.0.0.0:8080，手机端无法连接。'
         }
