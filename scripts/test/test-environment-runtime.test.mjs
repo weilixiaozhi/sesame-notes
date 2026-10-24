@@ -174,14 +174,21 @@ runtimeTest('拒绝生产库、独立 API/数据库端口与手机不可访问�
   assert.match(output, /PASS/);
 });
 
-runtimeTest('进程登记保留小数秒并拒绝重用 PID', () => {
+runtimeTest('进程登记使用可执行文件与精确时间，允许显示名称变化并拒绝重用 PID', () => {
   const output = run(`
     $Moment = [DateTime]::Parse('2026-10-06T08:09:10.1234567Z').ToUniversalTime()
-    function Get-Process { return [pscustomobject]@{ ProcessName = 'node'; StartTime = $Moment; Path = 'C:\\node.exe' } }
+    $ActualExecutable = $Node
+    function Get-Process { return [pscustomobject]@{ Id = $PID; ProcessName = 'renamed-worker'; StartTime = $Moment; Path = $ActualExecutable; HasExited = $false } }
     $StatePath = Join-Path $Root 'process.json'
-    @{ root = $Root; role = 'api'; id = 42; executable = 'C:\\node.exe'; started = $Moment.ToString('O') } |
+    @{ root = $Root; role = 'api'; id = $PID; executable = $Node; started = $Moment.ToString('O') } |
         ConvertTo-Json | Set-Content -LiteralPath $StatePath
     if (-not (Get-TestProcess $StatePath 'api')) { throw 'VALID_PROCESS_REJECTED' }
+    # 使用当前 PowerShell 的真实路径验证不同可执行文件被拒绝。
+    $ActualExecutable = [Environment]::ProcessPath
+    $Rejected = $false
+    try { $null = Get-TestProcess $StatePath 'api' } catch { $Rejected = $true }
+    if (-not $Rejected) { throw 'FOREIGN_EXECUTABLE_ACCEPTED' }
+    $ActualExecutable = $Node
     $Moment = $Moment.AddTicks(1)
     $Rejected = $false
     try { $null = Get-TestProcess $StatePath 'api' } catch { $Rejected = $true }

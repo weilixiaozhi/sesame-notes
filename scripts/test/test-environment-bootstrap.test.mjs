@@ -308,7 +308,7 @@ bootstrapTest('既有卷归属更改或更换 Docker 引擎时拒绝继续', () 
 
 bootstrapTest('依赖缺失在 Docker 操作前失败，绝不安装依赖', () => {
   run(`
-    Remove-Item -LiteralPath (Join-Path $Root 'node_modules/.modules.yaml')
+    Remove-Item -LiteralPath (Join-Path $Root 'node_modules/.modules.yaml') -Force
     Assert-Rejected { Initialize-TestEnvironment $Root $Node 'fake-docker' 'fake-pnpm' } '缺少项目依赖'
     if (@($script:Calls | Where-Object command -CEQ 'fake-docker').Count) { throw '实现错：依赖缺失仍操作 Docker' }
   `);
@@ -384,7 +384,7 @@ bootstrapTest('启动前就绪校验拒绝未完成或缺失的收据，不调�
     $script:Calls.Clear()
     Assert-Rejected { Assert-TestBootstrapReady $Root 'fake-docker' $Config.values } '首次初始化尚未完成'
     if ($script:Calls.Count -ne 0) { throw '实现错：未完成初始化时访问了 Docker' }
-    Remove-Item -LiteralPath (Join-Path $Root '.env.test.bootstrap.json')
+    Remove-Item -LiteralPath (Join-Path $Root '.env.test.bootstrap.json') -Force
     Assert-Rejected { Assert-TestBootstrapReady $Root 'fake-docker' $Config.values } '缺少初始化收据'
     if ($script:Calls.Count -ne 0) { throw '实现错：缺少收据时访问了 Docker' }
   `);

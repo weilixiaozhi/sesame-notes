@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { createConnection } from 'node:net';
 import path from 'node:path';
 import test from 'node:test';
@@ -20,6 +29,8 @@ import { createServer } from 'node:net';
 import { writeFileSync } from 'node:fs';
 try {
   const [ready, host, nonce, ...args] = process.argv.slice(2);
+  // 运行时和应用可以改变显示名称，进程身份仍应由可执行文件与启动时间确定。
+  process.title = 'sesame-fixture-worker';
   const server = createServer((socket) => {
     socket.on('error', (error) => console.error('fixture socket:', error.message));
     socket.end('fixture');
@@ -313,8 +324,12 @@ runtimeTest('Node 独立启动器退出后子进程仍存活，并保留完整�
       fixture,
       `
     $Process = Get-Process -Id ${id} -ErrorAction Stop
-    if ($Process.ProcessName -cne 'node' -or $Process.Path -ine $Node) { throw 'UNEXPECTED_PROCESS_IDENTITY' }
-    @{ root = $Root; role = 'fixture'; id = $Process.Id; started = $Process.StartTime.ToUniversalTime().ToString('O'); executable = $Node } |
+    $Executable = Get-Item -LiteralPath $Process.Path -ErrorAction Stop
+    $ActualPath = if ($Executable.LinkType) { $Executable.ResolveLinkTarget($true).FullName } else { $Executable.FullName }
+    $ExpectedPath = ${quote(realpathSync(process.execPath))}
+    $Matched = if ($IsWindows) { $ActualPath -ieq $ExpectedPath } else { $ActualPath -ceq $ExpectedPath }
+    if (-not $Matched) { throw "UNEXPECTED_PROCESS_IDENTITY: name=$($Process.ProcessName); actual=$ActualPath; expected=$ExpectedPath" }
+    @{ root = $Root; role = 'fixture'; id = $Process.Id; started = $Process.StartTime.ToUniversalTime().ToString('O'); executable = $ActualPath } |
         ConvertTo-Json | Set-Content -LiteralPath ${quote(fixture.state)} -Encoding utf8
     `,
     );
@@ -341,15 +356,54 @@ runtimeTest('启动后登记失败会清理自己的真实进程并保留其他�
       `
     $Rejected = $false
     try { $null = Start-TestProcess 'fixture' @(${args.map(quote).join(',')}) $Root $Runtime 'fixture-fingerprint' }
-    catch { $Rejected = $true }
+    catch {
+        if ($_.Exception.Message -match '独立进程身份无法确认') { throw }
+        [Console]::Error.WriteLine($_.Exception.ToString())
+        $Rejected = $true
+    }
     if (-not $Rejected) { throw 'INVALID_REGISTRATION_PATH_ACCEPTED' }
     if (Test-Path -LiteralPath ${quote(fixture.ready)}) {
         $Ready = Get-Content -LiteralPath ${quote(fixture.ready)} -Raw | ConvertFrom-Json
-        if (Get-Process -Id $Ready.id -ErrorAction SilentlyContinue) { throw 'FAILED_PROCESS_NOT_CLEANED' }
+        $Remaining = Get-Process -Id $Ready.id -ErrorAction SilentlyContinue
+        if (-not (Test-TestProcessExited $Remaining)) {
+            throw "FAILED_PROCESS_NOT_CLEANED: id=$($Ready.id); name=$($Remaining.ProcessName); path=$($Remaining.Path)"
+        }
     }
     `,
     );
+    if (existsSync(fixture.ready)) {
+      const managed = JSON.parse(readFileSync(fixture.ready, 'utf8'));
+      assert.equal(await canConnect(managed.port), false, '登记失败后，本次创建的监听必须已经关闭。');
+    }
     assert.equal(await canConnect(unknown.port), true);
+  } catch (error) {
+    console.error(error.stack);
+    throw error;
+  }
+});
+
+runtimeTest('监听工具在 PATH 中有多个入口时只执行首个应用并保留参数边界', (t) => {
+  const fixture = createFixture(t);
+  try {
+    const output = runPowerShell(
+      fixture,
+      `
+    <# .SYNOPSIS 模拟同一应用在 PATH 中的多个入口，不改变宿主 PATH。 #>
+    function Get-Command {
+        param([string]$Name, [string]$CommandType, [string]$ErrorAction)
+        try {
+            if ($Name -cne 'fixture-listener') { throw 'UNEXPECTED_COMMAND_LOOKUP' }
+            return @([pscustomobject]@{ Source = $Node }, [pscustomobject]@{ Source = (Join-Path $Root 'missing second executable') })
+        } catch { throw }
+    }
+    $Result = Invoke-TestListenerCommand 'fixture-listener' @('-e', 'process.stdout.write(process.argv[1]);process.stderr.write("diagnostic");', 'value with spaces')
+    if ($Result.ExitCode -ne 0 -or $Result.Output -cne 'value with spaces' -or $Result.ErrorOutput -cne 'diagnostic') {
+        throw "LISTENER_EXECUTION_INVALID: exit=$($Result.ExitCode); stdout=$($Result.Output); stderr=$($Result.ErrorOutput)"
+    }
+    Write-Output 'FIRST_APPLICATION_PASS'
+    `,
+    );
+    assert.match(output, /FIRST_APPLICATION_PASS/);
   } catch (error) {
     console.error(error.stack);
     throw error;

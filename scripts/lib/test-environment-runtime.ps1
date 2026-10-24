@@ -200,6 +200,47 @@ function Invoke-TestCommand {
     if ($LASTEXITCODE -ne 0) { throw "$Label 失败，退出码 $LASTEXITCODE。详细输出：$Log。" }
 }
 
+<# .SYNOPSIS 解析可执行文件的实际路径，统一处理命令别名与符号链接，不使用可修改的进程显示名称。 #>
+function Resolve-TestExecutablePath {
+    param([string]$Path)
+    try {
+        if ([string]::IsNullOrWhiteSpace($Path)) { throw '可执行文件路径为空。' }
+        $Executable = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+        if ($Executable.PSIsContainer) { throw '可执行文件路径不能指向目录。' }
+        return $(if ($Executable.LinkType) { $Executable.ResolveLinkTarget($true).FullName } else { $Executable.FullName })
+    } catch { throw [InvalidOperationException]::new("无法核验进程可执行文件：$($_.Exception.Message)", $_.Exception) }
+}
+
+<# .SYNOPSIS 按平台的文件路径语义比较真实可执行文件，避免符号链接或大小写造成身份误判。 #>
+function Test-SameExecutablePath {
+    param([string]$Actual, [string]$Expected)
+    try {
+        $ActualPath = Resolve-TestExecutablePath $Actual
+        $ExpectedPath = Resolve-TestExecutablePath $Expected
+        return $(if ($IsWindows) { $ActualPath -ieq $ExpectedPath } else { $ActualPath -ceq $ExpectedPath })
+    } catch { throw }
+}
+
+<# .SYNOPSIS 判断进程是否已终止；Unix 僵尸仍可枚举 PID，但已不能执行或持有监听。 #>
+function Test-TestProcessExited {
+    param($Process)
+    try {
+        if (-not $Process -or $Process.HasExited) { return $true }
+        if ($IsLinux) {
+            $StatusPath = "/proc/$($Process.Id)/stat"
+            if (-not (Test-Path -LiteralPath $StatusPath)) { return $true }
+            try { $Status = [IO.File]::ReadAllText($StatusPath) }
+            catch [IO.FileNotFoundException] { return $true }
+            catch [IO.DirectoryNotFoundException] { return $true }
+            # comm 字段可以包含空格与括号，状态位必须从最后一个右括号之后读取。
+            $NameEnd = $Status.LastIndexOf(')')
+            if ($NameEnd -lt 0 -or $Status.Length -le $NameEnd + 2) { throw '系统进程状态格式无效。' }
+            return $Status[$NameEnd + 2] -cin @('Z', 'X')
+        }
+        return $false
+    } catch { throw [InvalidOperationException]::new("无法确认进程退出状态：$($_.Exception.Message)", $_.Exception) }
+}
+
 <# .SYNOPSIS 只返回 PID、启动时间、可执行文件与工作区均匹配的已登记 Node 进程。 #>
 function Get-TestProcess {
     param([string]$Path, [string]$Role)
@@ -208,13 +249,16 @@ function Get-TestProcess {
     if ($State.root -cne $Root -or $State.role -cne $Role) { throw "服务登记不属于当前工作区或角色：$Path。" }
     if (-not $State.id) { return $null }
     $Process = Get-Process -Id $State.id -ErrorAction SilentlyContinue
-    if (-not $Process) { return $null }
+    if (Test-TestProcessExited $Process) { return $null }
     # ConvertFrom-Json 可能返回 DateTime；直接转字符串会丢失小数秒，必须保留完整 ticks。
     $StartedTicks = if ($State.started -is [DateTimeOffset]) { $State.started.UtcTicks }
         elseif ($State.started -is [DateTime]) { $State.started.ToUniversalTime().Ticks }
         else { [DateTimeOffset]::Parse([string]$State.started, [Globalization.CultureInfo]::InvariantCulture).UtcTicks }
-    if ($Process.ProcessName -cne 'node' -or $Process.StartTime.ToUniversalTime().Ticks -ne $StartedTicks -or
-        $Process.Path -ine $State.executable) { throw "PID $($State.id) 身份与服务登记不符，已保留登记并停止操作。" }
+    # Unix 进程显示名称可由运行时或应用修改；身份使用启动时间和真实可执行文件确定。
+    if ($Process.StartTime.ToUniversalTime().Ticks -ne $StartedTicks -or
+        -not (Test-SameExecutablePath $Process.Path $State.executable)) {
+        throw "PID $($State.id) 身份与服务登记不符，已保留登记并停止操作。"
+    }
     return @{ process = $Process; state = $State }
 }
 
@@ -237,21 +281,22 @@ function Start-TestProcess {
             throw '独立进程未返回有效 PID。'
         }
         $Candidate = Get-Process -Id $Receipt.id -ErrorAction Stop
-        $Executable = Get-Item -LiteralPath $Node -ErrorAction Stop
-        $ResolvedExecutable = if ($Executable.LinkType) { $Executable.ResolveLinkTarget($true).FullName } else { $Executable.FullName }
-        $SameExecutable = if ($IsWindows) { $Candidate.Path -ieq $ResolvedExecutable } else { $Candidate.Path -ceq $ResolvedExecutable }
-        if ($Candidate.ProcessName -cne 'node' -or -not $SameExecutable -or
+        $SameExecutable = Test-SameExecutablePath $Candidate.Path $Node
+        if ((Test-TestProcessExited $Candidate) -or -not $SameExecutable -or
             $Candidate.StartTime.ToUniversalTime() -lt $StartedAfter) {
-            throw '独立进程身份无法确认，未接管或终止该 PID。'
+            throw "独立进程身份无法确认，未接管或终止该 PID（PID=$($Receipt.id)，显示名称=$($Candidate.ProcessName)，可执行文件匹配=$SameExecutable）。"
         }
         $Process = $Candidate
         @{ root = $Root; role = $Role; id = $Process.Id; started = $Process.StartTime.ToUniversalTime().ToString('O');
-            executable = $Process.Path; fingerprint = $Fingerprint } | ConvertTo-Json | Set-Content -LiteralPath $Path -Encoding utf8 -ErrorAction Stop
+            executable = Resolve-TestExecutablePath $Process.Path; fingerprint = $Fingerprint } | ConvertTo-Json | Set-Content -LiteralPath $Path -Encoding utf8 -ErrorAction Stop
         return $Process
     } catch {
         $Failure = $_
         if ($Process -and -not $Process.HasExited) {
-            try { $Process.Kill($true); $null = $Process.WaitForExit(10000) }
+            try {
+                $Process.Kill($true)
+                if (-not $Process.WaitForExit(10000)) { throw '本次创建的子进程未在限定时间内退出。' }
+            }
             catch { [Console]::Error.WriteLine("清理已创建的 $Role 进程失败：$($_.Exception.Message)") }
         }
         throw [InvalidOperationException]::new("无法启动 $Role：$($Failure.Exception.Message)", $Failure.Exception)
@@ -283,7 +328,8 @@ function Invoke-TestListenerCommand {
     param([string]$Command, [string[]]$Arguments)
     $Query = $null
     try {
-        $Executable = (Get-Command $Command -CommandType Application -ErrorAction Stop).Source
+        # PATH 中可以同时存在同一工具的多个入口，只选命令解析顺序中的第一个应用。
+        $Executable = (Get-Command $Command -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
         $Info = [Diagnostics.ProcessStartInfo]::new($Executable)
         $Info.UseShellExecute = $false
         $Info.RedirectStandardOutput = $true
