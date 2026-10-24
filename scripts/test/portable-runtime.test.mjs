@@ -329,7 +329,8 @@ runtimeTest('Node 独立启动器退出后子进程仍存活，并保留完整�
     $ExpectedPath = ${quote(realpathSync(process.execPath))}
     $Matched = if ($IsWindows) { $ActualPath -ieq $ExpectedPath } else { $ActualPath -ceq $ExpectedPath }
     if (-not $Matched) { throw "UNEXPECTED_PROCESS_IDENTITY: name=$($Process.ProcessName); actual=$ActualPath; expected=$ExpectedPath" }
-    @{ root = $Root; role = 'fixture'; id = $Process.Id; started = $Process.StartTime.ToUniversalTime().ToString('O'); executable = $ActualPath } |
+    @{ root = $Root; role = 'fixture'; id = $Process.Id; started = $Process.StartTime.ToUniversalTime().ToString('O');
+        processIdentity = Get-TestProcessIdentity $Process; executable = $ActualPath } |
         ConvertTo-Json | Set-Content -LiteralPath ${quote(fixture.state)} -Encoding utf8
     `,
     );

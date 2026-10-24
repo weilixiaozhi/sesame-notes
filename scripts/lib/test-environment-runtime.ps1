@@ -221,21 +221,54 @@ function Test-SameExecutablePath {
     } catch { throw }
 }
 
+<# .SYNOPSIS 解析 Linux 内核进程状态与启动计数，名称中的空格和括号不参与字段定位。 #>
+function ConvertFrom-TestLinuxProcessStat {
+    param([string]$Value, [int]$ProcessId)
+    try {
+        $NameEnd = $Value.LastIndexOf(')')
+        if ($Value -cnotmatch '^(?<id>[1-9][0-9]*) \(' -or [int]$Matches.id -ne $ProcessId -or
+            $NameEnd -lt 0 -or $Value.Length -le $NameEnd + 2) { throw '系统进程记录的 PID 或名称边界无效。' }
+        $Fields = $Value.Substring($NameEnd + 2).Split(' ', [StringSplitOptions]::RemoveEmptyEntries)
+        $StartTicks = 0UL
+        # 名称之后从第 3 字段开始；第 22 字段是内核记录的开机后启动计数。
+        if ($Fields.Count -lt 20 -or $Fields[0] -cnotmatch '^[A-Za-z]$' -or
+            -not [UInt64]::TryParse($Fields[19], [ref]$StartTicks)) { throw '系统进程状态或启动计数无效。' }
+        return @{ State = $Fields[0]; StartTicks = $StartTicks.ToString([Globalization.CultureInfo]::InvariantCulture) }
+    } catch { throw [InvalidOperationException]::new("无法解析 Linux 进程身份：$($_.Exception.Message)", $_.Exception) }
+}
+
+<# .SYNOPSIS 直接读取指定 PID 的内核记录，不使用每个查询进程重新估算的墙上时钟。 #>
+function Get-TestLinuxProcessStat {
+    param([int]$ProcessId)
+    try {
+        $Value = [IO.File]::ReadAllText("/proc/$ProcessId/stat")
+        return ConvertFrom-TestLinuxProcessStat $Value $ProcessId
+    } catch { throw }
+}
+
+<# .SYNOPSIS 生成跨启动器稳定的进程身份；Linux 绑定系统启动 UUID 和内核启动计数。 #>
+function Get-TestProcessIdentity {
+    param($Process)
+    try {
+        if ($IsLinux) {
+            $Stat = Get-TestLinuxProcessStat $Process.Id
+            $BootId = [Guid]::Parse([IO.File]::ReadAllText('/proc/sys/kernel/random/boot_id').Trim()).ToString('D')
+            return "linux:${BootId}:$($Stat.StartTicks)"
+        }
+        return 'time:' + $Process.StartTime.ToUniversalTime().Ticks.ToString([Globalization.CultureInfo]::InvariantCulture)
+    } catch { throw [InvalidOperationException]::new("无法读取稳定进程身份：$($_.Exception.Message)", $_.Exception) }
+}
+
 <# .SYNOPSIS 判断进程是否已终止；Unix 僵尸仍可枚举 PID，但已不能执行或持有监听。 #>
 function Test-TestProcessExited {
     param($Process)
     try {
         if (-not $Process -or $Process.HasExited) { return $true }
         if ($IsLinux) {
-            $StatusPath = "/proc/$($Process.Id)/stat"
-            if (-not (Test-Path -LiteralPath $StatusPath)) { return $true }
-            try { $Status = [IO.File]::ReadAllText($StatusPath) }
+            try { $Stat = Get-TestLinuxProcessStat $Process.Id }
             catch [IO.FileNotFoundException] { return $true }
             catch [IO.DirectoryNotFoundException] { return $true }
-            # comm 字段可以包含空格与括号，状态位必须从最后一个右括号之后读取。
-            $NameEnd = $Status.LastIndexOf(')')
-            if ($NameEnd -lt 0 -or $Status.Length -le $NameEnd + 2) { throw '系统进程状态格式无效。' }
-            return $Status[$NameEnd + 2] -cin @('Z', 'X')
+            return $Stat.State -cin @('Z', 'X')
         }
         return $false
     } catch { throw [InvalidOperationException]::new("无法确认进程退出状态：$($_.Exception.Message)", $_.Exception) }
@@ -250,14 +283,19 @@ function Get-TestProcess {
     if (-not $State.id) { return $null }
     $Process = Get-Process -Id $State.id -ErrorAction SilentlyContinue
     if (Test-TestProcessExited $Process) { return $null }
-    # ConvertFrom-Json 可能返回 DateTime；直接转字符串会丢失小数秒，必须保留完整 ticks。
-    $StartedTicks = if ($State.started -is [DateTimeOffset]) { $State.started.UtcTicks }
-        elseif ($State.started -is [DateTime]) { $State.started.ToUniversalTime().Ticks }
-        else { [DateTimeOffset]::Parse([string]$State.started, [Globalization.CultureInfo]::InvariantCulture).UtcTicks }
-    # Unix 进程显示名称可由运行时或应用修改；身份使用启动时间和真实可执行文件确定。
-    if ($Process.StartTime.ToUniversalTime().Ticks -ne $StartedTicks -or
-        -not (Test-SameExecutablePath $Process.Path $State.executable)) {
-        throw "PID $($State.id) 身份与服务登记不符，已保留登记并停止操作。"
+    $ExpectedIdentity = $State.processIdentity
+    if ([string]::IsNullOrEmpty($ExpectedIdentity)) {
+        if ($IsLinux) { throw '进程登记缺少内核启动标识，请人工确认并停止该进程后重新启动；登记已保留。' }
+        # Windows 与 macOS 可直接使用登记中的完整小数秒时间。
+        $StartedTicks = if ($State.started -is [DateTimeOffset]) { $State.started.UtcTicks }
+            elseif ($State.started -is [DateTime]) { $State.started.ToUniversalTime().Ticks }
+            else { [DateTimeOffset]::Parse([string]$State.started, [Globalization.CultureInfo]::InvariantCulture).UtcTicks }
+        $ExpectedIdentity = 'time:' + $StartedTicks.ToString([Globalization.CultureInfo]::InvariantCulture)
+    }
+    $SameIdentity = (Get-TestProcessIdentity $Process) -ceq $ExpectedIdentity
+    $SameExecutable = Test-SameExecutablePath $Process.Path $State.executable
+    if ($Process.Id -ne $State.id -or -not $SameIdentity -or -not $SameExecutable) {
+        throw "PID $($State.id) 身份与服务登记不符（启动身份匹配=$SameIdentity，可执行文件匹配=$SameExecutable），已保留登记并停止操作。"
     }
     return @{ process = $Process; state = $State }
 }
@@ -288,6 +326,7 @@ function Start-TestProcess {
         }
         $Process = $Candidate
         @{ root = $Root; role = $Role; id = $Process.Id; started = $Process.StartTime.ToUniversalTime().ToString('O');
+            processIdentity = Get-TestProcessIdentity $Process;
             executable = Resolve-TestExecutablePath $Process.Path; fingerprint = $Fingerprint } | ConvertTo-Json | Set-Content -LiteralPath $Path -Encoding utf8 -ErrorAction Stop
         return $Process
     } catch {

@@ -174,13 +174,14 @@ runtimeTest('拒绝生产库、独立 API/数据库端口与手机不可访问�
   assert.match(output, /PASS/);
 });
 
-runtimeTest('进程登记使用可执行文件与精确时间，允许显示名称变化并拒绝重用 PID', () => {
+runtimeTest('进程登记使用可执行文件与稳定启动身份，允许显示名称变化并拒绝重用 PID', () => {
   const output = run(`
     $Moment = [DateTime]::Parse('2026-10-06T08:09:10.1234567Z').ToUniversalTime()
     $ActualExecutable = $Node
     function Get-Process { return [pscustomobject]@{ Id = $PID; ProcessName = 'renamed-worker'; StartTime = $Moment; Path = $ActualExecutable; HasExited = $false } }
     $StatePath = Join-Path $Root 'process.json'
-    @{ root = $Root; role = 'api'; id = $PID; executable = $Node; started = $Moment.ToString('O') } |
+    $Identity = Get-TestProcessIdentity (Get-Process)
+    @{ root = $Root; role = 'api'; id = $PID; executable = $Node; started = $Moment.ToString('O'); processIdentity = $Identity } |
         ConvertTo-Json | Set-Content -LiteralPath $StatePath
     if (-not (Get-TestProcess $StatePath 'api')) { throw 'VALID_PROCESS_REJECTED' }
     # 使用当前 PowerShell 的真实路径验证不同可执行文件被拒绝。
@@ -190,9 +191,50 @@ runtimeTest('进程登记使用可执行文件与精确时间，允许显示名�
     if (-not $Rejected) { throw 'FOREIGN_EXECUTABLE_ACCEPTED' }
     $ActualExecutable = $Node
     $Moment = $Moment.AddTicks(1)
+    if ($IsLinux) {
+        if (-not (Get-TestProcess $StatePath 'api')) { throw 'WALL_CLOCK_CHANGED_KERNEL_IDENTITY' }
+    } else {
+        $Rejected = $false
+        try { $null = Get-TestProcess $StatePath 'api' } catch { $Rejected = $true }
+        if (-not $Rejected) { throw 'CHANGED_START_TIME_ACCEPTED' }
+    }
+    $Moment = $Moment.AddTicks(-1)
+    $State = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
+    $IdentityPrefix = $Identity.Substring(0, $Identity.LastIndexOf(':') + 1)
+    $IdentityTicks = [UInt64]$Identity.Substring($Identity.LastIndexOf(':') + 1)
+    $State.processIdentity = $IdentityPrefix + ($IdentityTicks + 1).ToString([Globalization.CultureInfo]::InvariantCulture)
+    $State | ConvertTo-Json | Set-Content -LiteralPath $StatePath
     $Rejected = $false
     try { $null = Get-TestProcess $StatePath 'api' } catch { $Rejected = $true }
     if (-not $Rejected) { throw 'RECYCLED_PID_ACCEPTED' }
+    $State.PSObject.Properties.Remove('processIdentity')
+    $State | ConvertTo-Json | Set-Content -LiteralPath $StatePath
+    if ($IsLinux) {
+        $Rejected = $false
+        try { $null = Get-TestProcess $StatePath 'api' } catch {
+            if ($_.Exception.Message -notmatch '缺少内核启动标识') { throw }
+            $Rejected = $true
+        }
+        if (-not $Rejected) { throw 'UNVERIFIABLE_LEGACY_IDENTITY_ACCEPTED' }
+    } else {
+        if (-not (Get-TestProcess $StatePath 'api')) { throw 'PRECISE_LEGACY_IDENTITY_REJECTED' }
+    }
+    Write-Output 'PASS'
+  `);
+  assert.match(output, /PASS/);
+});
+
+runtimeTest('Linux 内核身份解析保留启动计数并拒绝错误 PID 与损坏记录', () => {
+  const output = run(`
+    $Fields = @('S') + @('0') * 18 + @('123456789')
+    $Record = '123 (worker title (with parentheses)) ' + ($Fields -join ' ')
+    $Parsed = ConvertFrom-TestLinuxProcessStat $Record 123
+    if ($Parsed.State -cne 'S' -or $Parsed.StartTicks -cne '123456789') { throw 'KERNEL_IDENTITY_INVALID' }
+    foreach ($Broken in @($Record.Replace('123 (', '124 ('), '123 (truncated) S', $Record.Replace('123456789', '-1'))) {
+        $Rejected = $false
+        try { $null = ConvertFrom-TestLinuxProcessStat $Broken 123 } catch { $Rejected = $true }
+        if (-not $Rejected) { throw 'INVALID_KERNEL_IDENTITY_ACCEPTED' }
+    }
     Write-Output 'PASS'
   `);
   assert.match(output, /PASS/);
