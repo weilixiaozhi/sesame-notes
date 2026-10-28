@@ -59,7 +59,7 @@ async function setup() {
     const device = { id: deviceId, userId, revokedAt: null };
     const refreshTokens = [{ id: 'existing-refresh-token', userId, deviceId, revokedAt: null }];
     const prisma = {
-      serverEpoch: { upsert: vi.fn(async () => ({ authGeneration: generation })) },
+      serverEpoch: { findUniqueOrThrow: vi.fn(async () => ({ authGeneration: generation })) },
       user: {
         findUnique: vi.fn(async () => user),
         update: vi.fn(async ({ data }: { data: { passwordHash: string } }) => Object.assign(user, data)),

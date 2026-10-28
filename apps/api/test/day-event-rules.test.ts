@@ -41,6 +41,13 @@ function birthday() {
 }
 
 describe('日子静态写边界', () => {
+  it.each(['2026-02-30T00:00:00.000Z', '2025-02-29T00:00:00.000Z', '0000-01-01T00:00:00.000Z'])(
+    '创建审计时间必须是可原样回读的时间戳：%s',
+    (createdAt) => {
+      expect(() => validateDayEvent({ ...birthday(), created_at: createdAt })).toThrow(ApiError);
+    },
+  );
+
   it.each(vectors.lunar_to_solar)('共享独立向量 $year-$month-$day → $solar_date', (sample) => {
     const event = {
       calendar_type: 'lunar',

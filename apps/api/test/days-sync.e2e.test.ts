@@ -148,6 +148,108 @@ afterAll(async () => {
 });
 
 describe('日子服务端私有本与 CAS', () => {
+  it('日子原始类型逐条拒绝，合法空端点和后续记录正常提交', async () => {
+    try {
+      const owner = await register();
+      const cloud = await book(owner);
+      const invalidBookId = randomUUID();
+      const invalidBook = change(invalidBookId, invalidBookId, { payload: { name: 123, created_at: createdAt } });
+      const invalidEvents = [
+        { ...eventPayload(), name: 123 },
+        { ...eventPayload(), event: { ...eventPayload().event, original_year: '2024' } },
+        { ...eventPayload(), event: { ...eventPayload().event, is_leap_month: 'false' } },
+      ].map((payload) => change(cloud.id, randomUUID(), { sync_id: cloud.syncId, payload }));
+      const valid = change(cloud.id, randomUUID(), { sync_id: cloud.syncId, payload: eventPayload() });
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sync/push',
+        headers: { authorization: `Bearer ${owner.access_token}` },
+        payload: { device_id: owner.device_id, changes: [invalidBook, ...invalidEvents, valid] },
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json().outcomes).toMatchObject([
+        { status: 'invalid', code: 'INVALID_BOOK' },
+        ...invalidEvents.map(() => ({ status: 'invalid', code: 'INVALID_DAY_DEFINITION' })),
+        { status: 'accepted', revision: 1 },
+      ]);
+      expect(await prisma.dayBook.findUnique({ where: { id: invalidBookId } })).toBeNull();
+      expect(
+        await prisma.dayEvent.count({ where: { id: { in: invalidEvents.map((entry) => entry.entity_id) } } }),
+      ).toBe(0);
+      expect(
+        await prisma.syncChange.count({
+          where: { mutationId: { in: [invalidBook, ...invalidEvents].map((entry) => entry.mutation_id) } },
+        }),
+      ).toBe(0);
+      const saved = await prisma.dayEvent.findUniqueOrThrow({ where: { id: valid.entity_id } });
+      expect(saved).toMatchObject({ eventIsLeapMonth: false, startSolarDate: null, endSolarDate: null, revision: 1 });
+      expect(saved.createdAt.toISOString()).toBe(createdAt);
+      const malformed = change(cloud.id, randomUUID(), {
+        sync_id: cloud.syncId,
+        payload: { ...eventPayload(), created_at: '2026-02-30T00:00:00.000Z' },
+      });
+      const following = change(cloud.id, randomUUID(), { sync_id: cloud.syncId, payload: eventPayload() });
+      const rejected = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sync/push',
+        headers: { authorization: `Bearer ${owner.access_token}` },
+        payload: { device_id: owner.device_id, changes: [malformed, following] },
+      });
+      expect(rejected.statusCode, rejected.body).toBe(400);
+      expect(rejected.json().code).toBe('VALIDATION_ERROR');
+      expect(await prisma.dayEvent.count({ where: { id: { in: [malformed.entity_id, following.entity_id] } } })).toBe(
+        0,
+      );
+    } catch (cause) {
+      throw new Error('日子原始输入边界与逐条写入隔离验收失败', { cause });
+    }
+  });
+
+  it('日子创建审计时间精确保留，未来时间不参与写入版本排序', async () => {
+    try {
+      const owner = await register();
+      const cloud = await book(owner);
+      const futureCreatedAt = new Date(Date.now() + 86400000).toISOString();
+      const mutation = change(cloud.id, randomUUID(), {
+        sync_id: cloud.syncId,
+        payload: { ...eventPayload(), created_at: futureCreatedAt },
+      });
+      const accepted = await push(owner, mutation);
+      expect(accepted.body.outcomes[0]).toMatchObject({ status: 'accepted', revision: 1 });
+      const saved = await prisma.dayEvent.findUniqueOrThrow({ where: { id: mutation.entity_id } });
+      expect(saved.createdAt.toISOString()).toBe(futureCreatedAt);
+      const event = await prisma.syncChange.findFirstOrThrow({ where: { mutationId: mutation.mutation_id } });
+      expect(event.payload).toMatchObject({ created_at: futureCreatedAt, revision: 1 });
+      const full = await get(owner, `day-books/full?day_book_id=${cloud.id}&sync_id=${cloud.syncId}`);
+      expect(full.statusCode, full.body).toBe(200);
+      expect(full.json().day_events).toEqual([
+        expect.objectContaining({ id: mutation.entity_id, created_at: futureCreatedAt }),
+      ]);
+      const replay = await push(owner, mutation);
+      expect(replay.body.outcomes[0]).toMatchObject({
+        status: 'ignored',
+        revision: 1,
+        change_id: accepted.body.outcomes[0]!.change_id,
+      });
+      const edited = await push(
+        owner,
+        change(cloud.id, mutation.entity_id, {
+          sync_id: cloud.syncId,
+          base_revision: 1,
+          payload: { ...eventPayload(), name: '已编辑', created_at: futureCreatedAt },
+        }),
+      );
+      expect(edited.body.outcomes[0]).toMatchObject({ status: 'accepted', revision: 2 });
+      expect(await prisma.dayEvent.findUniqueOrThrow({ where: { id: mutation.entity_id } })).toMatchObject({
+        name: '已编辑',
+        createdAt: new Date(futureCreatedAt),
+        revision: 2,
+      });
+    } catch (cause) {
+      throw new Error('日子创建时间、快照与重放一致性验收失败', { cause });
+    }
+  });
+
   it('账号记账快照包含本人数据及有共享权限 Owner 的分类墓碑', async () => {
     const owner = await register();
     const editor = await register();

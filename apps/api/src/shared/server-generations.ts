@@ -8,27 +8,24 @@ type ServerGenerations = {
   idempotencyGeneration: string;
 };
 
-/** 读取当前 generation；单例行缺失时幂等创建。 */
+/** 只读迁移建立的权威代际；缺失必须暴露，随机代际仅由显式维护流程轮换。 */
 async function getServerGenerations(prisma: GenerationSource): Promise<ServerGenerations> {
   try {
-    const row = await prisma.serverEpoch.upsert({
+    return await prisma.serverEpoch.findUniqueOrThrow({
       where: { id: 0 },
-      create: { id: 0 },
-      update: {},
+      select: { authGeneration: true, idempotencyGeneration: true },
     });
-    return {
-      authGeneration: row.authGeneration,
-      idempotencyGeneration: row.idempotencyGeneration,
-    };
   } catch (error) {
     throw new Error('服务端 generation 读取失败', { cause: error });
   }
 }
 
+/** 读取认证代际，供访问令牌、刷新令牌与实时连接核对同一权威身份。 */
 export async function currentAuthGeneration(prisma: GenerationSource): Promise<string> {
   return (await getServerGenerations(prisma)).authGeneration;
 }
 
+/** 读取幂等代际，读取失败时不能作废既有成功回执或生成新的回执。 */
 export async function currentIdempotencyGeneration(prisma: GenerationSource): Promise<string> {
   return (await getServerGenerations(prisma)).idempotencyGeneration;
 }

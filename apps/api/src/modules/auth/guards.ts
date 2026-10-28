@@ -57,8 +57,7 @@ export function authenticate(config: ApiConfig, prisma: PrismaClient) {
       request.realtimeRevalidationUserIds?.delete(claims.userId);
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      request.log.error({ err: error, request_id: request.id }, '会话安全状态暂时无法读取');
-      throw new ApiError(503, 'AUTH_UNAVAILABLE', '登录验证服务暂时不可用，请稍后重试');
+      throw new ApiError(503, 'AUTH_UNAVAILABLE', '登录验证服务暂时不可用，请稍后重试', undefined, { cause: error });
     }
   };
   USER_AUTHENTICATION_HOOKS.add(hook);

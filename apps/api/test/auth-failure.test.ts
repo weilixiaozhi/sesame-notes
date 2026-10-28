@@ -1,8 +1,9 @@
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { SignJWT } from 'jose';
 import { afterEach, expect, it, vi } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
+import { hashPassword } from '../src/modules/auth/index.js';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const adminId = '22222222-2222-4222-8222-222222222222';
@@ -10,6 +11,7 @@ const config = loadConfig({
   DATABASE_URL: 'postgresql://unused:unused@localhost:1/unused',
   JWT_SECRET: 'auth-failure-test-secret-at-least-32-bytes',
   STORAGE_PATH: 'Temp/auth-failure',
+  CORS_ORIGINS: 'https://web.example.test',
 });
 const apps: ReturnType<typeof buildApp>[] = [];
 
@@ -47,8 +49,12 @@ async function setup() {
       },
     };
     const prisma = {
-      serverEpoch: { upsert: vi.fn().mockResolvedValue({ authGeneration: id }) },
-      device: { findFirst: vi.fn().mockResolvedValue({ id }) },
+      serverEpoch: {
+        upsert: vi.fn().mockResolvedValue({ authGeneration: id }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ authGeneration: id }),
+      },
+      device: { findFirst: vi.fn().mockResolvedValue({ id }), upsert: vi.fn().mockResolvedValue({ id }) },
+      refreshToken: { create: vi.fn(), updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
       user: {
         findUnique: vi.fn(),
         findMany: vi.fn().mockResolvedValue([]),
@@ -91,9 +97,73 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
+it.each([
+  { method: 'GET' as const, url: '/api/v1/profile/me', status: 503, code: 'AUTH_UNAVAILABLE' },
+  { method: 'POST' as const, url: '/api/v1/auth/login', status: 500, code: 'LOGIN_FAILED' },
+  { method: 'POST' as const, url: '/api/v1/auth/browser/login', status: 500, code: 'LOGIN_FAILED' },
+])('权威代际单例缺失时 $url 拒绝处理，不伪造会话或误报密码错误', async ({ method, url, status, code }) => {
+  try {
+    const { app, prisma, userHeaders } = await setup();
+    const password = 'generation-boundary-fixture-password';
+    prisma.user.findUnique.mockResolvedValue({
+      id,
+      phoneE164: '+8613800138000',
+      sesameNumber: '123456789',
+      passwordHash: await hashPassword(password),
+      credentialVersion: 0,
+      isEnabled: true,
+      profile: null,
+    });
+    const cause = new Prisma.PrismaClientKnownRequestError('server epoch singleton is missing', {
+      code: 'P2025',
+      clientVersion: Prisma.prismaVersion.client,
+    });
+    prisma.serverEpoch.findUniqueOrThrow.mockRejectedValue(cause);
+    // 为写入接口提供随机代际，用于断言认证读取不能建立单例。
+    prisma.serverEpoch.upsert.mockResolvedValue({ authGeneration: adminId });
+    const failures: Error[] = [];
+    app.addHook('onError', async (_request, _reply, error) => {
+      failures.push(error);
+    });
+    const log = vi.spyOn(app.log, 'error');
+    const response = await app.inject({
+      method,
+      url,
+      headers: method === 'GET' ? userHeaders : { origin: 'https://web.example.test' },
+      ...(method === 'POST'
+        ? {
+            payload: {
+              country_code: '+86',
+              phone: '13800138000',
+              password,
+              device: { installation_id: id, name: '代际边界验收', platform: 'test' },
+            },
+          }
+        : {}),
+    });
+    expect(response.statusCode, response.body).toBe(status);
+    expect(response.json()).toMatchObject({ code });
+    expect(response.cookies).toHaveLength(0);
+    expect(response.body).not.toContain('access_token');
+    expect(response.body).not.toContain(cause.message);
+    expect(prisma.serverEpoch.upsert).not.toHaveBeenCalled();
+    expect(prisma.device.upsert).not.toHaveBeenCalled();
+    expect(prisma.refreshToken.create).not.toHaveBeenCalled();
+    expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledOnce();
+    expect(log.mock.calls[0]![0]).toMatchObject({ code });
+    expect(failures).toHaveLength(1);
+    let root: unknown = failures[0];
+    while (root instanceof Error && root.cause !== undefined) root = root.cause;
+    expect(root).toBe(cause);
+  } catch (cause) {
+    throw new Error('权威代际缺失的 HTTP 边界验收失败', { cause });
+  }
+});
+
 it.each(['generation', 'device'] as const)('用户认证 %s 数据库失败返回 503，不伪装为凭据错误', async (stage) => {
   const { app, prisma, userHeaders } = await setup();
-  const target = stage === 'generation' ? prisma.serverEpoch.upsert : prisma.device.findFirst;
+  const target = stage === 'generation' ? prisma.serverEpoch.findUniqueOrThrow : prisma.device.findFirst;
   target.mockRejectedValue(new Error('DATABASE_UNAVAILABLE'));
   const log = vi.spyOn(app.log, 'error');
   const response = await app.inject({ method: 'GET', url: '/api/v1/profile/me', headers: userHeaders });
@@ -128,7 +198,7 @@ it.each(['transaction', 'lock', 'session', 'touch'] as const)(
     expect(response.body).not.toContain('ADMIN_DATABASE_UNAVAILABLE');
     expect(prisma.user.findMany).not.toHaveBeenCalled();
     expect(prisma.device.findFirst).not.toHaveBeenCalled();
-    expect(prisma.serverEpoch.upsert).not.toHaveBeenCalled();
+    expect(prisma.serverEpoch.findUniqueOrThrow).not.toHaveBeenCalled();
   },
 );
 

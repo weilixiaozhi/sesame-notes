@@ -40,7 +40,7 @@ async function setup(browser = false) {
         }),
       },
       productAnalyticsEvent: { updateMany: vi.fn(async () => ({ count: 1 })) },
-      serverEpoch: { upsert: vi.fn(async () => ({ authGeneration: randomUUID() })) },
+      serverEpoch: { findUniqueOrThrow: vi.fn(async () => ({ authGeneration: randomUUID() })) },
       device: {
         upsert: vi.fn(async () => {
           operations.push('device');

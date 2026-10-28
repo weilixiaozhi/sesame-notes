@@ -17,7 +17,7 @@ const apps: ReturnType<typeof buildApp>[] = [];
 async function setup(scopes: string[]) {
   try {
     const prisma = {
-      serverEpoch: { upsert: vi.fn().mockResolvedValue({ authGeneration: id }) },
+      serverEpoch: { findUniqueOrThrow: vi.fn().mockResolvedValue({ authGeneration: id }) },
       device: { findFirst: vi.fn().mockResolvedValue({ id }) },
       syncChange: { findMany: vi.fn().mockResolvedValue([]) },
       $queryRaw: vi.fn().mockResolvedValue([{ cursor: 0n, completedAt: new Date(0) }]),
@@ -52,13 +52,13 @@ describe('路由资源 scope 边界', () => {
     // 保留一张有效票据，使全量复核错误地触发时可以观察到数据库查询。
     expect((await app.inject({ method: 'POST', url: '/api/v1/ws/ticket', headers })).statusCode).toBe(200);
     prisma.device.findFirst.mockClear();
-    prisma.serverEpoch.upsert.mockClear();
+    prisma.serverEpoch.findUniqueOrThrow.mockClear();
 
     expect((await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: {} })).statusCode).toBe(400);
     expect((await app.inject({ method: 'POST', url: '/api/v1/ws/ticket' })).statusCode).toBe(401);
 
     expect(prisma.device.findFirst).not.toHaveBeenCalled();
-    expect(prisma.serverEpoch.upsert).not.toHaveBeenCalled();
+    expect(prisma.serverEpoch.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 
   it('握手复核安全状态，已建连接在设备撤销响应完成前关闭', async () => {
@@ -176,6 +176,6 @@ describe('路由资源 scope 边界', () => {
     expect(response.statusCode).toBe(401);
     expect(response.json().code).toBe('ADMIN_UNAUTHORIZED');
     expect(prisma.device.findFirst).not.toHaveBeenCalled();
-    expect(prisma.serverEpoch.upsert).not.toHaveBeenCalled();
+    expect(prisma.serverEpoch.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 });

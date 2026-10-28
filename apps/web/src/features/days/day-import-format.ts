@@ -1,5 +1,6 @@
 import { buildDefinition, projectDate, solarDate, type DayDate, type DayDefinition } from './day-dates';
 import { hasVisibleText } from '../memos/memo-content';
+import { importTimestamp } from '../../lib/transfer/timestamp';
 
 export const dayImportFields = [
   ['name', '名称'],
@@ -126,11 +127,10 @@ export function mapDayRows(
         throw new Error('此类型需要单个日期，不能混用起止日期');
       if ((category === 'stage' || mode === 'interval_days') && (!start || event || (mode === 'interval_days' && end)))
         throw new Error('此类型需开始日期，请检查事件或结束日期是否多余');
+      /** 缺失时间沿用调用方约定；ISO 纯日期按 UTC 午夜保存，其余时间使用公共严格解析。 */
       const timestamp = (value: string, fallback: string) => {
         if (!value) return fallback;
-        const parsed = new Date(value);
-        if (!Number.isFinite(parsed.getTime())) throw new Error('时间格式无效');
-        return parsed.toISOString();
+        return importTimestamp(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value);
       };
       const created = timestamp(get('created_at'), now);
       const updated = timestamp(get('updated_at'), created);
@@ -151,7 +151,9 @@ export function mapDayRows(
         updatedAt: updated,
       };
     } catch (error) {
-      throw new Error(`第 ${index + 2} 行：${error instanceof Error ? error.message : '数据格式无效'}`);
+      throw new Error(`第 ${index + 2} 行：${error instanceof Error ? error.message : '数据格式无效'}`, {
+        cause: error,
+      });
     }
   });
 }

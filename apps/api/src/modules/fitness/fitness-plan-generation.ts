@@ -16,6 +16,14 @@ type PlanGeneration = { plan: FitnessPlanPayload; workouts: GeneratedWorkout[]; 
 const MAX_CYCLES = 100;
 const MAX_WORKOUTS = 500;
 
+/** 启用计划首次需要生成一个周期，之后按已提交游标判断是否还有到期周期。 */
+export function hasPendingPlanCycles(plan: FitnessPlanPayload, today: string): boolean {
+  return (
+    plan.status === 'in_progress' &&
+    (plan.generation_state.next_cycle_start_date === null || plan.generation_state.next_cycle_start_date <= today)
+  );
+}
+
 /** 日期计算始终使用 UTC 日历，严格拒绝日期溢出和年份超出四位的结果。 */
 export function addPlanDays(date: string, days: number): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date.startsWith('0000'))
@@ -151,5 +159,5 @@ export function generatePlanCycles(
     count++;
   }
   plan.updated_at = [now, plan.updated_at].sort().at(-1)!;
-  return { plan, workouts, hasMore: start <= today };
+  return { plan, workouts, hasMore: hasPendingPlanCycles(plan, today) };
 }

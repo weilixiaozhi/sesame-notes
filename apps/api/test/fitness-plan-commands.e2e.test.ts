@@ -160,6 +160,73 @@ describe('atomic online plan commands', () => {
     expect(anonymous.statusCode).toBe(401);
   });
 
+  it('分批补齐的重放保留剩余周期提示，并且不会重复写入训练或事件', async () => {
+    const actor = await account();
+    const space = await scope(actor);
+    const id = randomUUID();
+    try {
+      const plan = fresh();
+      plan.start_date = '2020-01-01';
+      const created = await command(actor, space.id, id, {
+        mutation_id: randomUUID(),
+        sync_id: space.syncId,
+        base_revision: 0,
+        today: '2020-01-01',
+        action: 'save',
+        plan,
+      });
+      expect(created.statusCode, created.body).toBe(200);
+      const body = {
+        mutation_id: randomUUID(),
+        sync_id: space.syncId,
+        base_revision: created.json().plan.revision,
+        today: '2021-01-01',
+        action: 'generate',
+      };
+      const first = await command(actor, space.id, id, body);
+      expect(first.statusCode, first.body).toBe(200);
+      expect(first.json()).toMatchObject({ generated_count: 100, has_more: true, replayed: false });
+      expect(first.json().plan.generation_state.next_cycle_start_date <= body.today).toBe(true);
+      const stored = await prisma.fitnessEntity.findUniqueOrThrow({ where: { id } });
+      const workouts = await prisma.fitnessEntity.count({
+        where: { fitnessSpaceId: space.id, entityType: 'fitness_workout' },
+      });
+      const events = await prisma.syncChange.count({ where: { fitnessSpaceId: space.id } });
+
+      // 相同冻结命令用于响应丢失后的重试，回执必须继续提示仍未补齐的周期。
+      const repeated = await command(actor, space.id, id, body);
+      expect(repeated.statusCode, repeated.body).toBe(200);
+      expect(repeated.json()).toEqual({
+        plan: first.json().plan,
+        generated_count: 0,
+        removed_count: 0,
+        has_more: true,
+        replayed: true,
+      });
+      expect(await prisma.fitnessEntity.findUniqueOrThrow({ where: { id } })).toEqual(stored);
+      expect(
+        await prisma.fitnessEntity.count({ where: { fitnessSpaceId: space.id, entityType: 'fitness_workout' } }),
+      ).toBe(workouts);
+      expect(await prisma.syncChange.count({ where: { fitnessSpaceId: space.id } })).toBe(events);
+
+      const completed = await command(actor, space.id, id, {
+        ...body,
+        mutation_id: randomUUID(),
+        base_revision: first.json().plan.revision,
+      });
+      expect(completed.statusCode, completed.body).toBe(200);
+      expect(completed.json()).toMatchObject({ has_more: false, replayed: false });
+      expect(completed.json().plan.generation_state.next_cycle_start_date > body.today).toBe(true);
+      const completedEvents = await prisma.syncChange.count({ where: { fitnessSpaceId: space.id } });
+      // 后续命令推进当前云态后，旧命令仍返回自身已提交的快照和补齐状态。
+      expect((await command(actor, space.id, id, body)).json()).toEqual(repeated.json());
+      expect(await prisma.syncChange.count({ where: { fitnessSpaceId: space.id } })).toBe(completedEvents);
+    } catch (cause) {
+      console.error('计划分批重放状态验收失败', { planId: id, spaceId: space.id, cause });
+      throw cause;
+    }
+  });
+
   it('rolls back an earlier generated workout when a later generated write is rejected', async () => {
     const actor = await account();
     const space = await scope(actor);

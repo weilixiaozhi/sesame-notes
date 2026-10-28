@@ -3,7 +3,10 @@ export function importTimestamp(input: string): string {
   const value = input.trim();
   if (/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
     const parsed = new Date(value);
-    if (!Number.isFinite(parsed.getTime())) throw new Error('日期无效');
+    const utcYear = parsed.getUTCFullYear();
+    // 来源不能使用零年份，转换后的 UTC 时间也必须落在协议支持的四位年份内。
+    if (value.startsWith('0000-') || !Number.isFinite(parsed.getTime()) || utcYear < 1 || utcYear > 9999)
+      throw new Error('日期无效');
     const calendar = value.slice(0, 10).split('-').map(Number);
     const check = new Date(Date.UTC(calendar[0]!, calendar[1]! - 1, calendar[2]!));
     if (check.getUTCMonth() !== calendar[1]! - 1 || check.getUTCDate() !== calendar[2]) throw new Error('日期不存在');

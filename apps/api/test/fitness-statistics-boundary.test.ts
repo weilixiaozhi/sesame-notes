@@ -26,7 +26,7 @@ it('损坏完成成绩返回可诊断服务端失败，恢复有效事实后返�
     fitnessEntity: { findMany: vi.fn().mockResolvedValue([row]) },
   };
   const prisma = {
-    serverEpoch: { upsert: vi.fn().mockResolvedValue({ authGeneration: identity }) },
+    serverEpoch: { findUniqueOrThrow: vi.fn().mockResolvedValue({ authGeneration: identity }) },
     device: { findFirst: vi.fn().mockResolvedValue({ id: identity }) },
     $transaction: vi.fn(async (operation: (transaction: typeof tx) => Promise<unknown>) => operation(tx)),
     $disconnect: vi.fn().mockResolvedValue(undefined),

@@ -20,7 +20,7 @@ async function setup() {
       STORAGE_PATH: resolve(import.meta.dirname, '../../../Temp/rate-proxy'),
     });
     const prisma = {
-      serverEpoch: { upsert: vi.fn().mockResolvedValue({ authGeneration: identity }) },
+      serverEpoch: { findUniqueOrThrow: vi.fn().mockResolvedValue({ authGeneration: identity }) },
       device: { findFirst: vi.fn().mockResolvedValue({ id: identity }) },
       $disconnect: vi.fn().mockResolvedValue(undefined),
     };

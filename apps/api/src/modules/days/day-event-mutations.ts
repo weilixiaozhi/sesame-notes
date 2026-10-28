@@ -5,7 +5,6 @@ import { identifySyncMutation, hasSyncRevisionConflict } from '../../shared/sync
 import { preparePrivateBookWrite, privateBookConflictOutcome, privateBookSnapshot } from '../private-books/index.js';
 import type { SyncTransaction } from '../../shared/sync-transaction.js';
 import { createChange } from '../sync-events/index.js';
-import { normalizeClientTimestamp } from '../../shared/sync-timestamps.js';
 import { dayEventSnapshot } from './day-event-snapshots.js';
 import { validateDayEvent } from './day-event-rules.js';
 import type { DayDate } from './day-event-schemas.js';
@@ -124,7 +123,8 @@ export async function applyDayChange(
                 ...data,
                 id: change.entity_id,
                 dayBookId: bookId,
-                createdAt: normalizeClientTimestamp(definition.created_at, now),
+                // 创建审计时间参与跨设备稳定排序，使用已验证的原始时间。
+                createdAt: new Date(definition.created_at),
               },
             });
       }

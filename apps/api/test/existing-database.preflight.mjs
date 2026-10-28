@@ -5,7 +5,7 @@ let prisma;
 try {
   const url = existingTestDatabaseUrl(process.env.E2E_DATABASE_URL, process.env);
   prisma = new PrismaClient({ datasourceUrl: url });
-  // This read-only guard also requires server_epochs.id=0 before any application import can upsert it.
+  // 现有库验收要求权威代际单例完整，应用读取只消费迁移建立的状态。
   await assertExistingTestDatabase(prisma, url, process.env);
 } catch (error) {
   // Do not forward driver error details, environment values, or connection URLs.

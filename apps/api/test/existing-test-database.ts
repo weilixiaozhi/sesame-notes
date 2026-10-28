@@ -92,7 +92,7 @@ export async function assertExistingTestDatabase(
   `;
   if (!connections || connections.count !== 0n)
     throw new Error('Existing API database has other client connections; stop before creating fixtures.');
-  // Application generation reads use upsert; require its singleton to exist before importing fixtures.
+  // 权威代际单例必须已由迁移建立，验收读取和夹具不能重建它。
   const epochs = await prisma.$queryRaw<Array<{ id: number }>>`
     SELECT id FROM public.server_epochs WHERE id = 0
   `;

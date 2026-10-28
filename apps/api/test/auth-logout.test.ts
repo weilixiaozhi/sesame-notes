@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import cookie from '@fastify/cookie';
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import Fastify from 'fastify';
 import { afterEach, expect, it, vi } from 'vitest';
 
@@ -70,7 +70,7 @@ async function setup(browser: boolean) {
     const devices: DeviceRow[] = [];
     let nextLock: (() => Promise<void>) | undefined;
     const prisma = {
-      serverEpoch: { upsert: vi.fn(async () => ({ authGeneration: generation })) },
+      serverEpoch: { findUniqueOrThrow: vi.fn(async () => ({ authGeneration: generation })) },
       user: { findUnique: vi.fn(async () => user) },
       device: {
         findFirst: vi.fn(
@@ -118,6 +118,10 @@ async function setup(browser: boolean) {
     prisma.$transaction.mockImplementation(async (action: (tx: typeof prisma) => Promise<unknown>) => action(prisma));
     const app = Fastify({ logger: false });
     apps.push(app);
+    const failures: Error[] = [];
+    app.addHook('onError', async (_request, _reply, error) => {
+      failures.push(error);
+    });
     await app.register(cookie);
     registerErrorHandler(app);
     registerAuthRoutes(app, prisma as unknown as PrismaClient, config, async () => {
@@ -183,7 +187,7 @@ async function setup(browser: boolean) {
       return { started, release };
     }
 
-    return { app, config, rows, prisma, login, request, readSession, delayNextLock };
+    return { app, config, rows, prisma, login, request, readSession, delayNextLock, failures };
   } catch (cause) {
     throw new Error('登出会话隔离测试初始化失败', { cause });
   }
@@ -220,6 +224,50 @@ it('生产部署即使未使用 production 运行标记，也只签发 Secure �
 
 for (const browser of [false, true]) {
   const client = browser ? '浏览器' : '移动端';
+
+  it.each(['refresh', 'logout'] as const)(
+    `${client} %s 读取代际失败时保留会话，返回单次可诊断的 500`,
+    async (action) => {
+      try {
+        const fixture = await setup(browser);
+        const session = await fixture.login(randomUUID());
+        const before = structuredClone(fixture.rows);
+        const cause = new Prisma.PrismaClientKnownRequestError('server epoch singleton is missing', {
+          code: 'P2025',
+          clientVersion: Prisma.prismaVersion.client,
+        });
+        // 登出入口先验证访问令牌；事务内的第二次权威读取独立失败。
+        if (action === 'logout')
+          fixture.prisma.serverEpoch.findUniqueOrThrow.mockResolvedValueOnce({ authGeneration: generation });
+        fixture.prisma.serverEpoch.findUniqueOrThrow.mockRejectedValueOnce(cause);
+        fixture.prisma.device.upsert.mockClear();
+        fixture.prisma.device.update.mockClear();
+        fixture.prisma.refreshToken.create.mockClear();
+        fixture.prisma.refreshToken.updateMany.mockClear();
+        const log = vi.spyOn(fixture.app.log, 'error');
+        const response = await fixture.request(action, session);
+        const code = action === 'refresh' ? 'TOKEN_REFRESH_FAILED' : 'LOGOUT_FAILED';
+        expect(response.statusCode, response.body).toBe(500);
+        expect(response.json()).toMatchObject({ code });
+        expect(response.cookies).toHaveLength(0);
+        expect(response.body).not.toContain('access_token');
+        expect(response.body).not.toContain(cause.message);
+        expect(fixture.rows).toEqual(before);
+        expect(fixture.prisma.device.upsert).not.toHaveBeenCalled();
+        expect(fixture.prisma.device.update).not.toHaveBeenCalled();
+        expect(fixture.prisma.refreshToken.create).not.toHaveBeenCalled();
+        expect(fixture.prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+        expect(log).toHaveBeenCalledOnce();
+        expect(log.mock.calls[0]![0]).toMatchObject({ code });
+        expect(fixture.failures).toHaveLength(1);
+        let root: unknown = fixture.failures[0];
+        while (root instanceof Error && root.cause !== undefined) root = root.cause;
+        expect(root).toBe(cause);
+      } catch (cause) {
+        throw new Error(`${client}会话代际失败边界验收失败：${action}`, { cause });
+      }
+    },
+  );
 
   it(`${client}旧登出等待期间完成同安装新登录，迟到请求不能撤销新会话`, async () => {
     const fixture = await setup(browser);

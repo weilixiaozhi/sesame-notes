@@ -4,7 +4,7 @@ import { Type } from '@sinclair/typebox';
 import { LunarDay, LunarMonth, LunarYear } from 'tyme4ts';
 
 import { ApiError } from '../../shared/errors.js';
-import { TIMESTAMP_PATTERN } from '../../shared/contracts/scalars.js';
+import { isStrictTimestamp } from '../../shared/contracts/scalars.js';
 import {
   DAY_DATE_PATTERN,
   DAY_MAX_DATE,
@@ -20,7 +20,7 @@ const StaticDayDefinitionSchema = Type.Object({
   ...DayEventPayloadSchema.properties,
   // 字符上限由 normalizeDayName 按码点检查，避免 TypeBox 按 UTF-16 误拒表情。
   name: Type.String(),
-  created_at: Type.String({ pattern: TIMESTAMP_PATTERN }),
+  created_at: Type.String(),
 });
 
 /** 规范化日子名称并按 Unicode 码点限制长度。 */
@@ -76,7 +76,7 @@ function validateDate(date: DayDate | null): void {
 
 /** 静态校验完整日子定义，不读取设备今天，也不替换非法原始日期。 */
 export function validateDayEvent(value: unknown): DayEventDefinition {
-  if (!Value.Check(StaticDayDefinitionSchema, value) || Number.isNaN(new Date(value.created_at).getTime()))
+  if (!Value.Check(StaticDayDefinitionSchema, value) || !isStrictTimestamp(value.created_at))
     throw new ApiError(400, 'INVALID_DAY_DEFINITION', '日子定义不完整');
   const definition = { ...value, name: normalizeDayName(value.name) };
   const {

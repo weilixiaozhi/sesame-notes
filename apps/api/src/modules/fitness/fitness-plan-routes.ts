@@ -13,7 +13,7 @@ import { createChange } from '../sync-events/index.js';
 import { fitnessPayloadSchemas, type FitnessPlanPayload, type FitnessPreferencesPayload } from './fitness-schemas.js';
 import { applyFitnessChange, fitnessSnapshot } from './fitness-sync.js';
 import { validateFitnessPayload, validateFitnessTransition } from './fitness-rules.js';
-import { addPlanDays, generatePlanCycles, preparePlanSave } from './fitness-plan-generation.js';
+import { addPlanDays, generatePlanCycles, hasPendingPlanCycles, preparePlanSave } from './fitness-plan-generation.js';
 import { officialExerciseIds } from './official-fitness.js';
 
 const date = Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' });
@@ -98,7 +98,8 @@ export function registerFitnessPlanRoutes(app: FastifyInstance, prisma: PrismaCl
               plan: identity.duplicate.payload,
               generated_count: 0,
               removed_count: 0,
-              has_more: false,
+              // 重放使用首次提交快照，不能把尚未补齐的历史周期标记为完成。
+              has_more: hasPendingPlanCycles(identity.duplicate.payload as FitnessPlanPayload, body.today),
               replayed: true,
             };
           const row = await tx.fitnessEntity.findUnique({ where: { id: planId } });

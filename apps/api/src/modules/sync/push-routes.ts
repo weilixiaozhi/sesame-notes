@@ -56,6 +56,8 @@ export function registerPushRoutes(app: FastifyInstance, prisma: PrismaClient, c
                 'member',
                 'recurring_transaction',
                 'exchange_rate_override',
+                'day_book',
+                'day_event',
                 'memo_book',
                 'memo_entry',
               ].includes(change.entity_type) ||

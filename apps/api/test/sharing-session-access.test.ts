@@ -81,7 +81,7 @@ async function fixture(action: Action, resource: Resource) {
     const businessWrites = vi.fn();
     const events: Array<Record<string, unknown>> = [];
     const tx = {
-      serverEpoch: { upsert: vi.fn(async () => ({ authGeneration: claims.authGeneration })) },
+      serverEpoch: { findUniqueOrThrow: vi.fn(async () => ({ authGeneration: claims.authGeneration })) },
       device: {
         findFirst: vi.fn(async ({ where }: { where: { user: { credentialVersion: number } } }) =>
           state.enabled && !state.revoked && state.credentialVersion === where.user.credentialVersion

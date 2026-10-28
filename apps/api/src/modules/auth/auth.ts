@@ -185,8 +185,7 @@ function registerAuthClientRoutes(
         await reply.status(201).send(sessionResponse(session, browser));
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        request.log.error({ err: error, request_id: request.id }, '注册失败');
-        throw new ApiError(500, 'REGISTER_FAILED', '注册失败，请稍后重试');
+        throw new ApiError(500, 'REGISTER_FAILED', '注册失败，请稍后重试', undefined, { cause: error });
       }
     },
   );
@@ -338,8 +337,7 @@ function registerAuthClientRoutes(
         await reply.send(sessionResponse(session, browser));
       } catch (error) {
         if (error instanceof ApiError) throw error;
-        request.log.error({ err: error, request_id: request.id }, '刷新令牌轮换失败');
-        throw new ApiError(500, 'TOKEN_REFRESH_FAILED', '登录状态刷新失败，请重新登录');
+        throw new ApiError(500, 'TOKEN_REFRESH_FAILED', '登录状态刷新失败，请重新登录', undefined, { cause: error });
       }
     },
   );
@@ -422,8 +420,7 @@ function registerAuthClientRoutes(
         if (browser && (terminated || !token)) reply.clearCookie(cookieName, { path: prefix });
         await reply.status(204).send();
       } catch (error) {
-        request.log.error({ err: error, request_id: request.id }, '退出登录失败');
-        throw new ApiError(500, 'LOGOUT_FAILED', '退出登录失败，请稍后重试');
+        throw new ApiError(500, 'LOGOUT_FAILED', '退出登录失败，请稍后重试', undefined, { cause: error });
       }
     },
   );
@@ -527,8 +524,7 @@ async function createMobileAccount(
     }
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    request.log.error({ err: error, request_id: request.id }, '手机号注册事务失败');
-    throw new ApiError(500, 'REGISTER_FAILED', '注册失败，请稍后重试');
+    throw new ApiError(500, 'REGISTER_FAILED', '注册失败，请稍后重试', undefined, { cause: error });
   }
 }
 
