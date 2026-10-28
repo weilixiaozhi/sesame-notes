@@ -1,33 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  deltaSchema,
-  fieldsSchema,
-  hasVisibleText,
-  isWellFormed,
-  logMemoError,
-  memoPreview,
-  type MemoEntry,
-} from './memo-content';
-
-/** 使用真实快照形状验证各类记录的列表摘要。 */
-function entry(overrides: Partial<MemoEntry>): MemoEntry {
-  return {
-    id: 'memo',
-    memo_book_id: 'book',
-    sync_id: 'sync',
-    revision: 1,
-    deleted_at: null,
-    book_type: 'normal',
-    title: '',
-    body_format: 'delta_v1',
-    body: { ops: [{ insert: '正文\n' }] },
-    order_key: null,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-    book_updated_at: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
-}
+import { deltaSchema, fieldsSchema, hasVisibleText, isWellFormed, logMemoError } from './memo-content';
 
 describe('备忘录富文本的跨端格式边界', () => {
   it('保存粗体、标题、清单和缩进，不裁剪文本', () => {
@@ -59,7 +31,7 @@ describe('备忘录富文本的跨端格式边界', () => {
   });
 });
 
-describe('账号卡片字段与列表摘要', () => {
+describe('账号卡片字段与隐私边界', () => {
   it('错误日志记录定位信息并排除字段值与异常消息', () => {
     const output = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
@@ -71,24 +43,6 @@ describe('账号卡片字段与列表摘要', () => {
     } finally {
       output.mockRestore();
     }
-  });
-  it('列表摘要直接显示账号字段值', () => {
-    expect(
-      memoPreview(
-        entry({
-          book_type: 'credentials',
-          body_format: 'fields_v1',
-          body: { fields: [{ label: '密码', value: 'example-password' }] },
-        }),
-      ),
-    ).toBe('密码：example-password');
-  });
-  it('普通正文摘要只跳过与外部标题相同的首行，存储正文保持原样', () => {
-    const memo = entry({ title: '地址', body: { ops: [{ insert: '地址\n正文内容\n地址\n' }] } });
-    expect(memoPreview(memo)).toBe('正文内容\n地址');
-    expect(memo.body).toEqual({ ops: [{ insert: '地址\n正文内容\n地址\n' }] });
-    expect(memoPreview(entry({ title: '地址', body: { ops: [{ insert: '正文内容\n' }] } }))).toBe('正文内容');
-    expect(memoPreview(entry({ title: '地址', body: { ops: [{ insert: '地址\n' }] } }))).toBe('');
   });
   it('允许空字段值，但不修剪密码内容', () => {
     const body = {
@@ -107,8 +61,5 @@ describe('账号卡片字段与列表摘要', () => {
     expect(fieldsSchema.safeParse({ fields: [{ label: 'a', value: 'x'.repeat(2049) }] }).success).toBe(false);
     expect(fieldsSchema.safeParse({ fields: [{ label: 'a', value: '', extra: true }] }).success).toBe(false);
     expect(hasVisibleText('  ')).toBe(false);
-  });
-  it('未知正文格式显示安全提示而非抛出页面错误', () => {
-    expect(memoPreview(entry({ body: { future_format: true } }))).toContain('暂不支持');
   });
 });

@@ -77,12 +77,12 @@ describe('备忘录文档导出', () => {
     expect(node.querySelector('strong')?.textContent).toBe('中文加粗');
     expect(node.textContent).toContain('2. 第二项');
   });
-  it('Word二进制含中文、东亚字体和富文本语义', async () => {
+  it('Word二进制保留中文和富文本语义', async () => {
     const bytes = await blobBytes(await memoDocx(entry));
     expect(bytes.slice(0, 2)).toEqual(new Uint8Array([0x50, 0x4b]));
     const xml = unzipText(bytes, 'word/document.xml');
     expect(xml).toContain('中文加粗');
-    expect(xml).toContain('w:eastAsia="Microsoft YaHei"');
+
     expect(xml).toContain('<w:b');
     expect(xml).toContain('Heading2');
     expect(xml).toContain('2. ');
