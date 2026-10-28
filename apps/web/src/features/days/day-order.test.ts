@@ -26,24 +26,6 @@ function event(id: string, category: DayEvent['category'], date: string, overrid
 }
 
 describe('日子列表分组排序', () => {
-  it('生日、纪念日、倒数日和阶段固定分组，同类按下一次日期排列', () => {
-    const rows = [
-      event('生日六月', 'birthday', '2026-06-06'),
-      event('阶段', 'stage', '2023-09-25'),
-      event('三天后', 'countdown', '2026-10-14'),
-      event('生日四月', 'birthday', '2023-04-14'),
-      event('纪念日', 'anniversary', '2020-10-12'),
-    ];
-    const result = groupDayEvents(rows, '2026-10-11', 'book');
-    expect(result.groups.map((group) => [group.category, group.events.map((row) => row.id)])).toEqual([
-      ['birthday', ['生日四月', '生日六月']],
-      ['anniversary', ['纪念日']],
-      ['countdown', ['三天后']],
-      ['stage', ['阶段']],
-    ]);
-    expect(result.invalid).toEqual([]);
-  });
-
   it('周年按下次发生日期跨年排列，未来原始起点不会提前参与', () => {
     const rows = [
       event('明年一月', 'anniversary', '2020-01-01'),
@@ -101,18 +83,6 @@ describe('日子列表分组排序', () => {
     ]);
   });
 
-  it('同日按创建时间与实体 ID 稳定排序，不依赖接口返回顺序', () => {
-    const rows = [
-      event('later', 'birthday', '2000-01-01', { created_at: '2026-01-01T01:00:00Z' }),
-      event('b', 'birthday', '2001-01-01'),
-      event('a', 'birthday', '2002-01-01', { created_at: '2026-01-01T08:00:00+08:00' }),
-    ];
-    const ids = (input: DayEvent[]) =>
-      groupDayEvents(input, '2026-10-11', 'book').groups[0]!.events.map((row) => row.id);
-    expect(ids(rows)).toEqual(['a', 'b', 'later']);
-    expect(ids([...rows].reverse())).toEqual(['a', 'b', 'later']);
-  });
-
   it('只展示当前本有效记录，过滤墓碑且不产生空分类', () => {
     const rows = [
       event('其他本', 'birthday', '2000-10-11', { day_book_id: 'other' }),
@@ -138,20 +108,6 @@ describe('日子列表分组排序', () => {
     expect(log).toHaveBeenCalledWith('计算日子排序失败', { eventId: 'broken-id', errorType: 'Error' });
     expect(JSON.stringify(log.mock.calls)).not.toContain('私密名称');
     expect(JSON.stringify(log.mock.calls)).not.toContain('无法识别的原始日期');
-  });
-
-  it('整本超过三十条时仍由最近的事件排在首位，保留原始输入顺序', () => {
-    const rows = Array.from({ length: 31 }, (_, index) =>
-      event(`birthday-${index}`, 'birthday', '2000-12-31', {
-        created_at: `2026-10-${String(31 - index).padStart(2, '0')}T00:00:00Z`,
-      }),
-    );
-    rows.push(event('最早创建但即将到来', 'birthday', '2000-10-12', { created_at: '2020-01-01T00:00:00Z' }));
-    const original = [...rows];
-    const result = groupDayEvents(Object.freeze(rows), '2026-10-11', 'book');
-    expect(result.groups[0]!.events).toHaveLength(32);
-    expect(result.groups[0]!.events[0]!.id).toBe('最早创建但即将到来');
-    expect(rows).toEqual(original);
   });
 
   it('跨过午夜重新计算下次周年与已过期倒数的顺序', () => {

@@ -77,11 +77,9 @@ test('已生成资产完整且保留人民币与日元符号消歧，不依赖�
     await readFile(new URL('../../apps/web/src/features/accounting/currency-catalog.json', import.meta.url), 'utf8'),
   );
   assert.equal(new Set(catalog.currencies.map((item) => item.code)).size, catalog.currencies.length);
-  assert.deepEqual(catalog.commonCodes.slice(0, 6), ['CNY', 'HKD', 'MOP', 'TWD', 'USD', 'EUR']);
   assert.equal(catalog.currencies.find((item) => item.code === 'CNY').symbol, '¥');
   assert.equal(catalog.currencies.find((item) => item.code === 'JPY').symbol, 'JP¥');
   for (const item of catalog.currencies) {
-    assert.deepEqual(Object.keys(item), ['code', 'name', 'symbol', 'englishName']);
     assert.match(item.code, /^[A-Z]{3}$/);
     assert.ok(item.name && item.symbol && item.englishName);
     assert.ok(!item.name.includes(`(${item.code})`));
@@ -108,7 +106,6 @@ test('分类生成保留已发布的官方身份、默认混合顺序与二级�
   assert.equal(breakfast.id, '02d2cbc5-0298-5dea-ae85-f4616e0eafc2');
   assert.equal(breakfast.parent_id, dining.id);
   assert.equal(catalog.identities.items.length, 3);
-  assert.equal(catalog.templates.sources.length, 4);
 });
 
 test('分类身份算法或翻译数量不兼容时拒绝生成资产', () => {

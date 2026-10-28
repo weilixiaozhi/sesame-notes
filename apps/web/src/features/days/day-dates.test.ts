@@ -3,6 +3,8 @@ import {
   buildDefinition,
   convertCalendar,
   daysBetween,
+  dateSpan,
+  daySummary,
   intervalTarget,
   nextOccurrence,
   projectDate,
@@ -10,6 +12,7 @@ import {
   todayDate,
   validateSolar,
   type DayDefinition,
+  type DayEvent,
 } from './day-dates';
 
 /** 以真实契约定义构造边界样例，断言可见业务结果。 */
@@ -86,6 +89,25 @@ describe('生日与纪念日年度重复', () => {
 });
 
 describe('倒数与阶段的保存约束', () => {
+  it('阶段时长不包含起日，指定结束日期时使用阶段总长', () => {
+    const stage: DayEvent = {
+      ...definition({ category: 'stage', event: null, start: solarDate('2026-01-01'), repeat_type: 'none' }),
+      id: 'event',
+      day_book_id: 'book',
+      sync_id: 'sync',
+      revision: 1,
+      deleted_at: null,
+      updated_at: '2026-01-01T00:00:00Z',
+    };
+    expect(daySummary(stage, '2026-01-02').value).toBe('1');
+    expect(daySummary({ ...stage, end: solarDate('2026-01-11') }, '2026-01-02').value).toBe('10');
+  });
+  it('计年和计月保留原始月末锚点及剩余日数', () => {
+    expect(dateSpan('2020-02-29', '2021-02-28')).toBe('1年');
+    expect(dateSpan('2026-01-31', '2026-03-30')).toBe('1个月30天');
+    expect(dateSpan('2026-01-01', '2026-01-01')).toBe('0天');
+    expect(dateSpan('2026-01-01', '2027-02-03')).toBe('1年1个月2天');
+  });
   it('间隔包含起日且不自动循环', () => {
     expect(intervalTarget('2026-01-01', 1)).toBe('2026-01-01');
     expect(intervalTarget('2026-01-01', 30)).toBe('2026-01-30');

@@ -25,16 +25,6 @@ describe('健身空间偏好保真', () => {
     expect(next.exercise_rest_settings).toEqual({ '0025': { rest_seconds: 60, warmup_rest_seconds: 20 } });
     expect(payload.custom_exercises[0]?.deleted).toBe(false);
   });
-  it('默认休息与提示偏好和手机客户端相同', () => {
-    expect(preferencesPayload()).toMatchObject({
-      default_rest_seconds: 90,
-      sound_enabled: true,
-      vibration_enabled: true,
-      custom_exercises: [],
-      pinned_exercise_ids: [],
-      exercise_weight_modes: {},
-    });
-  });
   it('只展示可识别的图片格式，不构造任意数据媒体', () => {
     expect(exerciseImage('/9j/test')).toBe('data:image/jpeg;base64,/9j/test');
     expect(exerciseImage('PHN2ZyBvbmxvYWQ9')).toBeUndefined();

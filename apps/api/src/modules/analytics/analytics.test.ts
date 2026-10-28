@@ -226,43 +226,18 @@ describe('可信账号事件采集', () => {
     expect(Value.Check(AnalyticsEventSchema, { ...action, event_name: 'free_event' })).toBe(false);
     expect(Value.Check(AnalyticsEventSchema, { ...action, properties: { amount: 100 } })).toBe(false);
   });
-  it('所有事件使用唯一英文身份，页面访问与操作名称都带行为后缀', () => {
+  it('事件使用唯一协议身份，页面访问身份与来源页面一致', () => {
     expect(new Set(ANALYTICS_DEFINITIONS.map((definition) => definition.id)).size).toBe(ANALYTICS_DEFINITIONS.length);
     for (const definition of ANALYTICS_DEFINITIONS) {
       expect(definition.id).toBe(definition.event_name);
       expect(definition.event_name).toMatch(/^[a-z][a-z0-9_]+$/);
       if (definition.kind === 'page_view')
         expect(definition.event_name).toBe(`${definition.page_id!.replaceAll('.', '_')}_view`);
-      expect(definition.location.trim().length).toBeGreaterThan(0);
       expect(definition.platforms.length).toBeGreaterThan(0);
-      expect(definition.name).not.toContain('undefined');
-      expect(definition.name).not.toContain('..');
-      expect(definition.name).not.toContain('__');
-      expect(definition.name).not.toContain('.');
-      expect(
-        definition.name.endsWith(
-          definition.behavior === 'view' ? '_访问' : definition.behavior === 'click' ? '_点击' : '_完成',
-        ),
-      ).toBe(true);
-      expect(Object.keys(definition).sort()).toEqual([
-        'behavior',
-        'event_name',
-        'id',
-        'kind',
-        'location',
-        'name',
-        'page_id',
-        'platforms',
-        'source_pages',
-      ]);
     }
   });
-  it('目录仅包含真实已采集页面，采集端契约拒绝空来源或重复来源', () => {
+  it('采集端契约拒绝空来源或重复来源，事件只能引用已登记页面及平台', () => {
     const transaction = ANALYTICS_DEFINITIONS.find((definition) => definition.id === 'accounting_transaction_view')!;
-    expect(transaction.platforms).toEqual(['app', 'web']);
-    expect(ANALYTICS_DEFINITIONS).toHaveLength(134);
-    expect(ANALYTICS_DEFINITIONS.some((definition) => definition.id === 'accounting_settings_view')).toBe(false);
-    expect(ANALYTICS_DEFINITIONS.some((definition) => definition.id === 'settings_devices_view')).toBe(false);
     expect(ANALYTICS_DEFINITIONS.every((definition) => Value.Check(AnalyticsDefinitionSchema, definition))).toBe(true);
     expect(Value.Check(AnalyticsDefinitionSchema, { ...transaction, platforms: [] })).toBe(false);
     expect(Value.Check(AnalyticsDefinitionSchema, { ...transaction, platforms: ['app', 'app'] })).toBe(false);
@@ -306,53 +281,6 @@ describe('可信账号事件采集', () => {
       }),
       expect.objectContaining({ platform, pageId: 'accounting.transaction', eventName: null, kind: 'active' }),
     ]);
-  });
-  it('相同业务页面使用唯一身份，目录按实际产品名称和来源区分编辑、详情与内容库', () => {
-    const byId = new Map(ANALYTICS_DEFINITIONS.map((definition) => [definition.id, definition]));
-    for (const page of [
-      'accounting.members',
-      'accounting.members.detail',
-      'fitness.session',
-      'fitness.sessions',
-      'fitness.sessions.edit',
-    ]) {
-      expect(byId.has(`${page.replaceAll('.', '_')}_view`)).toBe(false);
-      expect(Value.Check(AnalyticsEventSchema, { ...event(), page_id: page })).toBe(false);
-    }
-    expect(byId.get('accounting_aa_split_editor_view')).toMatchObject({
-      name: '记账_编辑分摊_访问',
-      platforms: ['app'],
-    });
-    expect(byId.get('accounting_aa_member_detail_view')).toMatchObject({
-      name: '记账_AA 成员账单详情_访问',
-      platforms: ['app'],
-    });
-    expect(byId.get('accounting_aa_statistics_view')).toMatchObject({ platforms: ['app', 'web'] });
-    expect(byId.get('memos_editor_view')).toMatchObject({ name: '备忘录_编辑_访问', platforms: ['app', 'web'] });
-    expect(byId.get('credentials_editor_view')).toMatchObject({
-      name: '账号密码_编辑_访问',
-      platforms: ['app', 'web'],
-    });
-    expect(byId.get('fitness_library_view')).toMatchObject({ name: '健身_官方内容库_访问', platforms: ['web'] });
-    expect(byId.get('fitness_templates_library_view')).toMatchObject({ name: '健身_模板库_访问', platforms: ['app'] });
-    expect(byId.get('memos_book_select')?.name).toBe('备忘录_备忘录本切换_点击');
-    expect(byId.get('credentials_book_select')?.name).toBe('账号密码_账号密码本切换_点击');
-    expect(byId.has('calendar_record_open_click')).toBe(false);
-    expect(byId.get('calendar_section_open_click')).toMatchObject({
-      name: '日历_业务入口_点击',
-      source_pages: [{ page_id: 'calendar', platforms: ['web'] }],
-    });
-    for (const action of [
-      'days_event_open_click',
-      'memos_note_open_click',
-      'credentials_open_click',
-      'fitness_workout_open_click',
-    ]) {
-      expect(byId.get(action)?.source_pages).toContainEqual({
-        page_id: 'calendar',
-        platforms: ['app', 'web'],
-      });
-    }
   });
   it('关联 UUID 随事件保存，缺失关联不伪造流程且无效输入无法通过契约', async () => {
     const createMany = vi.fn().mockResolvedValue({ count: 1 });

@@ -109,12 +109,6 @@ afterEach(() => {
 });
 
 describe('首条记录默认本准备', () => {
-  it('创建工厂不捕获会话或发起请求', () => {
-    createDefaultBookProvisioner('accounting', 'user');
-    expect(mock.capture).not.toHaveBeenCalled();
-    expect(mock.get).not.toHaveBeenCalled();
-  });
-
   it.each<DefaultBookKind>(['accounting', 'memos', 'days', 'fitness'])(
     '复用已有 %s 云本并发布真实目录，不写入新本',
     async (kind) => {

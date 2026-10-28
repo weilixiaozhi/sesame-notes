@@ -11,7 +11,6 @@ import {
   eventMeasure,
   eventRows,
   measured,
-  pageLabel,
   rowMeasure,
   sourcePageChoices,
 } from './model';
@@ -159,7 +158,7 @@ describe('统计计算与查询规则', () => {
     });
     expect(() => analysisQuery(range, { ...restored.selection, event: 'unknown' }, catalog())).toThrow('不可用');
   });
-  it('页面访问使用完整事件标识下钻与展示，页面上下文不替代事件筛选', () => {
+  it('页面访问使用完整事件标识筛选，页面上下文不替代事件筛选', () => {
     const range = { start_date: '2026-10-01', end_date: '2026-10-02', platform: 'app' as const };
     const restored = selectionFromPath(analysisLink(range, 'view', 'accounting_view'));
     expect(analysisQuery(range, restored.selection, catalog())).toEqual({
@@ -172,7 +171,6 @@ describe('统计计算与查询规则', () => {
     expect(eventRows(details(), 'view')).toEqual([
       { id: 'accounting_view', code: 'accounting_view', name: '记账_首页_访问', total: 9, users: 2 },
     ]);
-    expect(pageLabel(catalog().events[0]!)).toBe('记账_首页');
   });
   it('事件与来源页面只允许实际采集组合，改来源时清除失效事件与页面', () => {
     const definitions = catalog();

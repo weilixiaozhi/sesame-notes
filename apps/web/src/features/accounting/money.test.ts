@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  canonicalAmount,
-  canonicalEntryAmount,
-  displayAmount,
-  localDateTime,
-  roundEntryAmount,
-  sumAmounts,
-} from './money';
+import { canonicalAmount, canonicalEntryAmount, localDateTime, roundEntryAmount, sumAmounts } from './money';
 
 describe('accounting decimal amounts', () => {
   it('手工记账只接受两位小数，并支持键盘结束的小数点', () => {
@@ -49,10 +42,6 @@ describe('accounting decimal amounts', () => {
       '10000000000000000000000000000',
     );
     expect(sumAmounts([])).toBe('0');
-  });
-  it('formats without rounding stored precision', () => {
-    expect(displayAmount('12345678901234567890.1234567891')).toBe('12,345,678,901,234,567,890.1234567891');
-    expect(displayAmount('1')).toBe('1.00');
   });
   it('formats a local date without a timezone shift', () => {
     expect(localDateTime(new Date(2026, 8, 30, 23, 5))).toBe('2026-09-30T23:05');

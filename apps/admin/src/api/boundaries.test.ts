@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { pageBounds } from './paging';
-import { canAccess, landingPath } from './types';
+import { canAccess } from './types';
 import type { AdminIdentity } from './types';
 import { validateAdminResponse } from './response-validation';
-import { canonicalPath, routePage } from '../app/routes';
+import { routePage } from '../app/routes';
 import { loginSchema, password, passwordSchema } from '../lib/validation';
 
 const ordinary: AdminIdentity = {
@@ -27,8 +26,6 @@ describe('授权和响应边界', () => {
     expect(routePage('/analytics/tracking')).toBe('analytics_tracking');
     expect(routePage('/analytics/events?behavior=click')).toBe('analytics_events');
     expect(routePage('/analytics/behavior')).toBeNull();
-    expect(canonicalPath('/analytics/behavior')).toBe('/analytics/events');
-    expect(canonicalPath('/analytics/usage')).toBe('/analytics/overview');
     expect(routePage('/analytics/tracking/unknown')).toBeNull();
     expect(canAccess(ordinary, 'analytics')).toBe(false);
     expect(canAccess({ ...ordinary, permissions: ['analytics:read'], allowed_pages: ['analytics'] }, 'analytics')).toBe(
@@ -46,13 +43,6 @@ describe('授权和响应边界', () => {
         'analytics_events',
       ),
     ).toBe(false);
-  });
-  it('后台首页优先数据概览，但不会给无统计权限账号开放概览', () => {
-    expect(landingPath({ ...ordinary, identity_type: 'super_admin' })).toBe('/analytics/overview');
-    expect(landingPath({ ...ordinary, permissions: ['analytics:read'], allowed_pages: ['analytics'] })).toBe(
-      '/analytics/overview',
-    );
-    expect(landingPath(ordinary)).toBe('/application/users');
   });
   it('页面访问同时要求页面和动作权限，不根据组名推断', () => {
     expect(canAccess(ordinary, 'users')).toBe(true);
@@ -112,11 +102,6 @@ describe('授权和响应边界', () => {
         },
       }),
     ).toThrow();
-  });
-  it('真实总数为空、删除末页或跳过边界时修正页码', () => {
-    expect(pageBounds(0, { page: 9, page_size: 10 })).toEqual({ count: 1, page: 1 });
-    expect(pageBounds(11, { page: 2, page_size: 10 })).toEqual({ count: 2, page: 2 });
-    expect(pageBounds(10, { page: 2, page_size: 10 })).toEqual({ count: 1, page: 1 });
   });
   it('会话响应必须明确返回可空联系方式，缺失字段不能被当作未设置', () => {
     expect(() =>

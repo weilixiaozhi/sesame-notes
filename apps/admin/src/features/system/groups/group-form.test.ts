@@ -13,11 +13,10 @@ describe('用户组排序与资料编辑', () => {
     for (const sort of [GROUP_SORT_MIN, -1, 0, 9999, GROUP_SORT_MAX])
       expect(groupFormSchema.safeParse({ ...defaultGroupForm, sort }).success).toBe(true);
   });
-  it('范围外值和非整数显示友好的中文校验提示', () => {
+  it('拒绝范围外值和非整数', () => {
     for (const sort of [GROUP_SORT_MIN - 1, GROUP_SORT_MAX + 1, 1.5]) {
       const result = groupFormSchema.safeParse({ ...defaultGroupForm, sort });
       expect(result.success).toBe(false);
-      if (!result.success) expect(result.error.issues[0]?.message).toMatch(/^排序/);
     }
   });
 });

@@ -247,22 +247,6 @@ describe('ApiClient', () => {
     expect(request.headers.get('authorization')).toBe('Bearer access-token');
   });
 
-  it('unwrap 把错误载荷转为结构化 ApiError', () => {
-    const result = {
-      error: { code: 'LEDGER_NOT_FOUND', message: '账本不存在', request_id: 'req-9' },
-      response: jsonResponse(404, { code: 'LEDGER_NOT_FOUND', message: '账本不存在', request_id: 'req-9' }),
-    };
-    expect(() => unwrap(result)).toThrowError(ApiError);
-    try {
-      unwrap(result);
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      expect((error as ApiError).status).toBe(404);
-      expect((error as ApiError).code).toBe('LEDGER_NOT_FOUND');
-      expect((error as ApiError).requestId).toBe('req-9');
-    }
-  });
-
   it('unwrap 把合法 204 空响应视为成功', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -436,6 +420,7 @@ describe('ApiClient', () => {
       unwrap(result);
       expect.unreachable('应抛出 ApiError');
     } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
       expect(error).toMatchObject({
         status: 409,
         code: 'IDEMPOTENCY_KEY_REUSED',

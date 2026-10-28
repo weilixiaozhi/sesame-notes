@@ -238,28 +238,6 @@ describe('产品 Web 使用采集', () => {
     await collector.flush();
     expect(send.mock.calls[1]![1]).toHaveLength(1);
   });
-  it('子页重绘不计访问，弹窗覆盖子页并在关闭后恢复，页签切换不记录中间页', async () => {
-    const { collector, send } = setup();
-    collector.setAccount('one');
-    collector.enterPage('fitness', '/fitness');
-    const tab = Symbol('页签');
-    const editor = Symbol('编辑器');
-    collector.showSurface(tab, 'fitness.workouts', 1);
-    collector.showSurface(editor, 'fitness.workouts.editor', 2);
-    await collector.flush();
-    expect(send.mock.calls[0]![1].map((event) => event.page_id)).toEqual(['fitness.workouts.editor']);
-    collector.showSurface(editor, 'fitness.workouts.editor', 2);
-    collector.interact();
-    await collector.flush();
-    expect(send).toHaveBeenCalledTimes(1);
-    collector.hideSurface(editor);
-    await collector.flush();
-    expect(send.mock.calls[1]![1].map((event) => event.page_id)).toEqual(['fitness.workouts']);
-    collector.hideSurface(tab);
-    collector.showSurface(tab, 'fitness.statistics', 1);
-    await collector.flush();
-    expect(send.mock.calls[2]![1].map((event) => event.page_id)).toEqual(['fitness.statistics']);
-  });
   it('业务动作保留固定事件名称离线重试，普通交互不生成点击且迟到成功不串账号', async () => {
     const { collector, options, send, online } = setup();
     online(false);

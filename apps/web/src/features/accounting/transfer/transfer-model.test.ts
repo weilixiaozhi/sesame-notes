@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { webcrypto } from 'node:crypto';
 import { buildImportPlan, detectTransferMapping, accountingCsv, type Ledger, type Snapshot } from './transfer-model';
 import { importTimestamp } from '../../../lib/transfer/timestamp';
-import { convertAmount } from '../currency-math';
 import { parseDelimited } from '../../../lib/delimited-text';
 import { parseJsonTables, readTransferFile, selectTable } from '../../../lib/transfer/table';
 
@@ -61,13 +60,10 @@ describe('记账文件解析与精确转换', () => {
       '9007199254740992.1234567891',
     );
   });
-  it('严格时间与银行家舍入，不经浮点修改金额', () => {
+  it('拒绝非法日期，带时区的导入时间保持同一时刻', () => {
     expect(() => importTimestamp('2026-02-30')).toThrow();
     expect(() => importTimestamp('2026-02-30T12:00:00Z')).toThrow();
     expect(importTimestamp('2026-09-30T12:00:00+08:00')).toBe('2026-09-30T04:00:00.000Z');
-    expect(convertAmount('9999999999999999.1234567891', '1', 10)).toBe('9999999999999999.1234567891');
-    expect(convertAmount('0.0000000001', '1.5', 10)).toBe('0.0000000002');
-    expect(convertAmount('0.0000000001', '2.5', 10)).toBe('0.0000000002');
   });
   it('实际读取XLSX中文、多工作表与文字金额，并拒绝公式', async () => {
     const { default: ExcelJS } = await import('exceljs');

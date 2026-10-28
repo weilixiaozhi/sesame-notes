@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changePermissions, permissionLeaves, selectionState } from './permissions';
+import { changePermissions, permissionLeaves } from './permissions';
 import type { PermissionCatalog } from '../../../api/types';
 
 const catalog: PermissionCatalog = {
@@ -91,14 +91,12 @@ describe('用户组权限与页面授权', () => {
     const result = changePermissions({ permissions: [], page_ids: [] }, permissionLeaves(catalog), true, catalog);
     expect(result.page_ids.sort()).toEqual(['audit', 'users']);
     expect(result.permissions).not.toContain('accounts:manage');
-    expect(selectionState(result, permissionLeaves(catalog))).toBe('all');
   });
   it('取消用户读取撤销依赖链和页面，保留独立日志权限', () => {
     const all = changePermissions({ permissions: [], page_ids: [] }, permissionLeaves(catalog), true, catalog);
     const result = changePermissions(all, ['permission:users:read'], false, catalog);
     expect(result.permissions.sort()).toEqual(['audit:read', 'status:read']);
     expect(result.page_ids).toEqual(['audit']);
-    expect(selectionState(result, permissionLeaves(catalog))).toBe('some');
   });
   it('拒绝伪造的控制面权限叶子', () => {
     expect(() =>
@@ -108,7 +106,6 @@ describe('用户组权限与页面授权', () => {
   it('迁移保留的系统状态权限可见且可撤销，不引入页面', () => {
     expect(permissionLeaves(catalog, 'system')).toContain('permission:status:read');
     const current = { permissions: ['status:read'], page_ids: [] };
-    expect(selectionState(current, ['permission:status:read'])).toBe('all');
     expect(changePermissions(current, ['permission:status:read'], false, catalog)).toEqual({
       permissions: [],
       page_ids: [],
