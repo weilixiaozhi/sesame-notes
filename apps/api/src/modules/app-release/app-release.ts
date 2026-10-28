@@ -42,23 +42,60 @@ export function registerAppReleaseRoutes(app: FastifyInstance, config: ApiConfig
     };
   }
 
-  /** 校验 Release 响应结构；GitHub 返回体属于信任边界外输入，字段不合法一律丢弃。 */
+  /** 校验发布结构和更新渠道附件；无关附件允许为空，相关附件损坏必须明确暴露。 */
   function parseReleaseMetadata(payload: unknown): ReleaseMetadata {
-    const record = (payload ?? {}) as Record<string, unknown>;
-    const assets = Array.isArray(record.assets)
-      ? record.assets.flatMap((asset) => {
-          const item = (asset ?? {}) as Record<string, unknown>;
-          const name = typeof item.name === 'string' ? item.name : '';
-          const url = typeof item.url === 'string' ? item.url : '';
-          const size =
-            typeof item.size === 'number' && Number.isSafeInteger(item.size) && item.size > 0 ? item.size : 0;
-          // 附件下载必须走 GitHub API 地址（带 Token），网页下载地址对匿名请求返回 404。
-          return name && url.startsWith(`${GITHUB_API}/`) && size > 0 ? [{ name, url, size }] : [];
-        })
-      : [];
-    if (typeof record.tag_name !== 'string' || !record.tag_name || assets.length === 0)
-      throw new ApiError(503, 'APP_RELEASE_INVALID', '更新源返回了无效数据');
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw invalidRelease('发布响应结构无效');
+    const record = payload as Record<string, unknown>;
+    if (typeof record.tag_name !== 'string' || !record.tag_name || !Array.isArray(record.assets))
+      throw invalidRelease('发布标签或附件列表无效');
+    const assets: ReleaseAsset[] = [];
+    for (const asset of record.assets) {
+      if (!asset || typeof asset !== 'object' || Array.isArray(asset)) throw invalidRelease('发布附件结构无效');
+      const item = asset as Record<string, unknown>;
+      if (typeof item.name !== 'string' || !item.name) throw invalidRelease('发布附件名称无效');
+      if (item.name !== MANIFEST_ASSET_NAME && !APK_ASSET_NAME.test(item.name)) continue;
+      // 相关附件必须通过 GitHub API 下载，正字节数是清单与安装包可用的必要条件。
+      if (
+        typeof item.url !== 'string' ||
+        !item.url.startsWith(`${GITHUB_API}/`) ||
+        typeof item.size !== 'number' ||
+        !Number.isSafeInteger(item.size) ||
+        item.size <= 0
+      )
+        throw invalidRelease('更新附件的下载地址或长度无效');
+      assets.push({ name: item.name, url: item.url, size: item.size });
+    }
     return { tagName: record.tag_name, assets };
+  }
+
+  /** 上游契约错误保留安全诊断原因，统一由请求错误边界记录并返回友好信息。 */
+  function invalidRelease(reason: string): ApiError {
+    return new ApiError(503, 'APP_RELEASE_INVALID', '更新源返回了无效数据', undefined, { cause: new Error(reason) });
+  }
+
+  /** 清单已有字段与当前发布和安装包建立同一身份，验证通过后才能进入成功缓存。 */
+  function parseUpdateManifest(payload: unknown, release: ReleaseMetadata, apk: ReleaseAsset): Record<string, unknown> {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw invalidRelease('更新清单结构无效');
+    const metadata = payload as Record<string, unknown>;
+    if (
+      typeof metadata.version !== 'string' ||
+      !/^\d+\.\d+\.\d+$/.test(metadata.version) ||
+      typeof metadata.buildNumber !== 'number' ||
+      !Number.isSafeInteger(metadata.buildNumber) ||
+      metadata.buildNumber <= 0 ||
+      metadata.packageName !== 'com.sesame.notes' ||
+      metadata.abi !== 'arm64-v8a' ||
+      typeof metadata.size !== 'number' ||
+      !Number.isSafeInteger(metadata.size) ||
+      metadata.size <= 0 ||
+      typeof metadata.sha256 !== 'string' ||
+      !/^[a-f0-9]{64}$/i.test(metadata.sha256) ||
+      typeof metadata.notes !== 'string'
+    )
+      throw invalidRelease('更新清单字段无效');
+    if (`v${metadata.version}` !== release.tagName || metadata.size !== apk.size)
+      throw invalidRelease('更新清单与发布标签或安装包长度不一致');
+    return metadata;
   }
 
   /** 取指定 ref 的 Release（'latest' 或版本标签），瞬时缓存降低 GitHub 调用次数。 */
@@ -117,22 +154,23 @@ export function registerAppReleaseRoutes(app: FastifyInstance, config: ApiConfig
         const release = await loadRelease('latest');
         // 元数据与安装包必须使用同一套正式命名，避免把其他渠道安装包配给正式元数据。
         const manifest = release.assets.find((asset) => asset.name === MANIFEST_ASSET_NAME);
-        const apk = release.assets.find((asset) => APK_ASSET_NAME.test(asset.name));
+        const apk = release.assets.find((asset) => asset.name === `Sesame-Notes-prod-${release.tagName}.apk`);
         if (!manifest || !apk) throw new ApiError(404, 'APP_RELEASE_NOT_PUBLISHED', '更新源尚未发布可用版本');
 
         let metadata: Record<string, unknown>;
         try {
-          metadata = await cache.get(`manifest:${manifest.url}`, async () => {
-            const parsed: unknown = JSON.parse(
-              await (await openAsset(manifest, AbortSignal.timeout(METADATA_TIMEOUT_MS))).text(),
-            );
-            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('INVALID_MANIFEST');
-            return parsed as Record<string, unknown>;
-          });
+          metadata = await cache.get(
+            `manifest:${JSON.stringify([manifest.url, release.tagName, apk.url, apk.size])}`,
+            async () => {
+              const parsed: unknown = JSON.parse(
+                await (await openAsset(manifest, AbortSignal.timeout(METADATA_TIMEOUT_MS))).text(),
+              );
+              return parseUpdateManifest(parsed, release, apk);
+            },
+          );
         } catch (error) {
           if (error instanceof ApiError) throw error;
-          request.log.error({ err: error, request_id: request.id }, '更新元数据解析失败');
-          throw new ApiError(503, 'APP_RELEASE_INVALID', '更新源返回了无效数据');
+          throw new ApiError(503, 'APP_RELEASE_INVALID', '更新源返回了无效数据', undefined, { cause: error });
         }
 
         // 客户端按元数据里的 url 下载，必须指向本服务；客户端只接受 https 地址。
@@ -142,8 +180,9 @@ export function registerAppReleaseRoutes(app: FastifyInstance, config: ApiConfig
           if (error.statusCode === 429) reply.header('retry-after', '60');
           throw error;
         }
-        request.log.error({ err: error, request_id: request.id }, '发布信息查询失败');
-        throw new ApiError(503, 'APP_RELEASE_UPSTREAM_FAILED', '更新服务暂时不可用，请稍后重试');
+        throw new ApiError(503, 'APP_RELEASE_UPSTREAM_FAILED', '更新服务暂时不可用，请稍后重试', undefined, {
+          cause: error,
+        });
       }
     },
   );
@@ -249,8 +288,9 @@ export function registerAppReleaseRoutes(app: FastifyInstance, config: ApiConfig
           if (error.statusCode === 429) reply.header('retry-after', '60');
           throw error;
         }
-        request.log.error({ err: error, request_id: request.id }, '安装包下载失败');
-        throw new ApiError(503, 'APP_RELEASE_UPSTREAM_FAILED', '下载暂时不可用，请稍后重试');
+        throw new ApiError(503, 'APP_RELEASE_UPSTREAM_FAILED', '下载暂时不可用，请稍后重试', undefined, {
+          cause: error,
+        });
       }
     },
   );

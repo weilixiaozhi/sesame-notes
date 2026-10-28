@@ -44,7 +44,7 @@ export async function hashPassword(password: string): Promise<string> {
   }
 }
 
-/** 使用恒定时间比较验证密码，降低哈希比较泄漏风险。 */
+/** 使用恒定时间比较验证密码；不匹配返回 false，计算故障保留原因交由请求边界处理。 */
 export async function verifyPassword(password: string, encoded: string): Promise<boolean> {
   try {
     // 未配对代理码元编码时会变成替换字符，不能让不同原文验证为同一个密码。
@@ -57,8 +57,8 @@ export async function verifyPassword(password: string, encoded: string): Promise
     if (`scrypt:${salt.toString('base64url')}:${expected.toString('base64url')}` !== encoded) return false;
     const actual = (await scrypt(password, salt, PASSWORD_KEY_LENGTH)) as Buffer;
     return timingSafeEqual(expected, actual);
-  } catch {
-    return false;
+  } catch (cause) {
+    throw new Error('密码验证计算失败', { cause });
   }
 }
 

@@ -9,6 +9,25 @@ function response(status: number, body: unknown) {
 describe('后台客户端凭证边界', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('后台会话读取的空 200 不能确认有效身份', async () => {
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(new Response(null, { status: 200, headers: { 'x-request-id': 'admin-empty' } })),
+      );
+      const api = new AdminApiClient({ baseUrl: 'https://admin.example' });
+      const confirmIdentity = vi.fn();
+      await expect(api.adminAuth.me().then(confirmIdentity)).rejects.toMatchObject({
+        status: 200,
+        code: 'EMPTY_RESPONSE',
+        requestId: 'admin-empty',
+      });
+      expect(confirmIdentity).not.toHaveBeenCalled();
+    } catch (cause) {
+      throw new Error('后台客户端把缺失的会话正文作为有效身份交付', { cause });
+    }
+  });
+
   it('Cookie 请求剔除用户令牌，敏感响应不缓存且不接受重定向', async () => {
     const fetch = vi.fn().mockResolvedValue(response(200, { admin: {} }));
     vi.stubGlobal('fetch', fetch);

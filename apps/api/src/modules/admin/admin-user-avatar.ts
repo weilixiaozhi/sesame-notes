@@ -25,42 +25,36 @@ type AvatarMutationBody = { avatar_version: number; reason: string };
 type AvatarUploadBody = AvatarMutationBody & { content_type: AvatarContentType; data_base64: string };
 
 /** 后台头像更新与原因审计在同一授权事务内提交，文件补偿覆盖整个事务的失败。 */
-async function mutateAdminAvatar(
+function mutateAdminAvatar(
   request: FastifyRequest,
   prisma: PrismaClient,
   config: ApiConfig,
   image: { bytes: Buffer; extension: '.png' | '.jpg' | '.webp' } | null,
 ) {
-  try {
-    const { user_id: userId } = request.params as { user_id: string };
-    const body = request.body as AvatarMutationBody;
-    const reason = adminOperationReason(body);
-    return await replaceAvatar(prisma, config.storagePath, userId, image, request.log, {
-      expectedVersion: body.avatar_version,
-      transaction: (operation) =>
-        withAdminMutation(prisma, request, 'users:write', async (tx, auth) => {
-          // 共享头像操作持有账号头像锁，读到的版本同时用于冲突判断和审计快照。
-          const result = await operation(tx);
-          await writeAuditLog(tx, {
-            actor: `admin:${auth.adminId}`,
-            action: image ? 'user.avatar.update' : 'user.avatar.delete',
-            target: { type: 'user', id: userId },
-            requestId: request.id,
-            ip: request.ip,
-            metadata: {
-              reason,
-              previous_avatar_version: result.previousVersion,
-              avatar_version: result.profile?.avatarVersion ?? 0,
-            },
-          });
-          return result;
-        }),
-    });
-  } catch (error) {
-    // 日志只记录用户标识与异常；请求体包含图片内容，不得写入日志或审计。
-    request.log.error({ err: error, request_id: request.id, user_id: request.params }, '后台用户头像保存失败');
-    throw error;
-  }
+  const { user_id: userId } = request.params as { user_id: string };
+  const body = request.body as AvatarMutationBody;
+  const reason = adminOperationReason(body);
+  return replaceAvatar(prisma, config.storagePath, userId, image, request.log, {
+    expectedVersion: body.avatar_version,
+    transaction: (operation) =>
+      withAdminMutation(prisma, request, 'users:write', async (tx, auth) => {
+        // 共享头像操作持有账号头像锁，读到的版本同时用于冲突判断和审计快照。
+        const result = await operation(tx);
+        await writeAuditLog(tx, {
+          actor: `admin:${auth.adminId}`,
+          action: image ? 'user.avatar.update' : 'user.avatar.delete',
+          target: { type: 'user', id: userId },
+          requestId: request.id,
+          ip: request.ip,
+          metadata: {
+            reason,
+            previous_avatar_version: result.previousVersion,
+            avatar_version: result.profile?.avatarVersion ?? 0,
+          },
+        });
+        return result;
+      }),
+  });
 }
 
 /** 注册管理员替换及删除应用用户头像接口，图片校验复用个人资料上传规则。 */

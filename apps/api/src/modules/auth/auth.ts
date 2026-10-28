@@ -7,7 +7,7 @@ import { Type } from '@sinclair/typebox';
 import type { ApiConfig } from '../../shared/api-config.js';
 import { createMultiKeyRateLimit } from '../../shared/rate-limit.js';
 import { ApiError } from '../../shared/errors.js';
-import { executor } from '../../shared/execute.js';
+import { execute, executor } from '../../shared/execute.js';
 import { AnyUuidSchema, UuidSchema } from '../../shared/contracts/scalars.js';
 import { currentAuthGeneration } from '../../shared/server-generations.js';
 import { acquireSyncTransactionLock, type SyncTransaction } from '../../shared/sync-transaction.js';
@@ -207,39 +207,42 @@ function registerAuthClientRoutes(
         response: { 200: responseSchema },
       },
     },
-    async (request, reply) => {
-      try {
-        const body = request.body as {
-          country_code: string;
-          phone: string;
-          password: string;
-          device: DeviceInput;
-        };
-        const user = await resolveLoginUser(prisma, body);
-        // 不存在的手机号、禁用账号与错误密码返回完全一致的状态码、code 和文案，防止枚举；
-        // 账号不存在时也执行一次真实 scrypt 校验，让响应耗时不可区分
-        if (!user) {
-          await verifyPassword(body.password, await dummyPasswordHash());
-          throw new ApiError(401, 'INVALID_CREDENTIALS', '手机号或密码错误');
-        }
-        const session = await prisma.$transaction(async (tx) => {
-          await lockAccountSessions(tx, user.id);
-          // 手机号、密码与启用状态必须在账号锁内重读，等待期间发生换绑、改密或禁用时不能按旧快照签发。
-          const current = await tx.user.findUnique({ where: { id: user.id }, include: { profile: true } });
-          const passwordOk = await verifyPassword(body.password, current?.passwordHash ?? (await dummyPasswordHash()));
-          if (!current || current.phoneE164 !== user.phoneE164 || !current.isEnabled || !passwordOk) {
+    async (request, reply) =>
+      execute(
+        request,
+        '登录',
+        async () => {
+          const body = request.body as {
+            country_code: string;
+            phone: string;
+            password: string;
+            device: DeviceInput;
+          };
+          const user = await resolveLoginUser(prisma, body);
+          // 不存在的手机号、禁用账号与错误密码返回完全一致的状态码、code 和文案，防止枚举；
+          // 账号不存在时也执行一次真实 scrypt 校验，让响应耗时不可区分
+          if (!user) {
+            await verifyPassword(body.password, await dummyPasswordHash());
             throw new ApiError(401, 'INVALID_CREDENTIALS', '手机号或密码错误');
           }
-          return await createSession(tx, config, current, body.device, request.ip);
-        });
-        if (browser) setRefreshCookie(reply, session.refresh_token, config, cookieName, prefix);
-        await reply.send(sessionResponse(session, browser));
-      } catch (error) {
-        if (error instanceof ApiError) throw error;
-        request.log.error({ err: error, request_id: request.id }, '登录失败');
-        throw new ApiError(500, 'LOGIN_FAILED', '登录失败，请稍后重试');
-      }
-    },
+          const session = await prisma.$transaction(async (tx) => {
+            await lockAccountSessions(tx, user.id);
+            // 手机号、密码与启用状态必须在账号锁内重读，等待期间发生换绑、改密或禁用时不能按旧快照签发。
+            const current = await tx.user.findUnique({ where: { id: user.id }, include: { profile: true } });
+            const passwordOk = await verifyPassword(
+              body.password,
+              current?.passwordHash ?? (await dummyPasswordHash()),
+            );
+            if (!current || current.phoneE164 !== user.phoneE164 || !current.isEnabled || !passwordOk) {
+              throw new ApiError(401, 'INVALID_CREDENTIALS', '手机号或密码错误');
+            }
+            return await createSession(tx, config, current, body.device, request.ip);
+          });
+          if (browser) setRefreshCookie(reply, session.refresh_token, config, cookieName, prefix);
+          await reply.send(sessionResponse(session, browser));
+        },
+        'LOGIN_FAILED',
+      ),
   );
 
   app.post(

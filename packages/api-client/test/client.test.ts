@@ -278,6 +278,123 @@ describe('ApiClient', () => {
     expect(unwrap<void>(result)).toBeUndefined();
   });
 
+  it.each([
+    { status: 200, explicitLength: false },
+    { status: 200, explicitLength: true },
+    { status: 201, explicitLength: false },
+    { status: 201, explicitLength: true },
+  ])('空 $status 响应（零长度声明：$explicitLength）不能解包为有效数据', ({ status, explicitLength }) => {
+    try {
+      const response = new Response(explicitLength ? '' : null, {
+        status,
+        headers: { 'x-request-id': 'empty-result', ...(explicitLength ? { 'content-length': '0' } : {}) },
+      });
+      expect(() => unwrap({ response })).toThrowError(
+        expect.objectContaining({ status, code: 'EMPTY_RESPONSE', requestId: 'empty-result' }),
+      );
+    } catch (cause) {
+      throw new Error('缺少正文的业务响应被解包为成功', { cause });
+    }
+  });
+
+  it.each([
+    { status: 200, explicitLength: false },
+    { status: 200, explicitLength: true },
+    { status: 201, explicitLength: false },
+    { status: 201, explicitLength: true },
+  ])('空 $status 响应（零长度声明：$explicitLength）不能触发写入成功回调', async ({ status, explicitLength }) => {
+    try {
+      for (const validateResponse of [undefined, vi.fn()]) {
+        globalThis.fetch = vi.fn().mockResolvedValue(
+          new Response(explicitLength ? '' : null, {
+            status,
+            headers: { 'x-request-id': 'empty-write', ...(explicitLength ? { 'content-length': '0' } : {}) },
+          }),
+        );
+        const client = new ApiClient({
+          baseUrl: 'http://api.test',
+          getAccessToken: async () => 'token',
+          validateResponse,
+        });
+        const completeSave = vi.fn();
+        await expect(
+          client.client
+            .POST('/api/v1/ledgers', { body: { name: '账本' } })
+            .then(unwrap)
+            .then(completeSave),
+        ).rejects.toMatchObject({ status, code: 'EMPTY_RESPONSE', requestId: 'empty-write' });
+        expect(completeSave).not.toHaveBeenCalled();
+        if (validateResponse) expect(validateResponse).not.toHaveBeenCalled();
+      }
+    } catch (cause) {
+      throw new Error('空响应错误未在请求边界阻止保存成功副作用', { cause });
+    }
+  });
+
+  it('205 与 HEAD 的无正文语义保留，HEAD 方法和通用 request 返回值均可解包', async () => {
+    try {
+      const fetchMock = vi.fn().mockImplementation(async (request: Request) => {
+        return new Response(null, {
+          status: request.method === 'HEAD' ? 200 : 205,
+          headers: { 'x-request-id': 'empty-http' },
+        });
+      });
+      globalThis.fetch = fetchMock;
+      const validateResponse = vi.fn();
+      const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null, validateResponse });
+      expect(
+        unwrap(await client.client.POST('/api/v1/auth/logout', { body: { refresh_token: 'test-refresh-token' } })),
+      ).toBeUndefined();
+      // 当前生成契约未声明 HEAD 路由，此处验证 SDK 保留的通用 HTTP 方法能力。
+      expect(unwrap(await client.client.HEAD('/api/v1/health' as never))).toBeUndefined();
+      expect(unwrap(await client.client.request('head', '/api/v1/health' as never))).toBeUndefined();
+      expect(validateResponse).toHaveBeenCalledTimes(3);
+      expect(validateResponse.mock.calls.every(([context]) => context.body === undefined)).toBe(true);
+      client.client.use({
+        onRequest: () => new Response(null, { status: 200 }),
+      });
+      expect(unwrap(await client.client.HEAD('/api/v1/health' as never))).toBeUndefined();
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } catch (cause) {
+      throw new Error('合法无正文 HTTP 响应被误判', { cause });
+    }
+  });
+
+  it.each([401, 403, 500])('无正文 HTTP %s 保留失败状态与请求编号', async (status) => {
+    try {
+      globalThis.fetch = vi
+        .fn()
+        .mockResolvedValue(
+          new Response(null, { status, headers: { 'content-length': '0', 'x-request-id': 'empty-error' } }),
+        );
+      const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null });
+      const result = await client.client.GET('/api/v1/health');
+      expect(() => unwrap(result)).toThrowError(
+        expect.objectContaining({ status, code: `HTTP_${status}`, requestId: 'empty-error' }),
+      );
+    } catch (cause) {
+      throw new Error('无正文 HTTP 错误的业务语义丢失', { cause });
+    }
+  });
+
+  it('缓存复用同一响应时，HEAD 的无正文许可不能传给后续 GET', async () => {
+    try {
+      const cachedResponse = new Response(null, {
+        status: 200,
+        headers: { 'content-length': '0', 'x-request-id': 'shared-cache' },
+      });
+      const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null });
+      client.client.use({ onRequest: () => cachedResponse });
+      expect(unwrap(await client.client.HEAD('/api/v1/health' as never))).toBeUndefined();
+      const result = await client.client.GET('/api/v1/health');
+      expect(() => unwrap(result)).toThrowError(
+        expect.objectContaining({ status: 200, code: 'EMPTY_RESPONSE', requestId: 'shared-cache' }),
+      );
+    } catch (cause) {
+      throw new Error('缓存响应复用污染了不同请求的正文契约', { cause });
+    }
+  });
+
   it('非 JSON 错误响应仍转换为含状态和请求编号的友好 ApiError', async () => {
     const fetchMock = vi
       .fn()

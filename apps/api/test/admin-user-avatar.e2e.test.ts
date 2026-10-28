@@ -3,6 +3,7 @@ import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 import { PrismaClient } from '@prisma/client';
+import Fastify from 'fastify';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -27,6 +28,10 @@ let readerCookie = '';
 let source = '';
 let failAudit = false;
 let revokeWriterAfterAuthentication = false;
+const auditFailure = new Error('模拟头像审计写入失败');
+const logRecords: string[] = [];
+const requestFailures = new Map<string, Error>();
+const loggerHost = Fastify({ logger: { stream: { write: (record) => logRecords.push(record) } } });
 
 /** 所有后台写请求附带同源 Cookie 和自定义头，验证真实权限链路。 */
 function headers(cookie = writerCookie) {
@@ -159,13 +164,16 @@ beforeAll(async () => {
         auditLog: {
           /** 在真实事务中拒绝审计写入，头像资料必须随之回滚。 */
           async create({ args, query }) {
-            if (failAudit && args.data.action.startsWith('user.avatar.')) throw new Error('模拟头像审计写入失败');
+            if (failAudit && args.data.action.startsWith('user.avatar.')) throw auditFailure;
             return query(args);
           },
         },
       },
     });
-    app = buildApp({ logger: false, config, prisma: injected as unknown as PrismaClient });
+    app = buildApp({ logger: loggerHost.log, config, prisma: injected as unknown as PrismaClient });
+    app.addHook('onError', async (request, _reply, error) => {
+      requestFailures.set(request.id, error);
+    });
     await app.ready();
     source = (
       await sharp({ create: { width: 8, height: 6, channels: 4, background: '#55aa88' } })
@@ -184,6 +192,7 @@ afterAll(async () => {
   try {
     failAudit = false;
     await app?.close();
+    await loggerHost.close();
     if (userIds.length) await prisma.user.deleteMany({ where: { id: { in: userIds } } });
     if (adminIds.length) await prisma.adminAccount.deleteMany({ where: { id: { in: adminIds } } });
     if (groupIds.length) await prisma.adminGroup.deleteMany({ where: { id: { in: groupIds } } });
@@ -304,14 +313,24 @@ describe('后台应用用户头像设置', () => {
   });
 
   it('并发使用同一版本时仅一笔提交，失败请求不会留下文件或审计', async () => {
-    const user = await createUser();
-    const before = await avatarFiles();
-    const responses = await Promise.all([upload(user.id), upload(user.id)]);
-    expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 409]);
-    const current = await prisma.userProfile.findUniqueOrThrow({ where: { userId: user.id } });
-    expect(current.avatarVersion).toBe(1);
-    expect(await avatarFiles()).toEqual([...before, current.avatarFileId!].sort());
-    expect(await prisma.auditLog.count({ where: { target: { path: ['id'], equals: user.id } } })).toBe(1);
+    try {
+      const user = await createUser();
+      const before = await avatarFiles();
+      const responses = await Promise.all([upload(user.id), upload(user.id)]);
+      expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+      const current = await prisma.userProfile.findUniqueOrThrow({ where: { userId: user.id } });
+      expect(current.avatarVersion).toBe(1);
+      expect(await avatarFiles()).toEqual([...before, current.avatarFileId!].sort());
+      expect(await prisma.auditLog.count({ where: { target: { path: ['id'], equals: user.id } } })).toBe(1);
+      const rejected = responses.find((response) => response.statusCode === 409)!.json();
+      expect(rejected.code).toBe('AVATAR_VERSION_CONFLICT');
+      const warnings = logRecords
+        .map((record) => JSON.parse(record))
+        .filter((record) => record.request_id === rejected.request_id && record.level >= 40);
+      expect(warnings).toEqual([expect.objectContaining({ level: 40, code: 'AVATAR_VERSION_CONFLICT' })]);
+    } catch (cause) {
+      throw new Error('头像版本冲突的提交与日志分类验收失败', { cause });
+    }
   });
 
   it('头像审计失败时回滚资料并补偿新图，删除失败时保留旧图', async () => {
@@ -330,6 +349,23 @@ describe('后台应用用户头像设置', () => {
         payload: { avatar_version: 1, reason: '验证删除事务回滚' },
       });
       expect(deletion.statusCode, deletion.body).toBe(500);
+      for (const response of [replacement, deletion]) {
+        const body = response.json();
+        expect(body.code).toBe('AVATAR_OPERATION_FAILED');
+        let root: unknown = requestFailures.get(body.request_id);
+        while (root instanceof Error && root.cause !== undefined) root = root.cause;
+        expect(root).toBe(auditFailure);
+        const errors = logRecords
+          .map((record) => JSON.parse(record))
+          .filter((record) => record.request_id === body.request_id && record.level >= 50);
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatchObject({ code: 'AVATAR_OPERATION_FAILED' });
+        expect(JSON.stringify(errors)).not.toContain(auditFailure.message);
+        expect(JSON.stringify(errors)).not.toContain(source);
+        expect(response.body).not.toContain(auditFailure.message);
+      }
+    } catch (cause) {
+      throw new Error('头像审计失败的根因与单次日志验收失败', { cause });
     } finally {
       failAudit = false;
     }

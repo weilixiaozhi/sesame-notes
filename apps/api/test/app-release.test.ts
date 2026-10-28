@@ -60,13 +60,14 @@ function stubGithub(
   latest: () => Response = () => Response.json(RELEASE_PAYLOAD),
   /** 历史版本标签的响应覆盖；未列出的标签回落到最新版载荷。 */
   tags: Record<string, () => Response> = {},
+  manifest: () => Response = () => Response.json(UPDATE_MANIFEST),
 ): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     if (url.endsWith('/releases/latest')) return latest();
     const tag = /\/releases\/tags\/(.+)$/.exec(url)?.[1];
     if (tag) return (tags[tag] ?? (() => Response.json(RELEASE_PAYLOAD)))();
-    if (url.endsWith('/assets/1')) return new Response(JSON.stringify(UPDATE_MANIFEST));
+    if (url.endsWith('/assets/1')) return manifest();
     if (url.endsWith('/assets/2')) {
       // 上游按 Range 返回 206，用于验证断点续传由上游直接给出范围与长度
       const range = (init?.headers as Record<string, string> | undefined)?.range;
@@ -92,6 +93,142 @@ afterEach(async () => {
 });
 
 describe('GET /api/v1/app/update.json', () => {
+  it.each([
+    {},
+    { ...UPDATE_MANIFEST, version: 'invalid' },
+    { ...UPDATE_MANIFEST, version: '1.0.1' },
+    { ...UPDATE_MANIFEST, buildNumber: 0 },
+    { ...UPDATE_MANIFEST, buildNumber: 1.5 },
+    { ...UPDATE_MANIFEST, size: 0 },
+    { ...UPDATE_MANIFEST, size: 5 },
+    { ...UPDATE_MANIFEST, packageName: 'other.application' },
+    { ...UPDATE_MANIFEST, abi: 'other-abi' },
+    { ...UPDATE_MANIFEST, sha256: 'invalid' },
+    { ...UPDATE_MANIFEST, notes: null },
+  ])('拒绝损坏清单并允许上游恢复后重新读取：%j', async (invalid) => {
+    try {
+      let payload: unknown = invalid;
+      const github = stubGithub(undefined, {}, () => Response.json(payload));
+      const app = createTestApp();
+      const failed = await app.inject({ url: '/api/v1/app/update.json' });
+      expect(failed.statusCode, failed.body).toBe(503);
+      expect(failed.json().code).toBe('APP_RELEASE_INVALID');
+      payload = UPDATE_MANIFEST;
+      const recovered = await app.inject({ url: '/api/v1/app/update.json' });
+      expect(recovered.statusCode, recovered.body).toBe(200);
+      expect(recovered.json()).toMatchObject({ version: '1.0.0', size: APK_BYTES.length });
+      expect(github.mock.calls.filter(([input]) => String(input).endsWith('/assets/1'))).toHaveLength(2);
+    } catch (cause) {
+      throw new Error('发布清单校验与失败缓存恢复验收失败', { cause });
+    }
+  });
+
+  it('按发布标签选择确切 APK，不把前面的历史附件配给当前清单', async () => {
+    stubGithub(() =>
+      Response.json({
+        ...RELEASE_PAYLOAD,
+        assets: [{ ...RELEASE_PAYLOAD.assets[1], name: 'Sesame-Notes-prod-v0.9.0.apk' }, ...RELEASE_PAYLOAD.assets],
+      }),
+    );
+    const response = await createTestApp().inject({ url: '/api/v1/app/update.json' });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().url).toBe('https://localhost:80/api/v1/app/download/Sesame-Notes-prod-v1.0.0.apk');
+  });
+
+  it.each(
+    [
+      [],
+      [RELEASE_PAYLOAD.assets[0]],
+      [RELEASE_PAYLOAD.assets[1]],
+      [RELEASE_PAYLOAD.assets[0], { ...RELEASE_PAYLOAD.assets[1], name: 'Sesame-Notes-prod-v0.9.0.apk' }],
+      [{ name: 'notes.txt', url: 'https://api.github.com/repos/o/r/releases/assets/3', size: 0 }],
+    ].map((assets) => ({ assets })),
+  )('合法发布缺少当前更新附件时返回尚未发布：%j', async ({ assets }) => {
+    stubGithub(() => Response.json({ ...RELEASE_PAYLOAD, assets }));
+    const response = await createTestApp().inject({ url: '/api/v1/app/update.json' });
+    expect(response.statusCode, response.body).toBe(404);
+    expect(response.json().code).toBe('APP_RELEASE_NOT_PUBLISHED');
+  });
+
+  it.each(
+    [
+      [{ ...RELEASE_PAYLOAD.assets[0], size: 0 }, RELEASE_PAYLOAD.assets[1]],
+      [RELEASE_PAYLOAD.assets[0], { ...RELEASE_PAYLOAD.assets[1], size: -1 }],
+      [RELEASE_PAYLOAD.assets[0], { ...RELEASE_PAYLOAD.assets[1], url: 'https://invalid.example/file' }],
+    ].map((assets) => ({ assets })),
+  )('损坏相关附件不能过滤为未发布，修复后可立即重读：%j', async ({ assets }) => {
+    try {
+      let payload = { ...RELEASE_PAYLOAD, assets };
+      const github = stubGithub(() => Response.json(payload));
+      const app = createTestApp();
+      const failed = await app.inject({ url: '/api/v1/app/update.json' });
+      expect(failed.statusCode, failed.body).toBe(503);
+      expect(failed.json().code).toBe('APP_RELEASE_INVALID');
+      payload = RELEASE_PAYLOAD;
+      const recovered = await app.inject({ url: '/api/v1/app/update.json' });
+      expect(recovered.statusCode, recovered.body).toBe(200);
+      expect(github.mock.calls.filter(([input]) => String(input).endsWith('/releases/latest'))).toHaveLength(2);
+    } catch (cause) {
+      throw new Error('发布附件损坏与上游恢复验收失败', { cause });
+    }
+  });
+
+  it('无关零字节附件及待改写的清单地址不影响有效发布', async () => {
+    stubGithub(
+      () =>
+        Response.json({
+          ...RELEASE_PAYLOAD,
+          assets: [...RELEASE_PAYLOAD.assets, { name: 'notes.txt', url: 'https://api.github.com/notes', size: 0 }],
+        }),
+      {},
+      () => Response.json({ ...UPDATE_MANIFEST, url: null }),
+    );
+    const response = await createTestApp().inject({ url: '/api/v1/app/update.json' });
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().url).toBe('https://localhost:80/api/v1/app/download/Sesame-Notes-prod-v1.0.0.apk');
+  });
+
+  it('清单解析异常只由全局边界记录一次并保留原始原因', async () => {
+    stubGithub(undefined, {}, () => new Response('{invalid'));
+    const app = createTestApp();
+    const log = vi.spyOn(app.log, 'error');
+    try {
+      const response = await app.inject({ url: '/api/v1/app/update.json' });
+      expect(response.statusCode, response.body).toBe(503);
+      expect(response.json().code).toBe('APP_RELEASE_INVALID');
+      expect(log).toHaveBeenCalledOnce();
+      expect(log.mock.calls[0]![0]).toMatchObject({ err: { cause: { cause: expect.any(SyntaxError) } } });
+      expect(response.body).not.toContain('invalid');
+    } catch (cause) {
+      throw new Error('发布清单异常日志验收失败', { cause });
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it.each(['/api/v1/app/update.json', '/api/v1/app/download/Sesame-Notes-prod-v1.0.0.apk'])(
+    '上游网络故障只记录一次并保留原因：%s',
+    async (url) => {
+      const cause = new Error('upstream network unavailable');
+      const github = stubGithub();
+      github.mockRejectedValue(cause);
+      const app = createTestApp();
+      const log = vi.spyOn(app.log, 'error');
+      try {
+        const response = await app.inject({ url });
+        expect(response.statusCode, response.body).toBe(503);
+        expect(response.json().code).toBe('APP_RELEASE_UPSTREAM_FAILED');
+        expect(log).toHaveBeenCalledOnce();
+        expect(log.mock.calls[0]![0]).toMatchObject({ err: { cause: { cause } } });
+        expect(response.body).not.toContain(cause.message);
+      } catch (error) {
+        throw new Error('发布上游故障日志验收失败', { cause: error });
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
+
   it('serves prod-named assets through the existing update URL', async () => {
     stubGithub(() =>
       Response.json({

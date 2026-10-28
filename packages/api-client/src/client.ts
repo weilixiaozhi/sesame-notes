@@ -14,6 +14,9 @@ type RefreshTask = {
 type RequestTransport = (request: Request, init?: RequestInit) => Promise<Response>;
 type ReplayableRequest = { request: Request; transport: RequestTransport; init?: RequestInit };
 
+// HEAD 的无正文语义属于本次调用结果，不能由远端零长度头或跨请求复用的响应冒充。
+const headResults = new WeakSet<object>();
+
 type ResponseValidationContext = {
   method: string;
   path: string;
@@ -275,7 +278,15 @@ export class ApiClient {
           const initIndex = property === 'request' ? 2 : 1;
           const init = args[initIndex] as { fetch?: RequestTransport } | undefined;
           if (init?.fetch) args[initIndex] = { ...init, fetch: captureTransport(init.fetch) };
-          return Reflect.apply(method, target, args);
+          const result = Reflect.apply(method, target, args) as Promise<{ response: Response }>;
+          if (property === 'HEAD' || (property === 'request' && args[0] === 'head')) {
+            // 请求中间件可以直接返回缓存响应；以调用方法保存语义，涵盖跳过传输的 HEAD。
+            return result.then((value) => {
+              headResults.add(value);
+              return value;
+            });
+          }
+          return result;
         };
       },
     });
@@ -290,20 +301,38 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response?: Respon
     throw ApiError.from(result.error, result.response);
   }
   if (result.data === undefined) {
-    if (result.response && isEmptySuccess(result.response)) return undefined as T;
-    throw new ApiError(0, 'EMPTY_RESPONSE', '响应缺少数据');
+    if (result.response && (isEmptyResponse(result.response, '') || headResults.has(result))) return undefined as T;
+    throw new ApiError(
+      result.response?.status ?? 0,
+      'EMPTY_RESPONSE',
+      '响应缺少数据',
+      result.response?.headers.get('x-request-id') ?? undefined,
+    );
   }
   return result.data;
 }
 
-/** 将 204、205、HEAD 和明确的零长度成功响应统一标记为空，避免 JSON 解析器读取空正文。 */
+/** 只允许 204、205、HEAD 无正文；其他成功响应缺少数据时在传输边界拒绝。 */
 function normalizeEmptyResponse(response: Response, method: string): Response {
-  if (!response.ok || !isEmptyResponse(response, method)) return response;
-  if (response.status === 204 || response.headers.get('content-length') === '0') return response;
-
-  const headers = new Headers(response.headers);
-  headers.set('content-length', '0');
-  return new Response(null, { status: response.status, statusText: response.statusText, headers });
+  if (!response.ok) return response;
+  if (!isEmptyResponse(response, method)) {
+    if (response.body === null || response.headers.get('content-length') === '0') {
+      throw new ApiError(
+        response.status,
+        'EMPTY_RESPONSE',
+        '响应缺少数据',
+        response.headers.get('x-request-id') ?? undefined,
+      );
+    }
+    return response;
+  }
+  let normalized = response;
+  if (response.status !== 204 && response.headers.get('content-length') !== '0') {
+    const headers = new Headers(response.headers);
+    headers.set('content-length', '0');
+    normalized = new Response(null, { status: response.status, statusText: response.statusText, headers });
+  }
+  return normalized;
 }
 
 /** 为可选校验器解析响应副本；空响应返回 undefined，JSON 损坏统一转成友好契约错误。 */
@@ -334,18 +363,7 @@ async function parseValidationBody(response: Response, method: string, schemaPat
 
 /** 判断响应是否按 HTTP 语义不携带正文。 */
 function isEmptyResponse(response: Response, method: string): boolean {
-  return (
-    response.status === 204 ||
-    response.status === 205 ||
-    method === 'HEAD' ||
-    response.headers.get('content-length') === '0' ||
-    response.body === null
-  );
-}
-
-/** 判断 unwrap 是否可以把 undefined 作为合法成功值返回。 */
-function isEmptySuccess(response: Response): boolean {
-  return response.ok && isEmptyResponse(response, '');
+  return response.status === 204 || response.status === 205 || method === 'HEAD';
 }
 
 /** 优先从响应体读取服务端 request_id，缺失时回退到响应头。 */
