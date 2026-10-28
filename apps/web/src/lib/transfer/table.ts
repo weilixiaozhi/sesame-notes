@@ -82,8 +82,6 @@ export function parseJsonTables(text: string): TransferTable[] {
           headers.map((header) => {
             // 表头取各行字段的并集，当前行缺失的列必须为空，不能读取对象原型上的同名属性。
             const value = Object.hasOwn(row, header) ? row[header] : undefined;
-            if (typeof value === 'number' && (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER))
-              throw new Error('JSON 数字超出安全精度，请将金额保存为字符串');
             return value === null || value === undefined
               ? ''
               : typeof value === 'object'

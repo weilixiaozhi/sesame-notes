@@ -46,13 +46,6 @@ export async function currentLedgerSyncId(tx: Prisma.TransactionClient, ledgerId
   )?.syncId;
 }
 
-/** 识别 Prisma 唯一约束冲突（P2002），用于并发创建撞主键时的冲突归因。 */
-export function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002'
-  );
-}
-
 export function requireLedgerId(change: PushChange): string {
   if (!change.ledger_id) throw new ApiError(400, 'LEDGER_ID_REQUIRED', `${change.entity_type} 必须提供 ledger_id`);
   return change.ledger_id;

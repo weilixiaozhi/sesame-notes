@@ -50,8 +50,8 @@ export async function createTransactionMutation(
     );
     return { transaction, revision: transaction.revision, changeId };
   } catch (cause) {
-    // 唯一约束由 REST、同步和导入各自映射；其余异常保留根因交给公共错误边界记录。
-    if (cause instanceof ApiError || isUniqueConflict(cause)) throw cause;
+    // 存储故障保留原始原因，由事务回滚并交给公共错误边界记录。
+    if (cause instanceof ApiError) throw cause;
     throw new Error('交易创建失败', { cause });
   }
 }

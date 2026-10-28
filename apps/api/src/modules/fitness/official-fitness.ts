@@ -153,7 +153,7 @@ export async function validateOfficialContent(
 export async function readOfficialContent(prisma: PrismaClient) {
   return prisma.$transaction(
     async (tx) => ({
-      version: (await tx.officialFitnessState.findUnique({ where: { id: 1 } }))?.contentVersion ?? 1,
+      version: (await tx.officialFitnessState.findUniqueOrThrow({ where: { id: 1 } })).contentVersion,
       rows: await tx.officialFitnessContent.findMany({ orderBy: { id: 'asc' } }),
       taxonomies: await tx.officialFitnessTaxon.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }),
     }),

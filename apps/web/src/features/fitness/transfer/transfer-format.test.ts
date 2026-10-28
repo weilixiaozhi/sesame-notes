@@ -143,6 +143,49 @@ describe('fitness transfer formats', () => {
     await expect(preview(`数据类型,名称,动作\n模板,测试,${value}`)).rejects.toThrow('未匹配');
   });
 
+  it.each([
+    { label: '布尔值', entityType: false },
+    { label: '数字', entityType: 0 },
+    { label: '数组', entityType: ['fitness_plan'] },
+    { label: '对象', entityType: {} },
+  ])('JSON 中显式非法的数据类型 $label 不生成可导入计划', async ({ entityType }) => {
+    try {
+      await expect(
+        preview(JSON.stringify([{ entity_type: entityType, name: '力量计划', exercise: '0025', reps: 8 }])),
+      ).rejects.toThrow('数据类型');
+    } catch (cause) {
+      throw new Error('非法健身数据类型被默认计划掩盖', { cause });
+    }
+  });
+
+  it('仅缺失、null 与空单元格使用默认计划，合法别名保留相同计划内容及来源身份', async () => {
+    try {
+      const source = { name: '力量计划', exercise: '0025', reps: 8 };
+      const missing = await preview(JSON.stringify([source]));
+      expect(missing.records[0]).toMatchObject({
+        entity_type: 'fitness_plan',
+        payload: {
+          name: '力量计划',
+          status: 'closed',
+          cycle_days: 1,
+          days: [{ day_index: 0, slot: { name: '力量计划' } }],
+        },
+      });
+      for (const entityType of [null, '', 'fitness_plan']) {
+        expect(await preview(JSON.stringify([{ ...source, entity_type: entityType }]))).toEqual(missing);
+      }
+      for (const entityType of ['计划', 'plan', ' fitness_plan ']) {
+        const result = await preview(`数据类型,名称,动作,次数\n${entityType},力量计划,0025,8`);
+        expect(result.records[0]).toMatchObject({
+          entity_type: 'fitness_plan',
+          payload: { name: '力量计划', status: 'closed', cycle_days: 1 },
+        });
+      }
+    } catch (cause) {
+      throw new Error('健身导入的合法缺省与别名转换失败', { cause });
+    }
+  });
+
   it('映射原型同名列时，缺失名称必须交由名称校验拒绝', async () => {
     const rows: Record<string, unknown>[] = [
       { entity_type: 'fitness_template', constructor: '有效名称', exercises: [exercise] },

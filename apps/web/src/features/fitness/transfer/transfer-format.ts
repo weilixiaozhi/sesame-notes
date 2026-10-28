@@ -175,7 +175,7 @@ function boolean(value: unknown): boolean {
   throw new Error('完成状态需为 true/false 或 是/否。');
 }
 
-/** 数据类型的中文名称与移动端表格导入入口一致。 */
+/** 数据类型只接受约定的字符串名称；缺失字段使用与移动端一致的默认计划。 */
 function entityType(value: unknown): TransferRecord['entity_type'] {
   const names: Record<string, TransferRecord['entity_type']> = {
     模板: 'fitness_template',
@@ -192,8 +192,8 @@ function entityType(value: unknown): TransferRecord['entity_type'] {
     preferences: 'fitness_preferences',
     fitness_preferences: 'fitness_preferences',
   };
-  const name = String(value || 'fitness_plan').trim();
-  const type = Object.hasOwn(names, name) ? names[name] : undefined;
+  const name = value ?? 'fitness_plan';
+  const type = typeof name === 'string' && Object.hasOwn(names, name.trim()) ? names[name.trim()] : undefined;
   if (!type) throw new Error('数据类型应为计划、模板、训练或偏好。');
   return type;
 }

@@ -120,18 +120,18 @@ describe('交易创建与事件边界', () => {
     }
   });
 
-  it('唯一约束错误保留给协议映射，不误发成功事件', async () => {
+  it('唯一约束错误保留为存储失败的原始原因，不误发成功事件', async () => {
     try {
       const row = storedTransaction();
       const client = creationClient([row]);
       const conflict = Object.assign(new Error('unique conflict'), { code: 'P2002' });
       client.create.mockRejectedValue(conflict);
-      await expect(createTransactionMutation(client.tx, auth, { data: creationData(row), splits: null })).rejects.toBe(
-        conflict,
-      );
+      await expect(
+        createTransactionMutation(client.tx, auth, { data: creationData(row), splits: null }),
+      ).rejects.toMatchObject({ message: '交易创建失败', cause: conflict });
       expect(client.event).not.toHaveBeenCalled();
     } catch (cause) {
-      throw new Error('交易创建冲突映射验证失败', { cause });
+      throw new Error('交易创建存储错误验证失败', { cause });
     }
   });
 

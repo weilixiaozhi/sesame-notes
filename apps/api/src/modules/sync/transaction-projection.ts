@@ -22,7 +22,6 @@ import {
 import type { PushChange } from './sync-schemas.js';
 import {
   type ApplyOutcome,
-  isUniqueConstraintError,
   requireLedgerId,
   optionalString,
   requiredCurrency,
@@ -34,10 +33,7 @@ import {
 } from './projection-support.js';
 
 /** 构造 revision 冲突结果：携带当前版本、删除标记与完整实体快照供 UI 决策。 */
-async function conflictOutcome(
-  tx: Prisma.TransactionClient,
-  current: { id: string; revision: number; deletedAt: Date | null } | null,
-): Promise<ApplyOutcome> {
+function conflictOutcome(current: Prisma.TransactionGetPayload<{ include: { splits: true } }> | null): ApplyOutcome {
   if (!current) {
     return { status: 'conflict', current_revision: 0, current_deleted: false, current_entity: null };
   }
@@ -50,23 +46,12 @@ async function conflictOutcome(
       current_entity: null,
     };
   }
-  const row = await tx.transaction.findUnique({
-    where: { id: current.id },
-    include: { splits: true },
-  });
-  if (!row) {
-    return {
-      status: 'conflict',
-      current_revision: current.revision,
-      current_deleted: false,
-      current_entity: null,
-    };
-  }
+  // 领域层已在当前同步事务中读取完整快照，版本与内容必须来自同一份结果。
   return {
     status: 'conflict',
     current_revision: current.revision,
     current_deleted: false,
-    current_entity: mapTransaction(row),
+    current_entity: mapTransaction(current),
   };
 }
 
@@ -114,7 +99,7 @@ export async function applyTransaction(
       mutationId: change.mutation_id,
       requestHash,
     });
-    return await mapPushTransactionMutation(tx, result, true);
+    return mapPushTransactionMutation(result, true);
   }
 
   // ---- upsert：先做与 REST 一致的载荷校验，再走 create/update 状态机 ----
@@ -224,36 +209,28 @@ export async function applyTransaction(
 
   if (!current) {
     // CREATE：期望实体不存在 → revision 1；客户端声明 base>0（认为已存在）→ CONFLICT
-    if (base !== undefined && base > 0) return conflictOutcome(tx, null);
-    try {
-      const result = await createTransactionMutation(tx, auth, {
-        data: {
-          id: change.entity_id,
-          ledgerId,
-          ownerId: access.ledger.ownerId,
-          ...fields,
-          // createdBy/lastEditedBy 由认证推导（不信任 payload）
-          createdByMemberId: createdByMemberIdFor(ledgerId, auth.userId),
-          lastEditedByMemberId: createdByMemberIdFor(ledgerId, auth.userId),
-          revision: 1,
-          lastEditedAt: optionalDate(payload, 'last_edited_at'),
-          updatedAt,
-          updatedByDeviceId: auth.deviceId,
-        },
-        splits: splitMembers,
-        mutationId: change.mutation_id,
-        requestHash,
-        recurringCursor: occurrenceDate && recurring ? recurring : undefined,
-      });
-      return { status: 'applied', revision: result.revision, changeId: result.changeId };
-    } catch (error) {
-      // 并发创建撞主键：实体已被其他 mutation 创建 → 按已存在处理（CONFLICT）
-      if (isUniqueConstraintError(error)) {
-        const latest = await tx.transaction.findUnique({ where: { id: change.entity_id } });
-        if (latest) return conflictOutcome(tx, latest);
-      }
-      throw error;
-    }
+    if (base !== undefined && base > 0) return conflictOutcome(null);
+    // 同步提交锁保证读取与创建串行；存储失败由事务回滚并交给请求错误边界处理。
+    const result = await createTransactionMutation(tx, auth, {
+      data: {
+        id: change.entity_id,
+        ledgerId,
+        ownerId: access.ledger.ownerId,
+        ...fields,
+        // createdBy/lastEditedBy 由认证推导（不信任 payload）
+        createdByMemberId: createdByMemberIdFor(ledgerId, auth.userId),
+        lastEditedByMemberId: createdByMemberIdFor(ledgerId, auth.userId),
+        revision: 1,
+        lastEditedAt: optionalDate(payload, 'last_edited_at'),
+        updatedAt,
+        updatedByDeviceId: auth.deviceId,
+      },
+      splits: splitMembers,
+      mutationId: change.mutation_id,
+      requestHash,
+      recurringCursor: occurrenceDate && recurring ? recurring : undefined,
+    });
+    return { status: 'applied', revision: result.revision, changeId: result.changeId };
   }
 
   const result = await updateTransactionMutation(tx, auth, {
@@ -270,15 +247,11 @@ export async function applyTransaction(
     mutationId: change.mutation_id,
     requestHash,
   });
-  return await mapPushTransactionMutation(tx, result, false);
+  return mapPushTransactionMutation(result, false);
 }
 
 /** 把共享 mutation core 的结果映射为 push 的 per-mutation 状态。 */
-async function mapPushTransactionMutation(
-  tx: Prisma.TransactionClient,
-  result: TransactionMutationResult,
-  ignoreAbsentDelete: boolean,
-): Promise<ApplyOutcome> {
+function mapPushTransactionMutation(result: TransactionMutationResult, ignoreAbsentDelete: boolean): ApplyOutcome {
   if (result.status === 'applied') {
     return { status: 'applied', revision: result.revision, changeId: result.changeId };
   }
@@ -288,5 +261,5 @@ async function mapPushTransactionMutation(
   if (ignoreAbsentDelete && (result.status === 'not_found' || result.status === 'deleted')) {
     return { status: 'ignored' };
   }
-  return await conflictOutcome(tx, result.current);
+  return conflictOutcome(result.current);
 }

@@ -16,6 +16,7 @@ import {
   validateOfficialContent,
 } from './official-fitness.js';
 import { registerOfficialFitnessMediaRoutes, validateFitnessGif } from './official-fitness-media.js';
+import { registerFitnessLibraryRoutes } from './fitness-library.js';
 import { fitnessMediaFile } from './fitness-media-storage.js';
 import { validateFitnessPayload } from './fitness-rules.js';
 import { fitnessPreferences } from '../../../test/fitness-fixtures.js';
@@ -68,7 +69,10 @@ function repository() {
       create: vi.fn(),
       update: vi.fn(),
     },
-    officialFitnessState: { findUnique: vi.fn().mockResolvedValue({ id: 1, contentVersion: 1 }), upsert: vi.fn() },
+    officialFitnessState: {
+      findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1, contentVersion: 1 }),
+      update: vi.fn(),
+    },
     officialFitnessTaxon: {
       findMany: vi.fn().mockResolvedValue([
         {
@@ -146,6 +150,7 @@ async function application(db = repository()) {
   enforceAdminRouteProtection(app);
   const config = { adminOrigins: [ORIGIN], storagePath: resolve('Temp/official-fitness-tests') } as ApiConfig;
   registerOfficialFitnessRoutes(app, db as unknown as PrismaClient, config);
+  registerFitnessLibraryRoutes(app, db as unknown as PrismaClient);
   registerOfficialFitnessMediaRoutes(app, db as unknown as PrismaClient, config);
   await app.ready();
   return { app, db };
@@ -156,6 +161,70 @@ afterEach(async () => {
 });
 
 describe('官方健身目录', () => {
+  it.each(['/api/v1/fitness/catalog', '/api/v1/fitness/library'])(
+    '目录版本缺失时 %s 明确失败且只记录一次原始原因',
+    async (url) => {
+      const { app, db } = await application();
+      const cause = Object.assign(new Error('官方目录版本记录不存在'), { code: 'P2025' });
+      db.officialFitnessState.findUniqueOrThrow.mockRejectedValue(cause);
+      const log = vi.spyOn(app.log, 'error');
+      try {
+        const response = await app.inject({ url });
+        expect(response.statusCode, response.body).toBe(500);
+        expect(response.json()).toMatchObject({ code: 'DATABASE_OPERATION_FAILED' });
+        expect(response.json()).not.toHaveProperty('content_version');
+        expect(response.headers).not.toHaveProperty('etag');
+        expect(log).toHaveBeenCalledOnce();
+        expect(log.mock.calls[0]![0]).toMatchObject({ err: { cause } });
+      } catch (error) {
+        throw new Error('官方内容缺失版本的 HTTP 验收失败', { cause: error });
+      } finally {
+        log.mockRestore();
+      }
+    },
+  );
+
+  it.each(['/api/v1/fitness/catalog', '/api/v1/fitness/library'])(
+    '%s 返回持久化版本并保留条件缓存语义',
+    async (url) => {
+      const { app, db } = await application();
+      db.officialFitnessState.findUniqueOrThrow.mockResolvedValue({ id: 1, contentVersion: 40 });
+      const response = await app.inject({ url });
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json().content_version).toBe(40);
+      expect(response.headers.etag).toMatch(/^"fitness-[0-9a-f]{24}"$/);
+      const cached = await app.inject({ url, headers: { 'if-none-match': String(response.headers.etag) } });
+      expect(cached.statusCode, cached.body).toBe(304);
+      expect(cached.body).toBe('');
+    },
+  );
+
+  it('版本记录缺失时后台保存失败，保留数据库原因且不写成功审计', async () => {
+    const { app, db } = await application();
+    const cause = Object.assign(new Error('官方目录版本记录不存在'), { code: 'P2025' });
+    db.officialFitnessState.update.mockRejectedValue(cause);
+    const log = vi.spyOn(app.log, 'error');
+    try {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/admin/fitness/exercises/0025',
+        headers,
+        payload: { version: 1, is_enabled: false },
+      });
+      expect(response.statusCode, response.body).toBe(500);
+      expect(response.json()).toMatchObject({ code: 'DATABASE_OPERATION_FAILED' });
+      expect(db.auditLog.create).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledOnce();
+      expect(log.mock.calls[0]![0]).toMatchObject({
+        err: { cause: { message: '官方健身目录版本更新失败', cause } },
+      });
+    } catch (error) {
+      throw new Error('官方内容保存的版本原子性验收失败', { cause: error });
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it('后台列表必须具备独立身份，公开目录显示已保存正文并保留停用动作', async () => {
     const { app, db } = await application();
     expect((await app.inject({ url: '/api/v1/admin/fitness/exercises' })).statusCode).toBe(401);
@@ -219,7 +288,10 @@ describe('官方健身目录', () => {
     expect(created.json()).not.toHaveProperty('has_unpublished_changes');
     expect(created.json().id).toMatch(/^[a-f0-9-]{36}$/);
     expect(db.auditLog.create).toHaveBeenCalledTimes(1);
-    expect(db.officialFitnessState.upsert).toHaveBeenCalledTimes(1);
+    expect(db.officialFitnessState.update).toHaveBeenCalledExactlyOnceWith({
+      where: { id: 1 },
+      data: { contentVersion: { increment: 1 } },
+    });
   });
 
   it('保存拒绝过期版本，成功保存立即推进全局版本并更新正文', async () => {
@@ -232,7 +304,7 @@ describe('官方健身目录', () => {
     });
     expect(conflict.statusCode, conflict.body).toBe(409);
     expect(db.officialFitnessContent.update).not.toHaveBeenCalled();
-    expect(db.officialFitnessState.upsert).not.toHaveBeenCalled();
+    expect(db.officialFitnessState.update).not.toHaveBeenCalled();
     const { id: _id, ...content } = exercise;
     const response = await app.inject({
       method: 'PATCH',
@@ -241,7 +313,10 @@ describe('官方健身目录', () => {
       payload: { version: 1, content: { ...content, name_zh: '修改后的卧推' } },
     });
     expect(response.statusCode, response.body).toBe(200);
-    expect(db.officialFitnessState.upsert).toHaveBeenCalledTimes(1);
+    expect(db.officialFitnessState.update).toHaveBeenCalledExactlyOnceWith({
+      where: { id: 1 },
+      data: { contentVersion: { increment: 1 } },
+    });
     expect(db.officialFitnessContent.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ content: { ...exercise, name_zh: '修改后的卧推' }, isEnabled: true }),

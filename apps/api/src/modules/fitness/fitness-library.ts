@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { Value } from '@sinclair/typebox/value';
 import type { FastifyInstance } from 'fastify';
+import { execute } from '../../shared/execute.js';
 
 import exerciseCatalog from './fitness-catalog.json' with { type: 'json' };
 import librarySource from './fitness-library.json' with { type: 'json' };
@@ -61,8 +62,8 @@ export function registerFitnessLibraryRoutes(app: FastifyInstance, prisma: Prism
         response: { 200: FitnessLibrarySchema, 304: { type: 'null' } },
       },
     },
-    async (request, reply) => {
-      try {
+    async (request, reply) =>
+      execute(request, '读取官方训练内容库', async () => {
         const { version, rows } = await readOfficialContent(prisma);
         const library: FitnessLibrary = {
           schema_version: 1,
@@ -79,10 +80,6 @@ export function registerFitnessLibraryRoutes(app: FastifyInstance, prisma: Prism
         reply.header('cache-control', 'public, max-age=60, stale-if-error=86400');
         if (request.headers['if-none-match'] === etag) return await reply.status(304).send();
         return library;
-      } catch (error) {
-        request.log.error({ err: error, request_id: request.id }, '读取官方训练内容库失败');
-        throw new Error('官方训练内容库暂时不可用', { cause: error });
-      }
-    },
+      }),
   );
 }
