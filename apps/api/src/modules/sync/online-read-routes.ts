@@ -106,8 +106,9 @@ export function registerOnlineReadRoutes(app: FastifyInstance, prisma: PrismaCli
             const page = pageRows(rows, limit);
             if (book.type === 'credentials' && page.next_cursor) {
               const last = page.items.at(-1)!;
+              // 凭据卡片的数据库约束保证顺序键非空，普通笔记仍使用独立的时间游标。
               page.next_cursor = Buffer.from(
-                JSON.stringify({ v: 2, k: last.orderKey?.toString() ?? null, i: last.id }),
+                JSON.stringify({ v: 2, k: last.orderKey!.toString(), i: last.id }),
               ).toString('base64url');
             }
             return { items: page.items.map((row) => memoEntrySnapshot(row, book)), next_cursor: page.next_cursor };
@@ -315,24 +316,13 @@ function memoPageOptions(
         cursor.v !== 2 ||
         typeof cursor.i !== 'string' ||
         !new RegExp(ANY_UUID_PATTERN).test(cursor.i) ||
-        !(
-          cursor.k === null ||
-          (typeof cursor.k === 'string' &&
-            /^(?:0|[1-9]\d{0,18})$/.test(cursor.k) &&
-            BigInt(cursor.k) <= 9223372036854775807n)
-        )
+        typeof cursor.k !== 'string' ||
+        !/^(?:0|[1-9]\d{0,18})$/.test(cursor.k)
       )
         throw new Error('INVALID_CURSOR');
-      before =
-        cursor.k === null
-          ? { orderKey: null, id: { gt: cursor.i } }
-          : {
-              OR: [
-                { orderKey: { gt: BigInt(cursor.k as string) } },
-                { orderKey: BigInt(cursor.k as string), id: { gt: cursor.i } },
-                { orderKey: null },
-              ],
-            };
+      const orderKey = BigInt(cursor.k);
+      if (orderKey > 9223372036854775807n) throw new Error('INVALID_CURSOR');
+      before = { OR: [{ orderKey: { gt: orderKey } }, { orderKey, id: { gt: cursor.i } }] };
     }
     return { limit: query.limit ?? 50, before, orderBy: [{ orderKey: 'asc' }, { id: 'asc' }] };
   } catch {

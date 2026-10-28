@@ -1,8 +1,8 @@
-import { CloneType, type TSchema } from '@sinclair/typebox';
 import { isDeepStrictEqual } from 'node:util';
 import { Value } from '@sinclair/typebox/value';
 import { ApiError } from '../../shared/errors.js';
 import { isStrictTimestamp } from '../../shared/contracts/scalars.js';
+import { structuralSchema } from '../../shared/contracts/structural-schema.js';
 import { normalizeName } from '../../shared/text-validation.js';
 import catalog from './fitness-catalog.json' with { type: 'json' };
 import {
@@ -17,19 +17,6 @@ function fail(message = '健身字段无效'): never {
   throw new ApiError(400, 'INVALID_FITNESS_PAYLOAD', message);
 }
 
-// 独立校验原始 JSON，不让 AJV 强制转换、移除字段或宽松日期解析改写事实。
-export function structuralSchema(schema: TSchema): TSchema {
-  const result = CloneType(schema);
-  function visit(value: unknown, name = false): void {
-    if (!value || typeof value !== 'object') return;
-    if ('format' in value) delete value.format;
-    // TypeBox Value 按 UTF-16 单元计长度；名称交给公共规则按码点校验。
-    if (name && 'maxLength' in value) delete value.maxLength;
-    for (const [key, nested] of Object.entries(value)) visit(nested, name || key === 'name' || key.endsWith('_name'));
-  }
-  visit(result);
-  return result;
-}
 const strictSchemas = Object.fromEntries(
   Object.entries(fitnessPayloadSchemas).map(([key, schema]) => [key, structuralSchema(schema)]),
 );

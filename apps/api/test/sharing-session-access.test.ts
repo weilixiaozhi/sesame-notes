@@ -103,7 +103,6 @@ async function fixture(action: Action, resource: Resource) {
       },
       user: { findUnique: vi.fn(async () => ({ profile: { displayName: '受邀成员' } })) },
       ledgerMember: {
-        findFirst: vi.fn(async () => member),
         findUnique: vi.fn(async () => member),
         findUniqueOrThrow: vi.fn(async () => member),
         upsert: vi.fn(async ({ create }: { create: object }) => {
@@ -114,6 +113,11 @@ async function fixture(action: Action, resource: Resource) {
           businessWrites('member-update');
           Object.assign(member, data);
           return { count: 1 };
+        }),
+        update: vi.fn(async ({ data }: { data: Partial<typeof member> }) => {
+          businessWrites('member-update');
+          Object.assign(member, data);
+          return { ...member };
         }),
       },
       syncChange: {

@@ -13,27 +13,16 @@ type ChangeActor = { userId: string; deviceId: string };
 export async function leaveLedgerMember(prisma: PrismaClient, ledgerId: string, auth: AccessClaims): Promise<void> {
   try {
     await withSyncTransaction(prisma, async (tx) => {
-      await getLedgerWriteAccess(tx, auth.userId, ledgerId, 'editor');
+      const { role } = await getLedgerWriteAccess(tx, auth.userId, ledgerId, 'editor');
       // 当前成员资格已由访问入口锁定，使用锁等待结束后的会话状态决定是否允许退出。
       if (!(await currentSessionAccess(tx, auth))) throw new ApiError(401, 'UNAUTHORIZED', '登录状态已失效');
-      const member = await tx.ledgerMember.findFirst({
-        where: {
-          ledgerId,
-          linkedAccountId: auth.userId,
-          memberType: 'REGISTERED',
-          status: 'ACTIVE',
-          ledger: { deletedAt: null },
-        },
-      });
-      if (!member) throw new ApiError(404, 'MEMBER_NOT_FOUND', '成员不存在');
-      if (member.role === 'owner') throw new ApiError(409, 'OWNER_CANNOT_LEAVE', 'Owner 删除账本前不能退出');
+      if (role === 'owner') throw new ApiError(409, 'OWNER_CANNOT_LEAVE', 'Owner 删除账本前不能退出');
       const now = new Date();
-      const transitioned = await tx.ledgerMember.updateMany({
-        where: { id: member.id, status: 'ACTIVE' },
+      // 授权已锁定本账号唯一的 ACTIVE 注册成员，直接使用更新结果发布同一份最终快照。
+      const left = await tx.ledgerMember.update({
+        where: { ledgerId_linkedAccountId: { ledgerId, linkedAccountId: auth.userId } },
         data: { status: 'LEFT', updatedAt: now, updatedByDeviceId: auth.deviceId },
       });
-      if (!transitioned.count) throw new ApiError(404, 'MEMBER_NOT_FOUND', '成员不存在');
-      const left = await tx.ledgerMember.findUniqueOrThrow({ where: { id: member.id } });
       await appendMemberChange(tx, auth, left);
     });
   } catch (error) {

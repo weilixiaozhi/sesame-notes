@@ -330,3 +330,68 @@ it('凭据卡片按精确整数排序键分页，上一页被删除后游标仍�
   expect(next.json().items.map((item: { id: string }) => item.id)).toEqual([ids[2]]);
   expect(next.json().next_cursor).toBeNull();
 });
+
+it('凭据分页拒绝空排序键游标，零值及大整数边界仍完整排序', async () => {
+  try {
+    const { session } = await register();
+    const now = new Date('2026-09-01T00:00:00.000Z');
+    const book = await prisma.memoBook.create({
+      data: {
+        id: randomUUID(),
+        ownerId: session.user.user_id,
+        name: '凭据分页边界',
+        type: 'credentials',
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    const sameKeyIds = [randomUUID(), randomUUID()].sort();
+    const expected = [
+      { id: randomUUID(), order_key: '0' },
+      { id: randomUUID(), order_key: '9007199254740993' },
+      { id: sameKeyIds[0]!, order_key: '9223372036854775807' },
+      { id: sameKeyIds[1]!, order_key: '9223372036854775807' },
+    ];
+    // 逆序写入相同键的记录，分页结果必须由持久化排序键及 ID 决定。
+    for (const entry of [...expected].reverse()) {
+      await prisma.memoEntry.create({
+        data: {
+          id: entry.id,
+          memoBookId: book.id,
+          bookType: 'credentials',
+          title: '卡片',
+          bodyFormat: 'fields_v1',
+          body: { fields: [{ label: '账号', value: 'fixture' }] },
+          orderKey: BigInt(entry.order_key),
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    }
+    const path = `/api/v1/memo-books/${book.id}/entries?limit=1`;
+    const invalidCursor = Buffer.from(JSON.stringify({ v: 2, k: null, i: expected[0]!.id })).toString('base64url');
+    const invalid = await get(`${path}&cursor=${encodeURIComponent(invalidCursor)}`, session);
+    expect(invalid.statusCode, invalid.body).toBe(400);
+    expect(invalid.json()).toMatchObject({ code: 'INVALID_CURSOR' });
+    expect(invalid.json()).not.toHaveProperty('items');
+    let cursor: string | null = null;
+    for (const [index, entry] of expected.entries()) {
+      const response = await get(`${path}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, session);
+      expect(response.statusCode, response.body).toBe(200);
+      const page = response.json<{ items: Array<{ id: string; order_key: string }>; next_cursor: string | null }>();
+      expect(page.items).toEqual([expect.objectContaining(entry)]);
+      cursor = page.next_cursor;
+      if (index === expected.length - 1) expect(cursor).toBeNull();
+      else {
+        expect(cursor).toEqual(expect.any(String));
+        expect(JSON.parse(Buffer.from(cursor!, 'base64url').toString())).toEqual({
+          v: 2,
+          k: entry.order_key,
+          i: entry.id,
+        });
+      }
+    }
+  } catch (cause) {
+    throw new Error('凭据分页排序键边界验收失败', { cause });
+  }
+});

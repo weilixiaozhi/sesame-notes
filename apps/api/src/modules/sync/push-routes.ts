@@ -4,11 +4,13 @@ import { withSyncTransaction } from '../../shared/sync-transaction.js';
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { Type } from '@sinclair/typebox';
+import { Value } from '@sinclair/typebox/value';
 import type { ApiConfig } from '../../shared/api-config.js';
 import { authenticate, requireAuth, requireScopes, currentSessionAccess } from '../auth/index.js';
 import { ApiError } from '../../shared/errors.js';
 import { ErrorSchema } from '../../shared/contracts/errors.js';
-import { AnyUuidSchema, CursorSchema, UuidSchema } from '../../shared/contracts/scalars.js';
+import { AnyUuidSchema, CursorSchema, UuidSchema, isStrictTimestamp } from '../../shared/contracts/scalars.js';
+import { structuralSchema } from '../../shared/contracts/structural-schema.js';
 import { normalizeClientTimestamp } from '../../shared/sync-timestamps.js';
 import {
   SyncPushChangeSchema,
@@ -18,13 +20,40 @@ import {
   type PushOutcome,
 } from './sync-schemas.js';
 import { applyChange } from './sync-apply.js';
-import { fitnessPayloadSchemas } from '../fitness/index.js';
 import { executeSync, latestVisibleCursor } from './snapshot-support.js';
+
+// 外壳直接派生自完整协议，保留实体判别与字段约束，载荷继续由各实体逐条校验。
+const OriginalEnvelopeSchema = structuralSchema(
+  Type.Object({
+    ...SyncPushEnvelopeSchema.properties,
+    changes: {
+      ...SyncPushEnvelopeSchema.properties.changes,
+      items: Type.Omit(SyncPushChangeSchema, ['payload']),
+    },
+  }),
+);
+
+/** 保留完整请求外壳，只移除每条变更的第一层载荷，载荷错误沿用逐条业务处理。 */
+function requestEnvelope(value: unknown): unknown {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return value;
+  const { changes, ...fields } = value as Record<string, unknown>;
+  return {
+    ...fields,
+    changes: Array.isArray(changes)
+      ? changes.map((change: unknown) => {
+          if (change === null || typeof change !== 'object' || Array.isArray(change)) return change;
+          const { payload: _payload, ...envelope } = change as Record<string, unknown>;
+          return envelope;
+        })
+      : changes,
+  };
+}
+
 /** 注册 /api/v1/sync/push 的权限、协议与业务编排。 */
 export function registerPushRoutes(app: FastifyInstance, prisma: PrismaClient, config: ApiConfig): void {
   const secured = { preHandler: [authenticate(config, prisma), requireScopes('sync:read', 'sync:write')] };
 
-  const originalChanges = new WeakMap<FastifyRequest, Map<number, PushChange>>();
+  const originalBodies = new WeakMap<FastifyRequest, unknown>();
 
   app.post(
     '/api/v1/sync/push',
@@ -36,37 +65,26 @@ export function registerPushRoutes(app: FastifyInstance, prisma: PrismaClient, c
           if (request.validationError && !request.compileValidationSchema(SyncPushEnvelopeSchema)(request.body)) {
             throw request.validationError;
           }
+          // 不依赖框架尝试联合分支时改写的结果，原始外壳必须在任何写入之前完整通过契约。
+          const original = originalBodies.get(request) as { device_id: string; changes: PushChange[] };
+          if (
+            !Value.Check(OriginalEnvelopeSchema, requestEnvelope(original)) ||
+            !original.changes.every(
+              (change) =>
+                isStrictTimestamp(change.updated_at) &&
+                (change.deleted_at === undefined || isStrictTimestamp(change.deleted_at)),
+            )
+          ) {
+            throw new ApiError(400, 'VALIDATION_ERROR', '同步请求外壳不符合接口要求');
+          }
         },
         ...secured.preHandler,
       ],
       bodyLimit: 64 * 1024 * 1024,
       attachValidation: true,
       preValidation: async (request) => {
-        // 保存需要逐条校验的原始载荷，防止 AJV 的类型转换改写非法输入。
-        const changes = (request.body as { changes?: unknown } | null)?.changes;
-        if (!Array.isArray(changes)) return;
-        originalChanges.set(
-          request,
-          new Map(
-            changes.flatMap((change: PushChange, index) =>
-              change &&
-              ([
-                'transaction',
-                'category',
-                'member',
-                'recurring_transaction',
-                'exchange_rate_override',
-                'day_book',
-                'day_event',
-                'memo_book',
-                'memo_entry',
-              ].includes(change.entity_type) ||
-                Object.hasOwn(fitnessPayloadSchemas, change.entity_type))
-                ? [[index, structuredClone(change)]]
-                : [],
-            ),
-          ),
-        );
+        // 完整冻结客户端输入，框架的类型转换不能改变业务规则和幂等指纹使用的原值。
+        originalBodies.set(request, structuredClone(request.body));
       },
       schema: {
         tags: ['sync'],
@@ -115,7 +133,7 @@ export function registerPushRoutes(app: FastifyInstance, prisma: PrismaClient, c
     async (request) =>
       executeSync(request, '推送同步变更', async () => {
         const auth = requireAuth(request);
-        const body = request.body as { device_id: string; changes: PushChange[] };
+        const body = originalBodies.get(request) as { device_id: string; changes: PushChange[] };
         if (body.device_id !== auth.deviceId)
           throw new ApiError(403, 'DEVICE_MISMATCH', '设备标识与当前登录会话不一致');
         const now = new Date();
@@ -123,8 +141,7 @@ export function registerPushRoutes(app: FastifyInstance, prisma: PrismaClient, c
         // 不阻塞同批其他实体（避免长期未决冲突饥饿整个同步队列）；
         // 身份（412）、权限（403）或 mutation ID 复用错误会中止本次请求；已提交项仍保留。
         const outcomes: PushOutcome[] = [];
-        for (const [index, validated] of body.changes.entries()) {
-          const change = originalChanges.get(request)?.get(index) ?? validated;
+        for (const change of body.changes) {
           const updatedAt = normalizeClientTimestamp(change.updated_at, now);
           try {
             if (change.entity_type === 'transaction' && change.action === 'upsert') {

@@ -12,7 +12,7 @@ import { withSyncTransaction } from '../../shared/sync-transaction.js';
 import { uuidV5 } from '../../shared/uuid.js';
 import { authenticate, requireAuth, requireScopes, currentSessionAccess } from '../auth/index.js';
 import { fitnessPayloadSchemas, type FitnessPreferencesPayload } from './fitness-schemas.js';
-import { structuralSchema } from './fitness-rules.js';
+import { structuralSchema } from '../../shared/contracts/structural-schema.js';
 import { applyFitnessChange } from './fitness-sync.js';
 import { prepareFitnessImport, type TransferRecord } from './fitness-transfer-rules.js';
 import { officialExerciseIds } from './official-fitness.js';
