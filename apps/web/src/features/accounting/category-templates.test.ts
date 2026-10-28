@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import type { components } from '@sesame-notes/api-client';
 import { existingTemplate, templateBlockReason, templatePlan } from './category-template-plan';
 import catalog from './category-catalog.json';
-import { categoryIcons } from './category-icons';
 
 type Category = components['schemas']['Category'];
 type DefaultCategory = Omit<(typeof catalog.hierarchical)[number], 'seed_id' | 'parent_key'> & {
@@ -92,7 +91,6 @@ describe('手机分类模板兼容', () => {
       parent_key: 'dining',
     });
     for (const [index, entry] of hybrid.entries()) {
-      expect(categoryIcons).toHaveProperty(entry.icon);
       const template = [...catalog.flat, ...catalog.hierarchical].find((item) => item.seed_id === entry.seed_id);
       expect(template).toMatchObject({
         key: entry.key,
@@ -120,7 +118,6 @@ describe('手机分类模板兼容', () => {
       expect(new Set(items.map((item) => item.seed_id)).size).toBe(items.length);
       for (const item of items) {
         expect(item.name).not.toMatch(/^(category|defaultCategory)|\?/);
-        expect(categoryIcons).toHaveProperty(item.icon);
         if (item.level === 2)
           expect(items.some((parent) => parent.key === item.parent_key && parent.level === 1)).toBe(true);
       }

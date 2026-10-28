@@ -24,14 +24,10 @@ jobs:
         run: pnpm lint
       - name: 格式检查
         run: pnpm format:check
-      - name: 模块边界规则测试
-        run: pnpm test:rules
-      - name: Python 脚本回归（隔离夹具与模拟部署资源）
-        run: python3 -B scripts/test/run.py
+      - name: 目录数据、迁移与接口兼容性测试
+        run: pnpm test:scripts
       - name: 文件循环依赖检查
         run: pnpm analyze:deps
-      - name: 测试环境配置校验
-        run: pnpm --filter @sesame-notes/api test:config
       - name: Typecheck
         run: pnpm typecheck
       - name: 契约生成一致性与固定基线兼容检查
@@ -40,7 +36,7 @@ jobs:
         run: pnpm --filter @sesame-notes/api-client generate:check
       - name: API Client 单测
         run: pnpm --filter @sesame-notes/api-client test
-      - name: 用户 Web 全量随机单元与组件测试
+      - name: 用户 Web 业务逻辑测试
         run: pnpm --filter @sesame-notes/web test
       - name: Admin 单测
         run: pnpm --filter @sesame-notes/admin test

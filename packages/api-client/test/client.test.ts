@@ -1,7 +1,6 @@
-import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClient, ApiError, unwrap } from '../src/index.js';
-import type { ApiClientOptions, ResponseValidator } from '../src/index.js';
 
 /** 构造 JSON 响应。 */
 function jsonResponse(status: number, body: unknown): Response {
@@ -14,18 +13,6 @@ describe('ApiClient', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
     vi.restoreAllMocks();
-  });
-
-  it('包根公开构造选项与响应校验器类型', () => {
-    const validateResponse: ResponseValidator = () => undefined;
-    const options = {
-      baseUrl: 'http://api.test',
-      getAccessToken: async () => null,
-      validateResponse,
-    } satisfies ApiClientOptions;
-
-    expectTypeOf(options).toMatchTypeOf<ApiClientOptions>();
-    expectTypeOf(validateResponse).toMatchTypeOf<ResponseValidator>();
   });
 
   it('未登录时不注入 Authorization 头', async () => {

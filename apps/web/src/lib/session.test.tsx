@@ -74,12 +74,13 @@ function credentials(phone: string): LoginBody {
   };
 }
 
-/** 挂载真实 Provider 并读取最终用户可见的身份状态。 */
+/** 挂载真实 Provider，直接读取认证状态与账号身份。 */
 async function mount(waitUntilReady = true) {
   module = await import('./session');
+  /** 将会话状态交给业务断言，不渲染页面内容。 */
   function Probe() {
     current = module.useSession();
-    return <output>{`${current.status}:${current.session?.user.user_id ?? 'anonymous'}`}</output>;
+    return null;
   }
   render(
     <module.SessionProvider>
@@ -366,7 +367,7 @@ describe('browser session isolation', () => {
     await pending;
   });
 
-  it('only sends the newest of simultaneous logins and leaves the login form mounted', async () => {
+  it('only sends the newest of simultaneous logins', async () => {
     await mount();
     let results: PromiseSettledResult<void>[] = [];
     await settle(async () => {

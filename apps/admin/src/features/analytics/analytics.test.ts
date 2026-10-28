@@ -1,10 +1,8 @@
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AnalyticsOverview, overviewPoints } from './overview';
-import { EventAnalysis, selectionFromPath } from './events';
-import { TrackingManagement } from './tracking';
-import { FunnelAnalysis, validateFunnel } from './funnel';
+// @vitest-environment jsdom
+import { describe, expect, it } from 'vitest';
+import { overviewPoints } from './overview';
+import { selectionFromPath } from './events';
+import { validateFunnel } from './funnel';
 import { presetRange, validateRange } from './date-range';
 import {
   alignSelection,
@@ -17,23 +15,7 @@ import {
   rowMeasure,
   sourcePageChoices,
 } from './model';
-import { periodLabel, AnalyticsChart } from './chart';
 import { analyticsCatalogSchema, analyticsDetailsSchema, analyticsFunnelSchema } from '../../api/analytics-contracts';
-
-const mocks = vi.hoisted(() => ({
-  query: vi.fn(),
-  catalog: vi.fn(),
-  funnel: vi.fn(),
-  details: vi.fn(),
-  report: vi.fn(),
-}));
-vi.mock('@tanstack/react-query', () => ({ useQuery: mocks.query }));
-vi.mock('../../api/client', () => ({
-  api: { adminAnalytics: mocks },
-  request: (operation: () => unknown) => operation(),
-  errorMessage: () => '查询失败，请重试。',
-  reportError: vi.fn(),
-}));
 
 /** 固定范围内同一用户多次触发，验证总次数、去重人数与人均次数不混淆。 */
 function details() {
@@ -157,58 +139,7 @@ function funnel() {
   };
 }
 
-beforeEach(() => {
-  mocks.query.mockReset();
-  mocks.query.mockImplementation(({ queryKey }: { queryKey: string[] }) => {
-    const report = {
-      ...details(),
-      summary: { new_users: 2, active_users: 3, page_views: 9 },
-      series: [{ period_start: '2026-10-10T00:00:00Z', new_users: 2, active_users: 3, page_views: 9 }],
-      coverage: {
-        collection_started_at: '2026-10-01T00:00:00Z',
-        complete: true,
-      },
-    };
-    const data =
-      queryKey[1] === 'analytics-catalog'
-        ? catalog()
-        : queryKey[1] === 'analytics-overview'
-          ? { report, details: details() }
-          : queryKey[1] === 'analytics-funnel'
-            ? funnel()
-            : details();
-    return { data, isPending: false, isError: false, isFetching: false, refetch: vi.fn() };
-  });
-});
-
-describe('统计信息架构与口径', () => {
-  it('概览保留核心指标和下钻摘要，不再渲染旧头部导航及分类统计', () => {
-    const html = renderToStaticMarkup(createElement(AnalyticsOverview, { active: false, navigate: vi.fn() }));
-    expect(html).toContain('数据概览');
-    expect(html).toContain('热门页面');
-    expect(html).toContain('热门点击');
-    expect(html).not.toContain('使用概览');
-    expect(html).not.toContain('分类使用情况');
-    expect(mocks.query.mock.calls[0]![0].enabled).toBe(false);
-  });
-  it('纯埋点清单直接展示名称标识和位置，没有日期、数据计数和冗余查看详情', async () => {
-    const html = renderToStaticMarkup(createElement(TrackingManagement, { active: true }));
-    expect(html).toContain('记账_交易_新增_点击');
-    expect(html).toContain('accounting_transaction_create_click');
-    expect(html).toContain('<code>accounting_view</code>');
-    expect(html).not.toContain('<code>accounting</code>');
-    expect(html).toContain('<th>事件类型</th>');
-    expect(html).toContain('<th>采集端</th>');
-    expect(html).not.toContain('接入状态');
-    expect(html).not.toContain('未接入');
-    expect(html).not.toContain('已停用');
-    expect(html).not.toContain('历史兼容');
-    for (const text of ['统计意义', '事件参数', '最近触发', '触发次数', '查看</button>', '编辑分类', '开始日期'])
-      expect(html).not.toContain(text);
-    const signal = new AbortController().signal;
-    await mocks.query.mock.calls[0]![0].queryFn({ signal });
-    expect(mocks.catalog).toHaveBeenCalledWith(signal);
-  });
+describe('统计计算与查询规则', () => {
   it('按当前行为独立计算人均次数，不使用其他行为或逐日去重数之和', () => {
     expect(eventMeasure(details(), 'view', 'average')).toBe(4.5);
     expect(eventMeasure(details(), 'click', 'users')).toBe(1);
@@ -227,16 +158,6 @@ describe('统计信息架构与口径', () => {
       event_name: 'accounting_transaction_create_click',
     });
     expect(() => analysisQuery(range, { ...restored.selection, event: 'unknown' }, catalog())).toThrow('不可用');
-  });
-  it('事件页面采用指标与结果结构并提供明确的漏斗分析入口', () => {
-    const html = renderToStaticMarkup(createElement(EventAnalysis, { active: true, path: '/analytics/events' }));
-    expect(html).toContain('人均次数');
-    expect(html).toContain('漏斗分析');
-    expect(html).toContain('<option value="day" selected="">按天</option>');
-    expect(html).not.toContain('<option value="auto">');
-    expect(html).not.toContain('行为分析');
-    expect(html).not.toContain('业务分类');
-    expect(html.indexOf('时间范围')).toBeLessThan(html.indexOf('事件类型'));
   });
   it('页面访问使用完整事件标识下钻与展示，页面上下文不替代事件筛选', () => {
     const range = { start_date: '2026-10-01', end_date: '2026-10-02', platform: 'app' as const };
@@ -298,21 +219,6 @@ describe('统计信息架构与口径', () => {
     );
     expect(() => validateRange({ ...range, end_date: '2026-10-14' }, new Date('2026-10-12T16:00:00Z'))).toThrow('今天');
   });
-  it('跨日小时趋势含日期，跨年趋势含年份，图表与明细使用同一数字精度', () => {
-    const range = { start_date: '2025-12-31', end_date: '2026-01-02', platform: 'all' as const };
-    expect(periodLabel('2026-01-01T17:00:00Z', 'hour', false, range)).toMatch(/2026.*01.*02.*01:00/);
-    expect(periodLabel('2026-01-01T17:00:00Z', 'hour')).toBe('01:00');
-    expect(periodLabel('2026-01-01T17:00:00Z', 'day', false, range)).toContain('2026');
-    const chart = renderToStaticMarkup(
-      createElement(AnalyticsChart, {
-        label: '人均次数',
-        fractional: true,
-        rows: [{ label: '2026/01/02', shortLabel: '01/02', value: 4 / 3 }],
-      }),
-    );
-    expect(chart).toContain('2026/01/02：1.33');
-    expect(chart).not.toContain('1.333');
-  });
   it('两个概览请求跨整点时，点击趋势只使用自身时间桶，不把汇总值当小时数据', () => {
     const clicks = details();
     clicks.summary.clicks = 99;
@@ -355,26 +261,6 @@ describe('统计信息架构与口径', () => {
     expect(() =>
       validateFunnel({ steps: ['accounting_view', 'accounting_view'], scope: 'user', window_minutes: 0 }, catalog()),
     ).toThrow();
-  });
-  it('漏斗关联缺失时用占位符表示人数和流失，不附加采集说明', () => {
-    const data = funnel();
-    data.coverage.complete = false;
-    data.coverage.missing_context_events = 5;
-    data.steps.forEach((step) => {
-      step.users = 0;
-      step.drop_off = 0;
-    });
-    mocks.query.mockImplementation(({ queryKey }: { queryKey: string[] }) => ({
-      data: queryKey[1] === 'analytics-catalog' ? catalog() : data,
-      isPending: false,
-      isError: false,
-    }));
-    const html = renderToStaticMarkup(createElement(FunnelAnalysis, { active: true, initialRange: presetRange() }));
-    expect(html).toContain('<strong>—</strong>');
-    expect(html).not.toContain('未完整采集');
-    expect(html).not.toContain('条相关事件缺少关联标识');
-    expect(html).toContain('流失 — 人');
-    expect(html).not.toContain('>0<small>人');
   });
   it('协议明确区分纯定义、统计结果和窗口漏斗，不接收不可能的转化率', () => {
     expect(analyticsCatalogSchema.safeParse(catalog()).success).toBe(true);

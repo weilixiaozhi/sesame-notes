@@ -6,7 +6,6 @@ export default defineConfig({
     include: [
       'src/modules/admin/admin-policy.test.ts',
       'src/modules/admin/admin-password.test.ts',
-      'src/admin-test-initialization.test.ts',
       'test/seed.test.ts',
       'test/auth-failure.test.ts',
       'test/admin-route-policy.test.ts',

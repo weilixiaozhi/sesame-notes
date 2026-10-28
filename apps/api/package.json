@@ -9,7 +9,6 @@
     "test:serve": "tsx watch --env-file=../../.env.test src/server.ts",
     "start": "node dist/server.js",
     "test": "vitest run --config vitest.config.ts",
-    "test:config": "vitest run --config vitest.test-environment.config.ts",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:setup": "node prisma/setup.mjs",

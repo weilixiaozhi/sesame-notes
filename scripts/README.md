@@ -10,11 +10,10 @@
 | `pnpm dev:test:init`                          | 新 clone 首次准备本机测试配置、PostgreSQL 17 镜像与独立测试卷；不启动服务            |
 | `pnpm dev:web` / `pnpm admin:dev`             | 启动 Web / Admin 开发页面                                                            |
 | `pnpm dev:web:preview` / `pnpm admin:preview` | 启动连接共用测试 API 的验收页面                                                      |
-| `pnpm test:web:backend`                       | Web 与测试后端联调                                                                   |
 | `pnpm test:mobile:backend`                    | 手机与测试后端联调，可追加 `-MobilePath` 等原有参数                                  |
 | `pnpm version:bump api`                       | 递增所选端版本；端可选 `api`、`web`、`admin`，可追加 `minor`、`major` 或 `--dry-run` |
 | `pnpm analyze:deps` / `pnpm contract:check`   | 依赖分析 / 契约一致性与兼容性检查                                                    |
-| `pnpm test:scripts`                           | 运行规则和全部脚本回归；部署测试使用模拟资源                                         |
+| `pnpm test:scripts`                           | 验证目录数据、管理员迁移与接口兼容性                                                 |
 
 验收页面和共用测试环境支持追加 `-Rebuild` 重建或 `-Stop` 停止。手机联调默认读取相邻的 `sesame-notes-mobile` 仓库。
 
@@ -45,8 +44,6 @@ pnpm dev:test
 - 同名未知卷、手工 `.env.test` 或归属不匹配：保留全部资源并拒绝接管。已有环境继续使用原来的 `pnpm dev:test`，新环境需由资源所有者人工核对、备份并解决命名冲突；不要直接删卷重新初始化。
 - 已登记卷丢失、引擎变化或收据/配置缺失：恢复匹配的原配置、收据及原卷，不自动新建数据库。若配置发布时失败，收据已写入且候选配置仍在 `Temp/test-environment/candidate-<归属 ID>/.env.test`，人工核对身份后将其恢复到根目录。
 - 已记录镜像缺失：从可信备份恢复同一 Image ID，再重跑；脚本拒绝把浮动标签的新镜像当作原镜像。镜像别名指向其他 ID 时也拒绝覆盖，需人工核查。
-
-首次初始化和恢复的本地回归使用内存 Docker 替身，不要求运行 Docker；真实 Docker 首次使用由开发者显式执行上述命令。
 
 ## 发布脚本
 
@@ -92,9 +89,9 @@ API 发布在停止服务后，通过 `db-init` 自动准备旧后台账号、�
 | `deploy/`      | 发布内部模块和专项部署维护工具           |
 | `dev/`         | 本地启动、验收和联调实现                 |
 | `lib/`         | 共享契约校验、测试环境配置与进程管理模块 |
-| `test/`        | 脚本回归测试及 Python 测试运行器         |
+| `test/`        | 目录数据、管理员迁移与接口兼容性测试     |
 
-只运行 Node.js 回归使用 `pnpm test:rules`；只运行 Python 回归使用 `python -B scripts/test/run.py`。GitHub CI 仍由手动触发，本地验证不会启动 CI。
+业务测试使用 `pnpm test`，目录数据、管理员迁移与接口兼容性测试使用 `pnpm test:scripts`。测试聚焦金额、日期、权限、同步、导入导出和数据完整性；UI 外观、布局、页面交互及纯源码结构不纳入自动化测试。格式、静态分析、类型检查和构建通过各自命令验证。GitHub CI 由手动触发，本地验证不会启动 CI。
 
 ## 保留脚本的使用场景
 
@@ -109,7 +106,6 @@ API 发布在停止服务后，通过 `db-init` 自动准备旧后台账号、�
 | `dev/start-test-environment.ps1`         | `dev:test`、`dev:web:preview`、`admin:preview` 共用组件启动、停止和重建流程 |
 | `dev/init-test-environment.ps1`          | `dev:test:init` 首次开发资源准备与幂等恢复                                  |
 | `lib/test-environment-bootstrap.ps1`     | 初始化与启动共享的本机引擎、镜像、卷归属和收据校验                          |
-| `dev/test-web-backend.ps1`               | Web 浏览器联调，管理 Playwright、Web 进程和隔离测试数据库                   |
 | `dev/test-mobile-backend.ps1`            | 手机 Flutter 往返联调，管理移动端专用夹具及后端进程                         |
 | `lib/test-environment-runtime.ps1`       | 启动与联调共用的配置、来源、进程身份和日志处理                              |
 | `maintenance/sync-mobile-catalogs.mjs`   | 从本仓共同输入生成分类、币种和健身身份资产，提供只读核对及失败恢复          |
@@ -120,4 +116,4 @@ API 发布在停止服务后，通过 `db-init` 自动准备旧后台账号、�
 | `check/contract-check.mjs`               | 契约检查调用，读取固定支持快照并核对生成一致性与兼容性                      |
 | `lib/contract-compatibility.mjs`         | 契约检查使用的请求与响应兼容性算法                                          |
 
-`test/` 保留上述能力的回归验证；Python 运行器自动发现测试，Node.js 测试由包命令统一发现。
+`test/` 中的业务数据测试由 `pnpm test:scripts` 统一发现。

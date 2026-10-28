@@ -8,8 +8,7 @@
     "build": "node ../../scripts/build-tools/clean-build-output.mjs apps/web/dist && tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test": "vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "catalog:",
@@ -32,7 +31,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@playwright/test": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",

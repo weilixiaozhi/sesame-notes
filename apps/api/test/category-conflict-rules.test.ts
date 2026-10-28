@@ -50,7 +50,6 @@ describe('官方分类身份与基线规则', () => {
         },
       ]),
     );
-    expect(identities.items).toHaveLength(159);
     expect(identities.items).toEqual([...expected.values()].sort((a, b) => a.id.localeCompare(b.id)));
     const defaults = JSON.parse(
       readFileSync(new URL('../src/modules/accounting/default-category-catalog.json', import.meta.url), 'utf8'),

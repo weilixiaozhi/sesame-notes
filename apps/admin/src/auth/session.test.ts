@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@sesame-notes/api-client';
 import { api, errorMessage } from '../api/client';
 import type { SessionResponse } from '../api/types';
-import { LoginPage } from '../features/authentication';
 import { queryClient, SessionProvider, useSession } from './session';
 
 let root: Root;
@@ -37,32 +36,16 @@ function response(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 }
 
-/** 读取真实会话上下文并挂载登录页，验证状态变化与用户可见提示一致。 */
+/** 读取会话上下文，直接验证认证状态与缓存隔离。 */
 function SessionScreen() {
   latest = useSession();
-  return latest.phase === 'anonymous' ? createElement(LoginPage) : createElement('div', null, latest.phase);
+  return null;
 }
 
-/** 等待初始会话查询结束，使每个用例从稳定的实际页面状态开始。 */
+/** 等待初始会话查询结束，取得可调用的会话操作。 */
 async function renderSession(): Promise<void> {
   await act(async () => {
     root.render(createElement(SessionProvider, { children: createElement(SessionScreen) }));
-  });
-}
-
-/** 通过原生输入和表单事件提交，覆盖实际表单校验及错误展示。 */
-async function submitLogin(): Promise<void> {
-  await act(async () => {
-    for (const [name, value] of [
-      ['username', 'operator'],
-      ['password', 'incorrect-test-password'],
-    ]) {
-      const input = container.querySelector<HTMLInputElement>(`input[name="${name}"]`)!;
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-    container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   });
 }
 
@@ -85,15 +68,13 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-describe('后台首次访问与会话过期提示', () => {
-  it('首次打开收到未登录响应时显示干净登录页，不声称登录已过期', async () => {
+describe('后台会话认证与隔离', () => {
+  it('首次未登录保持匿名状态，不标记会话过期', async () => {
     fetchMock.mockResolvedValue(response(401, { code: 'ADMIN_UNAUTHORIZED', message: '请先登录管理后台' }));
     await renderSession();
 
     expect(latest.phase).toBe('anonymous');
     expect(latest.message).toBe('');
-    expect(container.textContent).toContain('登录管理后台');
-    expect(container.querySelector('[role="status"]')).toBeNull();
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
@@ -108,7 +89,7 @@ describe('后台首次访问与会话过期提示', () => {
 
     expect(latest.phase).toBe('anonymous');
     expect(latest.session).toBeNull();
-    expect(container.querySelector('[role="status"]')?.textContent).toBe('登录状态已失效，请重新登录。');
+    expect(latest.message).toBe('登录状态已失效，请重新登录。');
     expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
   });
 
@@ -129,34 +110,6 @@ describe('后台首次访问与会话过期提示', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('会话过期后重新登录失败只显示本次账号密码错误，并清空密码', async () => {
-    fetchMock.mockResolvedValueOnce(response(200, authenticated));
-    await renderSession();
-    fetchMock.mockResolvedValueOnce(response(401, { code: 'ADMIN_UNAUTHORIZED', message: '会话失效' }));
-    await act(async () => latest.verify());
-    expect(container.querySelector('[role="status"]')).not.toBeNull();
-    fetchMock.mockResolvedValueOnce(response(401, { code: 'INVALID_CREDENTIALS', message: '账号或密码错误' }));
-
-    await submitLogin();
-
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe('账号或密码不正确，请检查后重试。');
-    expect(container.querySelector('[role="status"]')).toBeNull();
-    expect(container.querySelector<HTMLInputElement>('input[name="password"]')?.value).toBe('');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
-  it('登录限流展示等待重试，不误导用户修改账号密码', async () => {
-    fetchMock.mockResolvedValueOnce(response(401, { code: 'ADMIN_UNAUTHORIZED', message: '请先登录管理后台' }));
-    await renderSession();
-    fetchMock.mockResolvedValueOnce(response(429, { code: 'RATE_LIMITED', message: '请求过多' }));
-
-    await submitLogin();
-
-    expect(container.querySelector('[role="alert"]')?.textContent).toBe('操作过于频繁，请稍后重试。');
-    expect(container.querySelector('[role="status"]')).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
   it('登录成功响应后的会话核验失败时说明登录未确认，允许用户重试', async () => {
     fetchMock.mockResolvedValueOnce(response(401, { code: 'ADMIN_UNAUTHORIZED', message: '请先登录管理后台' }));
     await renderSession();
@@ -164,14 +117,11 @@ describe('后台首次访问与会话过期提示', () => {
       .mockResolvedValueOnce(response(200, authenticated))
       .mockResolvedValueOnce(response(401, { code: 'ADMIN_UNAUTHORIZED', message: '请先登录管理后台' }));
 
-    await submitLogin();
+    await act(async () => latest.login('operator', 'test-password'));
 
     expect(latest.phase).toBe('anonymous');
     expect(latest.session).toBeNull();
-    expect(container.querySelector('[role="status"]')?.textContent).toBe('登录状态未能确认，请重试。');
-    expect(container.textContent).not.toContain('登录状态已失效');
-    expect(container.querySelector<HTMLInputElement>('input[name="password"]')?.value).toBe('');
-    expect(container.querySelector<HTMLButtonElement>('button.button-primary')?.disabled).toBe(false);
+    expect(latest.message).toBe('登录状态未能确认，请重试。');
     expect(fetchMock.mock.calls.map(([input]) => new URL((input as Request).url).pathname)).toEqual([
       '/api/v1/admin/auth/me',
       '/api/v1/admin/auth/login',
@@ -179,7 +129,7 @@ describe('后台首次访问与会话过期提示', () => {
     ]);
 
     fetchMock.mockResolvedValueOnce(response(200, authenticated)).mockResolvedValueOnce(response(200, authenticated));
-    await submitLogin();
+    await act(async () => latest.login('operator', 'test-password'));
     expect(latest.phase).toBe('authenticated');
     expect(latest.session).toEqual(authenticated);
     expect(latest.message).toBe('');
