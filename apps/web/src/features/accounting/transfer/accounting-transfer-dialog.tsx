@@ -10,17 +10,14 @@ import { downloadText, exportFileName } from '../../../lib/transfer/download';
 import { readTransferFile, selectTable, type TransferTable, type SelectedTable } from '../../../lib/transfer/table';
 import { CategoryIcon } from '../category-icons';
 import type { CategoryImportChoices } from './category-transfer';
+import { transferFields, type Ledger, type Snapshot, type TransferMapping } from './transfer-schema';
 import {
   accountingCsv,
   buildImportPlan,
   detectTransferMapping,
   previewDate,
-  transferFields,
   validateImportTargets,
   type ImportPlan,
-  type Ledger,
-  type Snapshot,
-  type TransferMapping,
 } from './transfer-model';
 
 /** 账本交换在固定账号下运行，文件解析不上传原始文件，写入前显示可核对的计划。 */

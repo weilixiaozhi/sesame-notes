@@ -1,5 +1,5 @@
 import type { SelectedTable } from '../../../lib/transfer/table';
-import type { Snapshot, TransferMapping } from './transfer-model';
+import type { Snapshot, TransferMapping } from './transfer-schema';
 
 export type CategoryImportChoice = { kind: 'existing'; id: string } | { kind: 'new' };
 export type CategoryImportChoices = Record<string, CategoryImportChoice>;

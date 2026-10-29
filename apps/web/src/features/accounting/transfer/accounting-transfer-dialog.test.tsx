@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { AccountingTransferDialog } from './accounting-transfer-dialog';
-import type { Ledger, Snapshot } from './transfer-model';
+import type { Ledger, Snapshot } from './transfer-schema';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), read: vi.fn() }));
 vi.mock('../../../lib/session', () => ({

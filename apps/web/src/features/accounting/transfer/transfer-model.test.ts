@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createHash, webcrypto } from 'node:crypto';
-import { buildImportPlan, detectTransferMapping, accountingCsv, type Ledger, type Snapshot } from './transfer-model';
+import { buildImportPlan, detectTransferMapping, accountingCsv } from './transfer-model';
+import type { Ledger, Snapshot } from './transfer-schema';
 import { importTimestamp } from '../../../lib/transfer/timestamp';
 import { parseDelimited } from '../../../lib/delimited-text';
 import { parseJsonTables, readTransferFile, selectTable } from '../../../lib/transfer/table';
