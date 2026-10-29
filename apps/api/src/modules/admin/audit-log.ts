@@ -35,12 +35,13 @@ async function auditTargetDisplay(
   metadata?: Prisma.JsonValue,
 ): Promise<string | null> {
   if (target.type === 'app_banner') {
-    return target.id === 'fitness-plan-library'
-      ? '计划库入口'
-      : target.id === 'fitness-template-library'
-        ? '模板库入口'
-        : null;
+    const slot =
+      target.id === 'fitness-plan-library' || target.id === 'fitness-template-library'
+        ? target.id
+        : (await tx.appBanner.findUnique({ where: { id: target.id }, select: { slot: true } }))?.slot;
+    return slot === 'fitness-plan-library' ? '计划库入口' : slot === 'fitness-template-library' ? '模板库入口' : null;
   }
+  if (target.type === 'app_banner_slot') return target.id === 'fitness-plan-library' ? '计划库入口' : '模板库入口';
   if (target.type === 'banner_media') {
     return displayText(
       (await tx.appBannerMedia.findUnique({ where: { id: target.id }, select: { fileName: true } }))?.fileName,

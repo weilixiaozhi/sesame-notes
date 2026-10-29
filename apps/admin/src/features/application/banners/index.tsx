@@ -1,228 +1,299 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
-import { api, errorMessage, InputError, reportError, request } from '../../../api/client';
-import { queryClient, useSession } from '../../../auth/session';
-import { Button, Loading, Modal, RequestError, StatusBadge } from '../../../components/ui';
-import { bannerImageId, bannerPreview, bannerSlots, bannerTargets, defaultBanner } from './model';
-import type { BannerEntry, BannerTarget } from './model';
+import { useState } from 'react';
+import { api, request } from '../../../api/client';
+import { dateTime, initialPaging, type Paging } from '../../../api/types';
+import { useClampPage } from '../../../api/paging';
+import { useSession } from '../../../auth/session';
+import { Button, Empty, Loading, Modal, Pagination, RequestError } from '../../../components/ui';
+import { presetRange, validateRange } from '../../analytics/date-range';
+import { bannerMetricCount, bannerSlots, bannerTargetLabel, currentBannerMetrics } from './model';
+import type { BannerEntry, BannerSlot } from './model';
+import { BannerPreview, BannerThumbnail } from './preview';
+import { BannerEditor } from './editor';
+import { BannerDelete, BannerReset } from './operations';
 import './styles.css';
 
 const queryKey = ['admin', 'banners'];
+const statisticsKey = ['admin', 'banner-statistics'];
+type BannerRange = { start_date: string; end_date: string };
+type Dialog =
+  | { mode: 'edit'; row?: BannerEntry; slot: BannerSlot }
+  | { mode: 'preview' | 'delete'; row: BannerEntry }
+  | { mode: 'reset'; slot: BannerSlot };
 
-/** 固定入口独立配置，页面首次读取失败时保留重试入口。 */
+/** 入口轮播图采用查询区、数据表格与独立编辑弹窗，统计只关联当前显示配置。 */
 export function BannersPage({ active }: { active: boolean }) {
-  const session = useSession();
-  const canWrite = session.session!.admin.permissions.includes('banners:write');
-  const [editing, setEditing] = useState<BannerEntry>();
+  const { session } = useSession();
+  const canWrite = session?.admin.permissions.includes('banners:write');
+  const [dialog, setDialog] = useState<Dialog>();
+  const [paging, setPaging] = useState<Paging>(initialPaging);
+  const [range, setRange] = useState<BannerRange>(() => presetRange('week'));
+  const [draftRange, setDraftRange] = useState(range);
+  const [preset, setPreset] = useState('week');
+  const [slot, setSlot] = useState('');
+  const [rangeError, setRangeError] = useState('');
   const query = useQuery({
     queryKey,
     enabled: active,
     queryFn: ({ signal }) => request(() => api.adminBanners.list(signal), 'banner-list'),
   });
+  const statistics = useQuery({
+    queryKey: [...statisticsKey, range],
+    enabled: active,
+    queryFn: ({ signal }) =>
+      request(
+        () =>
+          api.adminBanners.statistics(
+            {
+              start_date: range.start_date,
+              end_date: range.end_date,
+            },
+            signal,
+          ),
+        'banner-statistics',
+      ),
+  });
+  const rows = query.data?.items.filter((entry) => !slot || entry.slot === slot) ?? [];
+  useClampPage(query.data ? rows.length : undefined, paging, setPaging);
+  const initialSlot = (slot || 'fitness-plan-library') as BannerSlot;
+
+  /** 日期统一按北京时间验证，重复查询相同范围也刷新配置与统计。 */
+  function search(): void {
+    try {
+      const value = validateRange({ ...draftRange, platform: 'app' });
+      setRange({ start_date: value.start_date, end_date: value.end_date });
+      setRangeError('');
+      setPaging(initialPaging);
+      void query.refetch();
+      if (range.start_date === value.start_date && range.end_date === value.end_date) void statistics.refetch();
+    } catch (error) {
+      setRangeError(error instanceof Error ? error.message : '请选择有效的统计日期。');
+    }
+  }
+
   return (
     <>
       <div className="page-heading">
-        <div>
-          <h1>Banner 管理</h1>
-          <p className="muted">管理应用入口的图片和跳转页面。离线或图片不可用时，应用自动使用内置图片和默认入口。</p>
-        </div>
-        <Button disabled={query.isFetching} onClick={() => void query.refetch()}>
-          刷新
-        </Button>
+        <h1>Banner 管理</h1>
+        {canWrite && (
+          <div className="row-actions">
+            <Button
+              disabled={!query.data?.items.some((entry) => entry.source === 'remote')}
+              onClick={() => setDialog({ mode: 'reset', slot: initialSlot })}
+            >
+              恢复默认
+            </Button>
+            <Button variant="primary" onClick={() => setDialog({ mode: 'edit', slot: initialSlot })}>
+              添加图片
+            </Button>
+          </div>
+        )}
       </div>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <RequestError error={query.error} retry={() => void query.refetch()} />
-      ) : (
-        <div className="banner-grid">
-          {query.data.items.map((entry) => (
-            <section className="banner-card" key={entry.slot}>
-              <BannerPreview entry={entry} />
-              <div className="banner-card-content">
-                <div className="banner-card-heading">
-                  <h2>{bannerSlots[entry.slot].title}</h2>
-                  <StatusBadge enabled={entry.is_enabled} enabledLabel="自定义" disabledLabel="应用默认" />
-                </div>
-                <p>点击进入：{bannerTargets[entry.is_enabled ? entry.target : entry.slot]}</p>
-                {canWrite && <Button onClick={() => setEditing(entry)}>配置图片与跳转</Button>}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
-      {editing && canWrite && <BannerEditor current={editing} onClose={() => setEditing(undefined)} />}
-    </>
-  );
-}
-
-/** 图片读取失败显示真实状态，避免把未生效的默认图片当作配置预览。 */
-function BannerPreview({ entry }: { entry: BannerEntry }) {
-  const source = bannerPreview(entry);
-  const [failed, setFailed] = useState<string>();
-  if (failed === source)
-    return (
-      <div className="banner-preview banner-preview-error" role="status">
-        <span>图片暂时无法预览，请重试或更换图片。</span>
-        <Button onClick={() => setFailed(undefined)}>重试预览</Button>
-      </div>
-    );
-  return (
-    <img
-      className="banner-preview"
-      src={source}
-      alt={bannerSlots[entry.slot].title}
-      onError={() => {
-        reportError('banner-preview', new Error('BANNER_PREVIEW_UNAVAILABLE'));
-        setFailed(source);
-      }}
-    />
-  );
-}
-
-/** 图片在浏览器内编码后上传，不持久化到浏览器，也不写入日志。 */
-async function encodeImage(file: File): Promise<string> {
-  try {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    let binary = '';
-    for (let offset = 0; offset < bytes.length; offset += 8192)
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
-    return btoa(binary);
-  } catch (error) {
-    reportError('banner-file-read', error);
-    throw new InputError('图片读取失败，请重新选择文件。');
-  }
-}
-
-/** 编辑固定修订，图片上传只是草稿；保存后图片和目标作为一个配置发布。 */
-function BannerEditor({ current, onClose }: { current: BannerEntry; onClose: () => void }) {
-  const [draft, setDraft] = useState(current);
-  const [busy, setBusy] = useState<'upload' | 'save' | null>(null);
-  const [error, setError] = useState('');
-  const lock = useRef(false);
-  /** 完成上传校验后才替换草稿，失败时保留已选择的可用图片。 */
-  async function upload(file: File | undefined) {
-    if (!file || lock.current) return;
-    if (!/\.(?:png|jpe?g|webp)$/i.test(file.name) || file.size === 0 || file.size > 8 * 1024 * 1024) {
-      setError('请选择不超过 8 MB 的 PNG、JPEG 或 WebP 图片。');
-      return;
-    }
-    lock.current = true;
-    setBusy('upload');
-    setError('');
-    try {
-      const data_base64 = await encodeImage(file);
-      const media = await request(() => api.adminBanners.upload({ filename: file.name, data_base64 }), 'banner-upload');
-      setDraft((value) => ({ ...value, image_path: media.image_path, is_enabled: true }));
-    } catch (failure) {
-      setError(errorMessage(failure));
-    } finally {
-      lock.current = false;
-      setBusy(null);
-    }
-  }
-  /** 带版本提交防止并发覆盖，成功结果立即更新列表，写请求不会自动重试。 */
-  async function save() {
-    if (lock.current) return;
-    if (draft.is_enabled && !draft.image_path) {
-      setError('请先上传图片，再启用自定义配置。');
-      return;
-    }
-    lock.current = true;
-    setBusy('save');
-    setError('');
-    try {
-      const result = await request(
-        () =>
-          api.adminBanners.update(current.slot, {
-            version: current.version,
-            image_id: bannerImageId(draft.image_path),
-            target: draft.target,
-            is_enabled: draft.is_enabled,
-          }),
-        'banner-save',
-      );
-      queryClient.setQueryData<Awaited<ReturnType<typeof api.adminBanners.list>>>(queryKey, (previous) =>
-        previous
-          ? {
-              items: previous.items.map((entry) => (entry.slot === result.slot ? result : entry)),
-            }
-          : previous,
-      );
-      onClose();
-    } catch (failure) {
-      setError(errorMessage(failure));
-    } finally {
-      lock.current = false;
-      setBusy(null);
-    }
-  }
-  return (
-    <Modal title={bannerSlots[current.slot].title} busy={busy !== null} onClose={onClose} className="banner-editor">
-      <form
-        className="form-stack"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <BannerPreview entry={draft} />
-        <label className="check-row">
-          <input
-            type="checkbox"
-            checked={draft.is_enabled}
-            disabled={busy !== null}
-            onChange={(event) => setDraft({ ...draft, is_enabled: event.target.checked })}
-          />
-          使用自定义配置
-        </label>
-        <label className="field">
-          替换图片
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
-            disabled={busy !== null}
-            onChange={(event) => {
-              void upload(event.target.files?.[0]);
-              event.target.value = '';
+      <section className="panel">
+        <form
+          className="toolbar"
+          onSubmit={(event) => {
+            event.preventDefault();
+            search();
+          }}
+        >
+          <label className="field">
+            展示位置
+            <select
+              value={slot}
+              onChange={(event) => {
+                setSlot(event.target.value);
+                setPaging(initialPaging);
+              }}
+            >
+              <option value="">全部位置</option>
+              {Object.entries(bannerSlots).map(([value, item]) => (
+                <option key={value} value={value}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            统计范围
+            <select
+              value={preset}
+              onChange={(event) => {
+                const value = event.target.value;
+                setPreset(value);
+                if (value !== 'custom') setDraftRange(presetRange(value as 'today' | 'week' | 'month'));
+              }}
+            >
+              <option value="today">今天</option>
+              <option value="week">近 7 天</option>
+              <option value="month">近 30 天</option>
+              <option value="custom">自定义</option>
+            </select>
+          </label>
+          {preset === 'custom' && (
+            <>
+              <label className="field">
+                开始日期
+                <input
+                  type="date"
+                  required
+                  value={draftRange.start_date}
+                  max={presetRange('today').end_date}
+                  onChange={(event) => setDraftRange({ ...draftRange, start_date: event.target.value })}
+                />
+              </label>
+              <label className="field">
+                结束日期
+                <input
+                  type="date"
+                  required
+                  value={draftRange.end_date}
+                  max={presetRange('today').end_date}
+                  onChange={(event) => setDraftRange({ ...draftRange, end_date: event.target.value })}
+                />
+              </label>
+            </>
+          )}
+          <Button type="submit" variant="primary" disabled={query.isFetching || statistics.isFetching}>
+            查询
+          </Button>
+          <Button
+            onClick={() => {
+              const value = presetRange('week');
+              setSlot('');
+              setPreset('week');
+              setDraftRange(value);
+              setRange(value);
+              setRangeError('');
+              setPaging(initialPaging);
             }}
-          />
-          <small>
-            建议使用 3:1 横图，PNG / JPEG / WebP，最大 8 MB，最长边不超过 4096 像素。图片中的文字请与跳转页面保持一致。
-          </small>
-        </label>
-        <label className="field">
-          点击跳转
-          <select
-            value={draft.target}
-            disabled={busy !== null || !draft.is_enabled}
-            onChange={(event) => setDraft({ ...draft, target: event.target.value as BannerTarget })}
           >
-            {Object.entries(bannerTargets).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        {!draft.is_enabled && <p className="muted">当前使用应用内置图片，点击进入{bannerTargets[current.slot]}。</p>}
-        {error && (
+            重置
+          </Button>
+        </form>
+        {rangeError && (
           <p className="form-error" role="alert">
-            {error}
+            {rangeError}
           </p>
         )}
-        <div className="dialog-actions">
-          <Button disabled={busy !== null} onClick={() => setDraft(defaultBanner(draft))}>
-            恢复默认
-          </Button>
-          <Button disabled={busy !== null} onClick={onClose}>
-            取消
-          </Button>
-          <Button type="submit" variant="primary" disabled={busy !== null}>
-            {busy === 'upload' ? '正在上传…' : busy === 'save' ? '正在保存…' : '保存配置'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+        <p className="muted banner-statistics-note">
+          {range.start_date} 至 {range.end_date}（北京时间） · 已登录 App 用户 · 每张图当前配置的统计
+        </p>
+        {statistics.isError && <RequestError error={statistics.error} retry={() => void statistics.refetch()} />}
+        {query.isPending ? (
+          <Loading />
+        ) : query.isError ? (
+          <RequestError error={query.error} retry={() => void query.refetch()} />
+        ) : !rows.length ? (
+          <Empty>没有匹配的入口</Empty>
+        ) : (
+          <div className="table-wrap">
+            <table className="banner-table">
+              <thead>
+                <tr>
+                  <th>展示位置</th>
+                  <th>图片</th>
+                  <th>跳转目标</th>
+                  <th>顺序</th>
+                  <th>曝光次数</th>
+                  <th>点击次数</th>
+                  <th>点击率</th>
+                  <th>更新时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice((paging.page - 1) * paging.page_size, paging.page * paging.page_size).map((entry) => {
+                  const report = statistics.isError || statistics.isFetching ? undefined : statistics.data;
+                  const metrics = currentBannerMetrics(entry, report);
+                  return (
+                    <tr key={entry.id}>
+                      <td data-label="展示位置">{bannerSlots[entry.slot].title}</td>
+                      <td data-label="图片">
+                        <BannerThumbnail entry={entry} onPreview={() => setDialog({ mode: 'preview', row: entry })} />
+                        <small className="banner-source">{entry.source === 'builtin' ? '内置默认' : '自定义'}</small>
+                      </td>
+                      <td data-label="跳转目标">{bannerTargetLabel(entry)}</td>
+                      <td data-label="顺序">{entry.source === 'builtin' ? '—' : entry.sort_order}</td>
+                      <td data-label="曝光次数">{bannerMetricCount(metrics?.impressions, report)}</td>
+                      <td data-label="点击次数">{bannerMetricCount(metrics?.clicks, report)}</td>
+                      <td data-label="点击率">
+                        {metrics?.ctr == null || !report || (!report.coverage.complete && !metrics.clicks)
+                          ? '—'
+                          : new Intl.NumberFormat('zh-CN', { style: 'percent', maximumFractionDigits: 2 }).format(
+                              metrics.ctr,
+                            )}
+                      </td>
+                      <td data-label="更新时间">
+                        {dateTime(entry.updated_at)}
+                        {entry.updated_by && <small className="banner-source">{entry.updated_by}</small>}
+                      </td>
+                      <td data-label="操作">
+                        <div className="row-actions">
+                          <Button variant="ghost" onClick={() => setDialog({ mode: 'preview', row: entry })}>
+                            预览
+                          </Button>
+                          {canWrite && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                onClick={() =>
+                                  setDialog({
+                                    mode: 'edit',
+                                    row: entry.source === 'remote' ? entry : undefined,
+                                    slot: entry.slot,
+                                  })
+                                }
+                              >
+                                修改
+                              </Button>
+                              {entry.source === 'remote' && (
+                                <Button variant="ghost" onClick={() => setDialog({ mode: 'delete', row: entry })}>
+                                  删除
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {query.data && (
+          <Pagination value={paging} total={rows.length} onChange={setPaging} disabled={query.isFetching} />
+        )}
+        {statistics.data && !statistics.data.coverage.complete && (
+          <p className="muted banner-statistics-note">
+            曝光与点击从 {dateTime(statistics.data.coverage.collection_started_at)}{' '}
+            开始采集；此前数据不可用，「—」不代表零次。
+          </p>
+        )}
+      </section>
+      {dialog?.mode === 'preview' && (
+        <Modal
+          title={bannerSlots[dialog.row.slot].title}
+          onClose={() => setDialog(undefined)}
+          className="banner-editor"
+        >
+          <div className="form-stack">
+            <BannerPreview entry={dialog.row} />
+            <p>点击进入：{bannerTargetLabel(dialog.row)}</p>
+          </div>
+        </Modal>
+      )}
+      {dialog?.mode === 'edit' && canWrite && (
+        <BannerEditor current={dialog.row} initialSlot={dialog.slot} onClose={() => setDialog(undefined)} />
+      )}
+      {dialog?.mode === 'delete' && canWrite && (
+        <BannerDelete current={dialog.row} onClose={() => setDialog(undefined)} />
+      )}
+      {dialog?.mode === 'reset' && canWrite && (
+        <BannerReset initialSlot={dialog.slot} entries={query.data?.items ?? []} onClose={() => setDialog(undefined)} />
+      )}
+    </>
   );
 }

@@ -61,11 +61,26 @@ export class AdminApiClient extends ApiClient {
   readonly adminBanners = {
     /** 读取应用固定入口的图片、目标和当前修订。 */
     list: async (signal?: AbortSignal) => unwrap(await this.client.GET('/api/v1/admin/banners', { signal })),
-    /** 按当前修订保存单个入口，关闭覆盖时客户端使用内置图片和默认目标。 */
-    update: async (
-      slot: paths['/api/v1/admin/banners/{slot}']['put']['parameters']['path']['slot'],
-      body: Body<paths['/api/v1/admin/banners/{slot}']['put']>,
-    ) => unwrap(await this.client.PUT('/api/v1/admin/banners/{slot}', { params: { path: { slot } }, body })),
+    /** 按北京时间范围查询当前入口配置的真实曝光与点击。 */
+    statistics: async (query: Query<paths['/api/v1/admin/banners/statistics']['get']>, signal?: AbortSignal) =>
+      unwrap(await this.client.GET('/api/v1/admin/banners/statistics', { params: { query }, signal })),
+    /** 新增同一位置的一张轮播图片。 */
+    create: async (body: Body<paths['/api/v1/admin/banners']['post']>) =>
+      unwrap(await this.client.POST('/api/v1/admin/banners', { body })),
+    /** 按当前修订保存轮播图片与独立跳转目标。 */
+    update: async (banner_id: string, body: Body<paths['/api/v1/admin/banners/{banner_id}']['patch']>) =>
+      unwrap(await this.client.PATCH('/api/v1/admin/banners/{banner_id}', { params: { path: { banner_id } }, body })),
+    /** 删除一张自定义图片；最后一张删除后应用使用内置入口。 */
+    remove: async (banner_id: string, body: Body<paths['/api/v1/admin/banners/{banner_id}']['delete']>) =>
+      unwrap(await this.client.DELETE('/api/v1/admin/banners/{banner_id}', { params: { path: { banner_id } }, body })),
+    /** 比对位置内完整修订快照后恢复默认，避免覆盖他人新增图片。 */
+    reset: async (
+      slot: paths['/api/v1/admin/banners/{slot}/reset']['post']['parameters']['path']['slot'],
+      body: Body<paths['/api/v1/admin/banners/{slot}/reset']['post']>,
+    ) => unwrap(await this.client.POST('/api/v1/admin/banners/{slot}/reset', { params: { path: { slot } }, body })),
+    /** 查询可跳转的官方计划或模板，权限沿用 Banner 管理。 */
+    targets: async (query: Query<paths['/api/v1/admin/banners/targets']['get']>, signal?: AbortSignal) =>
+      unwrap(await this.client.GET('/api/v1/admin/banners/targets', { params: { query }, signal })),
     /** 上传经过服务端校验的图片，保存配置后才对应用生效。 */
     upload: async (body: Body<paths['/api/v1/admin/banners/media']['post']>) =>
       unwrap(await this.client.POST('/api/v1/admin/banners/media', { body })),

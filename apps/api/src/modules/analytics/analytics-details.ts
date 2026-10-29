@@ -11,6 +11,8 @@ type MetricRow = {
   click_users: bigint;
   completions: bigint;
   completion_users: bigint;
+  action_total: bigint;
+  action_users: bigint;
 };
 type AggregateRow = MetricRow & {
   period_start: Date | null;
@@ -90,7 +92,9 @@ export async function readAnalyticsDetails(prisma: PrismaClient, query: Analytic
           COUNT(*) FILTER (WHERE behavior='click') AS clicks,
           COUNT(DISTINCT actor_key) FILTER (WHERE behavior='click') AS click_users,
           COUNT(*) FILTER (WHERE behavior='complete') AS completions,
-          COUNT(DISTINCT actor_key) FILTER (WHERE behavior='complete') AS completion_users
+          COUNT(DISTINCT actor_key) FILTER (WHERE behavior='complete') AS completion_users,
+          COUNT(*) FILTER (WHERE kind='action') AS action_total,
+          COUNT(DISTINCT actor_key) FILTER (WHERE kind='action') AS action_users
         FROM timed GROUP BY GROUPING SETS ((),(period_start),(event_name))`);
         const seriesByPeriod = new Map(
           rows.filter((row) => row.dimension === 'series').map((row) => [row.period_start!.toISOString(), row]),
@@ -99,7 +103,10 @@ export async function readAnalyticsDetails(prisma: PrismaClient, query: Analytic
           period_start: row.period_start,
           ...behaviorMetrics(seriesByPeriod.get(row.period_start)),
         }));
-        const collectionStartedAt = state.startedAt;
+        const collectionStartedAt =
+          query.event_name === 'banner_impression' || query.event_name === 'banner_click'
+            ? state.bannerStartedAt
+            : state.startedAt;
         const complete = start.getTime() >= collectionStartedAt.getTime();
         return {
           range: {
@@ -118,7 +125,8 @@ export async function readAnalyticsDetails(prisma: PrismaClient, query: Analytic
               (row) =>
                 row.dimension === 'event' &&
                 row.event_name &&
-                ANALYTICS_DEFINITION_MAP.get(row.event_name)?.kind === 'action',
+                ANALYTICS_DEFINITION_MAP.get(row.event_name)?.kind === 'action' &&
+                ANALYTICS_DEFINITION_MAP.get(row.event_name)?.behavior !== 'view',
             )
             .map((row) => {
               const definition = ANALYTICS_DEFINITION_MAP.get(row.event_name!)!;
@@ -126,10 +134,25 @@ export async function readAnalyticsDetails(prisma: PrismaClient, query: Analytic
                 event_name: row.event_name!,
                 name: definition.name,
                 behavior: definition.behavior as 'click' | 'complete',
-                total: Number(row.clicks + row.completions),
-                users: row.clicks ? Number(row.click_users) : Number(row.completion_users),
+                total: Number(row.action_total),
+                users: Number(row.action_users),
               };
             })
+            .sort((a, b) => b.total - a.total),
+          exposures: rows
+            .filter(
+              (row) =>
+                row.dimension === 'event' &&
+                row.event_name &&
+                ANALYTICS_DEFINITION_MAP.get(row.event_name)?.kind === 'action' &&
+                ANALYTICS_DEFINITION_MAP.get(row.event_name)?.behavior === 'view',
+            )
+            .map((row) => ({
+              event_name: row.event_name!,
+              name: ANALYTICS_DEFINITION_MAP.get(row.event_name!)!.name,
+              total: Number(row.action_total),
+              users: Number(row.action_users),
+            }))
             .sort((a, b) => b.total - a.total),
           coverage: {
             collection_started_at: collectionStartedAt.toISOString(),

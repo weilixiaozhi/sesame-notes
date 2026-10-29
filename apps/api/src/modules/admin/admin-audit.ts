@@ -42,6 +42,9 @@ const ADMIN_ACTION_LABELS: Readonly<Record<string, string>> = {
   'fitness.plan.update': '修改训练计划',
   'fitness.media.upload': '上传动作 GIF',
   'banner.update': '配置应用 Banner',
+  'banner.create': '添加 Banner 图片',
+  'banner.delete': '移除 Banner 图片',
+  'banner.reset': '恢复 Banner 默认图片',
   'banner.media.upload': '上传 Banner 图片',
   'fitness.taxonomy.create': '新增部位或器械',
   'fitness.taxonomy.update': '修改部位或器械',
@@ -140,7 +143,14 @@ function auditText(metadata: Record<string, Prisma.JsonValue>, key: string): str
 export function adminAuditSummary(action: string, metadata: Record<string, Prisma.JsonValue>): string | null {
   if (!Object.hasOwn(AUDIT_HISTORY_LABELS, action)) return null;
   const parts: string[] = [];
-  if (typeof metadata.is_enabled === 'boolean') parts.push(`状态：${metadata.is_enabled ? '启用' : '停用'}`);
+  if (action === 'banner.reset') parts.push('已恢复应用内置图片和默认入口');
+  if (action === 'banner.delete') parts.push('已移除自定义图片');
+  if (typeof metadata.is_enabled === 'boolean')
+    parts.push(
+      action === 'banner.update'
+        ? `图片：${metadata.is_enabled ? '自定义' : '内置默认'}`
+        : `状态：${metadata.is_enabled ? '启用' : '停用'}`,
+    );
   if (action.startsWith('fitness.') && typeof metadata.enabled === 'boolean')
     parts.push(`状态：${metadata.enabled ? '启用' : '停用'}`);
   if (['fitness.media.upload', 'banner.media.upload'].includes(action) && typeof metadata.byte_size === 'number')

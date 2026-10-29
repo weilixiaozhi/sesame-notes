@@ -64,6 +64,7 @@ export const analyticsDetailsSchema = z.object({
       users: count,
     }),
   ),
+  exposures: z.array(z.object({ event_name: z.string(), name: z.string(), total: count, users: count })).optional(),
   coverage: z.object({
     collection_started_at: z.iso.datetime(),
     complete: z.boolean(),

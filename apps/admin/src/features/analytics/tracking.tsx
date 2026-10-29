@@ -7,6 +7,15 @@ import { useClampPage } from '../../api/paging';
 import { Button, Empty, Loading, Pagination, RequestError } from '../../components/ui';
 import { BEHAVIORS } from './model';
 
+const trackingBehaviors = { ...BEHAVIORS, exposure: '曝光' };
+
+/** 元素曝光与页面访问共用浏览协议分类，在采集清单中按真实触发对象明确区分。 */
+function trackingBehavior(event: { kind: string; behavior: string }): keyof typeof trackingBehaviors {
+  return event.kind === 'action' && event.behavior === 'view'
+    ? 'exposure'
+    : (event.behavior as keyof typeof trackingBehaviors);
+}
+
 /** 埋点清单只呈现采集定义，页面与动作由稳定命名表达，查询不依赖日期或使用数据。 */
 export function TrackingManagement({ active }: { active: boolean }) {
   const [search, setSearch] = useState('');
@@ -33,7 +42,7 @@ export function TrackingManagement({ active }: { active: boolean }) {
             event.location,
             ...event.source_pages.flatMap((source) => [source.page_id, pageNames.get(source.page_id)]),
           ].some((value) => value?.toLocaleLowerCase().includes(keyword))) &&
-        (!behavior || event.behavior === behavior) &&
+        (!behavior || trackingBehavior(event) === behavior) &&
         (!platform || event.platforms.includes(platform as 'app' | 'web')),
     ) ?? [];
   useClampPage(query.data ? rows.length : undefined, paging, setPaging);
@@ -68,7 +77,7 @@ export function TrackingManagement({ active }: { active: boolean }) {
               }}
             >
               <option value="">全部类型</option>
-              {Object.entries(BEHAVIORS).map(([key, label]) => (
+              {Object.entries(trackingBehaviors).map(([key, label]) => (
                 <option key={key} value={key}>
                   {label}
                 </option>
@@ -116,7 +125,7 @@ export function TrackingManagement({ active }: { active: boolean }) {
                       </td>
                       <td data-label="事件类型">
                         <span className={`analytics-type analytics-type-${event.behavior}`}>
-                          {BEHAVIORS[event.behavior]}
+                          {trackingBehaviors[trackingBehavior(event)]}
                         </span>
                       </td>
                       <td data-label="触发位置">{event.location}</td>

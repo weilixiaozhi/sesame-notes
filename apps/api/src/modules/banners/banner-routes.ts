@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import type { AppBanner, Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { Type } from '@sinclair/typebox';
 import type { FastifyInstance } from 'fastify';
 import type { ApiConfig } from '../../shared/api-config.js';
@@ -8,13 +8,34 @@ import { execute } from '../../shared/execute.js';
 import { authenticateAdmin, verifyAdminWriteRequest, withAdminMutation, writeAuditLog } from '../admin/index.js';
 import { bannerMediaFile, MAX_BANNER_BYTES, publishBannerMedia, validateBannerImage } from './banner-media.js';
 import {
+  activeBannerWhere,
+  adminBannerResponse,
+  assertBannerCapacity,
+  bannerOrder,
+  bannerSlideResponse,
+  bannerTargetNames,
+  builtinBannerResponse,
+  editableBanner,
+  officialBannerName,
+  validateBannerContent,
+} from './banner-management.js';
+import {
   BANNER_SLOTS,
-  BannerEntrySchema,
+  AdminBannerEntrySchema,
+  AdminBannerListSchema,
+  BannerCarouselSchema,
+  BannerCreateSchema,
+  BannerDeleteSchema,
+  BannerIdSchema,
   BannerListSchema,
   BannerMediaIdSchema,
+  BannerResetSchema,
   BannerSlotSchema,
+  BannerTargetOptionsSchema,
   BannerUpdateSchema,
   BannerUploadResponseSchema,
+  type BannerCreate,
+  type BannerReset,
   type BannerSlot,
   type BannerUpdate,
 } from './banner-schemas.js';
@@ -23,113 +44,295 @@ const slotNames: Record<BannerSlot, string> = {
   'fitness-plan-library': '计划库入口',
   'fitness-template-library': '模板库入口',
 };
+const idParams = Type.Object({ banner_id: BannerIdSchema });
+const okSchema = Type.Object({ ok: Type.Literal(true) });
+type AdminBannerDisplay = ReturnType<typeof adminBannerResponse> | ReturnType<typeof builtinBannerResponse>;
 
-/** 明确返回客户端需要的字段，默认版本零表示此位置尚未保存服务器覆盖。 */
-export function bannerResponse(slot: BannerSlot, row?: AppBanner | null) {
-  return {
-    slot,
-    image_path: row?.imageId ? `/api/v1/banners/media/${row.imageId}` : null,
-    target: row?.target ?? slot,
-    is_enabled: row?.isEnabled ?? false,
-    version: row?.version ?? 0,
-    updated_at: row?.updatedAt.toISOString() ?? null,
-  };
-}
-
-/** 安全事务已串行化管理写入；版本零只允许首次创建，后续修改必须匹配当前版本。 */
-export async function saveBanner(tx: Prisma.TransactionClient, slot: BannerSlot, body: BannerUpdate, username: string) {
-  try {
-    const current = await tx.appBanner.findUnique({ where: { slot } });
-    if ((current?.version ?? 0) !== body.version)
-      throw new ApiError(409, 'BANNER_VERSION_CONFLICT', 'Banner 已被其他管理员修改，请刷新后重试');
-    if (body.is_enabled && !body.image_id) throw new ApiError(400, 'BANNER_IMAGE_REQUIRED', '启用 Banner 前请选择图片');
-    if (body.image_id && !(await tx.appBannerMedia.findUnique({ where: { id: body.image_id } })))
-      throw new ApiError(400, 'BANNER_MEDIA_NOT_FOUND', '所选图片不存在，请重新上传');
-    const data = {
-      imageId: body.image_id,
-      target: body.target,
-      isEnabled: body.is_enabled,
-      updatedBy: username,
-      version: body.version + 1,
-    };
-    return current
-      ? await tx.appBanner.update({ where: { slot, version: body.version }, data })
-      : await tx.appBanner.create({ data: { slot, ...data } });
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    // 同一位置的首次并发创建和乐观锁失败均返回可重试的业务冲突，不泄露数据库异常。
-    if (error && typeof error === 'object' && 'code' in error && ['P2002', 'P2025'].includes(String(error.code)))
-      throw new ApiError(409, 'BANNER_VERSION_CONFLICT', 'Banner 已被其他管理员修改，请刷新后重试');
-    throw error;
-  }
-}
-
-/** 公开读取仅发布启用覆盖，后台读取始终包含固定的两个可配置位置。 */
+/** 公开配置按显式格式返回；旧客户端每个位置只得到首张及其可识别的库入口。 */
 export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient, config: ApiConfig): void {
   app.get(
     '/api/v1/banners',
-    { schema: { tags: ['banners'], operationId: 'getAppBanners', response: { 200: BannerListSchema } } },
+    {
+      schema: {
+        tags: ['banners'],
+        operationId: 'getAppBanners',
+        querystring: Type.Object({ format: Type.Optional(Type.Literal('carousel')) }, { additionalProperties: false }),
+        response: { 200: Type.Union([BannerListSchema, BannerCarouselSchema]) },
+      },
+    },
     async (request, reply) =>
       execute(request, '读取应用 Banner', async () => {
-        const rows = await prisma.appBanner.findMany({ where: { isEnabled: true }, orderBy: { slot: 'asc' } });
-        // 配置不能被代理长期缓存，停用或替换后客户端下一次读取立即拿到新内容。
+        const carousel = (request.query as { format?: string }).format === 'carousel';
+        const items = await prisma.$transaction(
+          async (tx) => {
+            const rows = await tx.appBanner.findMany({ where: activeBannerWhere, orderBy: [...bannerOrder] });
+            const names = await bannerTargetNames(tx, rows, true);
+            const available = rows.filter(
+              (row) => row.imageId && (!row.targetId || names.has(`${row.target}:${row.targetId}`)),
+            );
+            if (carousel) return available.map((row) => bannerSlideResponse(row, names));
+            return BANNER_SLOTS.flatMap((slot) => {
+              const row = available.find((item) => item.slot === slot);
+              if (!row) return [];
+              return [
+                {
+                  slot,
+                  image_path: `/api/v1/banners/media/${row.imageId}`,
+                  target:
+                    row.target === 'official-plan'
+                      ? 'fitness-plan-library'
+                      : row.target === 'official-template'
+                        ? 'fitness-template-library'
+                        : row.target,
+                  is_enabled: true,
+                  version: row.version,
+                  updated_at: row.updatedAt.toISOString(),
+                },
+              ];
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+        );
         reply.header('cache-control', 'no-store');
-        return { items: rows.map((row) => bannerResponse(row.slot as BannerSlot, row)) };
+        return { items };
       }),
   );
   app.get(
     '/api/v1/admin/banners',
     {
       preHandler: authenticateAdmin(config, prisma, 'banners:read'),
-      schema: { tags: ['admin-banners'], operationId: 'listAdminBanners', response: { 200: BannerListSchema } },
+      schema: { tags: ['admin-banners'], operationId: 'listAdminBanners', response: { 200: AdminBannerListSchema } },
     },
     async (request) =>
-      execute(request, '查询 Banner 配置', async () => {
-        const rows = await prisma.appBanner.findMany();
+      execute(request, '查询 Banner 图片', async () =>
+        prisma.$transaction(
+          async (tx) => {
+            const rows = await tx.appBanner.findMany({ where: activeBannerWhere, orderBy: [...bannerOrder] });
+            const names = await bannerTargetNames(tx, rows);
+            return {
+              items: BANNER_SLOTS.flatMap<AdminBannerDisplay>((slot) => {
+                const selected = rows.filter((row) => row.slot === slot);
+                return selected.length
+                  ? selected.map((row) => adminBannerResponse(row, names))
+                  : [builtinBannerResponse(slot)];
+              }),
+            };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+        ),
+      ),
+  );
+  app.get(
+    '/api/v1/admin/banners/targets',
+    {
+      preHandler: authenticateAdmin(config, prisma, 'banners:read'),
+      schema: {
+        tags: ['admin-banners'],
+        operationId: 'listAdminBannerTargets',
+        querystring: Type.Object(
+          {
+            kind: Type.Union([Type.Literal('plan'), Type.Literal('template')]),
+            q: Type.Optional(Type.String({ maxLength: 100 })),
+          },
+          { additionalProperties: false },
+        ),
+        response: { 200: BannerTargetOptionsSchema },
+      },
+    },
+    async (request) =>
+      execute(request, '查询 Banner 跳转内容', async () => {
+        const query = request.query as { kind: 'plan' | 'template'; q?: string };
+        const rows = await prisma.officialFitnessContent.findMany({
+          where: {
+            kind: query.kind,
+            isEnabled: true,
+            ...(query.q?.trim() ? { content: { path: ['name', 'zh'], string_contains: query.q.trim() } } : {}),
+          },
+          orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+          take: 100,
+          select: { id: true, content: true },
+        });
         return {
-          items: BANNER_SLOTS.map((slot) =>
-            bannerResponse(
-              slot,
-              rows.find((row) => row.slot === slot),
-            ),
-          ),
+          items: rows.flatMap((row) => {
+            const name = officialBannerName(row.content);
+            return name ? [{ id: row.id, name }] : [];
+          }),
         };
       }),
   );
-  app.put(
-    '/api/v1/admin/banners/:slot',
+  app.post(
+    '/api/v1/admin/banners',
+    {
+      onRequest: verifyAdminWriteRequest(config),
+      preHandler: authenticateAdmin(config, prisma, 'banners:write'),
+      schema: {
+        tags: ['admin-banners'],
+        operationId: 'createAdminBanner',
+        body: BannerCreateSchema,
+        response: { 201: AdminBannerEntrySchema },
+      },
+    },
+    async (request, reply) =>
+      execute(request, '新增 Banner 图片', async () => {
+        const body = request.body as BannerCreate;
+        const response = await withAdminMutation(prisma, request, 'banners:write', async (tx, auth) => {
+          await validateBannerContent(tx, body);
+          await assertBannerCapacity(tx, body.slot);
+          const row = await tx.appBanner.create({
+            data: {
+              slot: body.slot,
+              imageId: body.image_id,
+              target: body.target,
+              targetId: body.target_id,
+              sortOrder: body.sort_order,
+              isEnabled: true,
+              updatedBy: auth.username,
+            },
+          });
+          await writeAuditLog(tx, {
+            actor: `admin:${auth.adminId}`,
+            action: 'banner.create',
+            target: { type: 'app_banner', id: row.id },
+            requestId: request.id,
+            ip: request.ip,
+            metadata: { slot: row.slot, version: row.version },
+          });
+          return adminBannerResponse(row, await bannerTargetNames(tx, [row]));
+        });
+        return reply.code(201).send(response);
+      }),
+  );
+  app.patch(
+    '/api/v1/admin/banners/:banner_id',
     {
       onRequest: verifyAdminWriteRequest(config),
       preHandler: authenticateAdmin(config, prisma, 'banners:write'),
       schema: {
         tags: ['admin-banners'],
         operationId: 'updateAdminBanner',
-        params: Type.Object({ slot: BannerSlotSchema }),
+        params: idParams,
         body: BannerUpdateSchema,
-        response: { 200: BannerEntrySchema },
+        response: { 200: AdminBannerEntrySchema },
       },
     },
     async (request) =>
-      execute(request, '保存 Banner 配置', async () => {
-        const { slot } = request.params as { slot: BannerSlot };
+      execute(request, '修改 Banner 图片', async () => {
+        const { banner_id: id } = request.params as { banner_id: string };
         const body = request.body as BannerUpdate;
         return withAdminMutation(prisma, request, 'banners:write', async (tx, auth) => {
-          const row = await saveBanner(tx, slot, body, auth.username);
+          await editableBanner(tx, id, body.version);
+          await validateBannerContent(tx, body);
+          await assertBannerCapacity(tx, body.slot, id);
+          const row = await tx.appBanner.update({
+            where: { id, version: body.version },
+            data: {
+              slot: body.slot,
+              imageId: body.image_id,
+              target: body.target,
+              targetId: body.target_id,
+              sortOrder: body.sort_order,
+              updatedBy: auth.username,
+              version: { increment: 1 },
+            },
+          });
           await writeAuditLog(tx, {
             actor: `admin:${auth.adminId}`,
             action: 'banner.update',
-            target: { type: 'app_banner', id: slot },
+            target: { type: 'app_banner', id },
             requestId: request.id,
             ip: request.ip,
-            metadata: { target_display: slotNames[slot], is_enabled: row.isEnabled, version: row.version },
+            metadata: { slot: row.slot, version: row.version },
           });
-          return bannerResponse(slot, row);
+          return adminBannerResponse(row, await bannerTargetNames(tx, [row]));
+        });
+      }),
+  );
+  app.delete(
+    '/api/v1/admin/banners/:banner_id',
+    {
+      onRequest: verifyAdminWriteRequest(config),
+      preHandler: authenticateAdmin(config, prisma, 'banners:write'),
+      schema: {
+        tags: ['admin-banners'],
+        operationId: 'deleteAdminBanner',
+        params: idParams,
+        body: BannerDeleteSchema,
+        response: { 200: okSchema },
+      },
+    },
+    async (request) =>
+      execute(request, '移除 Banner 图片', async () => {
+        const { banner_id: id } = request.params as { banner_id: string };
+        const { version } = request.body as { version: number };
+        return withAdminMutation(prisma, request, 'banners:write', async (tx, auth) => {
+          const row = await editableBanner(tx, id, version);
+          await tx.appBanner.update({
+            where: { id, version },
+            data: {
+              deletedAt: new Date(),
+              isEnabled: false,
+              updatedBy: auth.username,
+              version: { increment: 1 },
+            },
+          });
+          await writeAuditLog(tx, {
+            actor: `admin:${auth.adminId}`,
+            action: 'banner.delete',
+            target: { type: 'app_banner', id },
+            requestId: request.id,
+            ip: request.ip,
+            metadata: { slot: row.slot },
+          });
+          return { ok: true as const };
+        });
+      }),
+  );
+  app.post(
+    '/api/v1/admin/banners/:slot/reset',
+    {
+      onRequest: verifyAdminWriteRequest(config),
+      preHandler: authenticateAdmin(config, prisma, 'banners:write'),
+      schema: {
+        tags: ['admin-banners'],
+        operationId: 'resetAdminBannerSlot',
+        params: Type.Object({ slot: BannerSlotSchema }),
+        body: BannerResetSchema,
+        response: { 200: okSchema },
+      },
+    },
+    async (request) =>
+      execute(request, '恢复 Banner 默认图片', async () => {
+        const { slot } = request.params as { slot: BannerSlot };
+        const body = request.body as BannerReset;
+        return withAdminMutation(prisma, request, 'banners:write', async (tx, auth) => {
+          const rows = await tx.appBanner.findMany({ where: { ...activeBannerWhere, slot } });
+          const requested = new Map(body.revisions.map((row) => [row.id, row.version]));
+          // 必须与管理员看到的完整位置快照一致，不能悄悄清除后来新增或修改的图片。
+          if (
+            requested.size !== body.revisions.length ||
+            rows.length !== requested.size ||
+            rows.some((row) => requested.get(row.id) !== row.version)
+          )
+            throw new ApiError(409, 'BANNER_VERSION_CONFLICT', '此位置的图片已变化，请刷新并确认后重试');
+          if (rows.length)
+            await tx.appBanner.updateMany({
+              where: { ...activeBannerWhere, slot },
+              data: { deletedAt: new Date(), isEnabled: false, updatedBy: auth.username, version: { increment: 1 } },
+            });
+          await writeAuditLog(tx, {
+            actor: `admin:${auth.adminId}`,
+            action: 'banner.reset',
+            target: { type: 'app_banner_slot', id: slot },
+            requestId: request.id,
+            ip: request.ip,
+            metadata: { count: rows.length, target_display: slotNames[slot] },
+          });
+          return { ok: true as const };
         });
       }),
   );
   registerBannerMediaRoutes(app, prisma, config);
 }
-
 /** 图片上传受独立权限保护，公开媒体地址只读取当前启用 Banner 的引用。 */
 function registerBannerMediaRoutes(app: FastifyInstance, prisma: PrismaClient, config: ApiConfig): void {
   app.post(
@@ -206,7 +409,10 @@ function registerBannerMediaRoutes(app: FastifyInstance, prisma: PrismaClient, c
           const media = await prisma.appBannerMedia.findUnique({ where: { id } });
           const referenced =
             admin ||
-            (await prisma.appBanner.findFirst({ where: { imageId: id, isEnabled: true }, select: { slot: true } }));
+            (await prisma.appBanner.findFirst({
+              where: { imageId: id, isEnabled: true, deletedAt: null },
+              select: { slot: true },
+            }));
           if (!media || !referenced) throw new ApiError(404, 'BANNER_MEDIA_NOT_FOUND', 'Banner 图片不存在');
           let bytes: Buffer;
           try {

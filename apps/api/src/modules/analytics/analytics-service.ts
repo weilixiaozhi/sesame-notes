@@ -3,6 +3,7 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import { ApiError } from '../../shared/errors.js';
 import type { AnalyticsEventInput, AnalyticsQuery } from './analytics-contract.js';
 import { ANALYTICS_DEFINITION_MAP, ANALYTICS_PAGE_DEFINITION_MAP } from './analytics-catalog.js';
+import { ANALYTICS_BANNER_PAGES } from './analytics-banner-contract.js';
 
 const DAY_MS = 86_400_000;
 const SHANGHAI_OFFSET_MS = 8 * 3_600_000;
@@ -45,6 +46,41 @@ export function analyticsRange(query: AnalyticsQuery, now = new Date()) {
   return { start, end: new Date(Math.min(end.getTime(), now.getTime() + 1)), bucket };
 }
 
+/** Banner 的素材归因必须完整且与真实页面匹配，其他事件不能夹带这些专属维度。 */
+function validateBannerDimensions(event: AnalyticsEventInput): void {
+  const bannerEvent = event.event_name === 'banner_impression' || event.event_name === 'banner_click';
+  if (!bannerEvent) {
+    if (
+      event.banner_id !== undefined ||
+      event.banner_slot !== undefined ||
+      event.banner_source !== undefined ||
+      event.banner_version !== undefined
+    ) {
+      throw new ApiError(400, 'ANALYTICS_BANNER_INVALID', '非 Banner 事件不能携带 Banner 归因字段');
+    }
+    return;
+  }
+  const version = event.banner_version;
+  if (
+    event.kind !== 'action' ||
+    event.platform !== 'app' ||
+    !event.banner_slot ||
+    !event.banner_id ||
+    !Object.hasOwn(ANALYTICS_BANNER_PAGES, event.banner_slot) ||
+    ANALYTICS_BANNER_PAGES[event.banner_slot] !== event.page_id ||
+    version === undefined ||
+    !Number.isInteger(version) ||
+    version > 2_147_483_647 ||
+    (event.banner_source === 'builtin'
+      ? version !== 0 || event.banner_id !== `builtin:${event.banner_slot}`
+      : event.banner_source !== 'remote' ||
+        version < 1 ||
+        !/^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i.test(event.banner_id))
+  ) {
+    throw new ApiError(400, 'ANALYTICS_BANNER_INVALID', 'Banner 位置、素材来源、版本或发生页面不匹配');
+  }
+}
+
 /** 批量重报按账号和事件标识幂等；活动与访问由同一登录账号跨端合并。 */
 export async function ingestAnalyticsEvents(
   prisma: PrismaClient,
@@ -55,6 +91,7 @@ export async function ingestAnalyticsEvents(
   try {
     const actorKey = analyticsActorKey(userId);
     const data = events.map((event) => {
+      validateBannerDimensions(event);
       const occurredAt = new Date(event.occurred_at);
       if (
         !Number.isFinite(occurredAt.getTime()) ||
@@ -102,6 +139,10 @@ export async function ingestAnalyticsEvents(
         sessionId: event.session_id,
         eventSequence: event.event_sequence,
         flowId: event.flow_id ?? null,
+        bannerSlot: event.banner_slot ?? null,
+        bannerId: event.banner_id?.toLowerCase() ?? null,
+        bannerSource: event.banner_source ?? null,
+        bannerVersion: event.banner_version ?? null,
       };
     });
     const result = await prisma.productAnalyticsEvent.createMany({ data, skipDuplicates: true });

@@ -133,7 +133,9 @@ export async function readAnalyticsFunnel(prisma: PrismaClient, query: Analytics
           )} ORDER BY step`);
         const counts = new Map(rows.map((row) => [row.step, Number(row.users)]));
         const missingContextEvents = counts.get(-1) ?? 0;
-        const collectionStartedAt = state.startedAt;
+        const collectionStartedAt = query.steps.some((id) => id === 'banner_impression' || id === 'banner_click')
+          ? state.bannerStartedAt
+          : state.startedAt;
         const complete = start.getTime() >= collectionStartedAt.getTime() && missingContextEvents === 0;
         const firstUsers = counts.get(0) ?? 0;
         return {

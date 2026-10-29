@@ -1,20 +1,36 @@
-.banner-grid {
+.banner-thumbnail {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
-  gap: var(--space-6);
-}
-.banner-card {
+  place-items: center;
+  width: 108px;
+  aspect-ratio: 3 / 1;
+  padding: 0;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-small);
+  background: var(--secondary);
+  font-size: var(--text-small);
+}
+.banner-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.banner-source {
+  display: block;
+  margin-top: var(--space-1);
+}
+.banner-statistics-note {
+  margin: var(--space-3) var(--space-4);
+}
+.banner-table td {
+  vertical-align: middle;
 }
 .banner-preview {
   display: block;
   width: 100%;
   aspect-ratio: 3 / 1;
   object-fit: cover;
+  border-radius: var(--radius-small);
   background: var(--secondary);
 }
 .banner-preview-error {
@@ -23,24 +39,19 @@
   padding: var(--space-4);
   color: var(--muted);
 }
-.banner-card-content {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-4);
-  padding: var(--space-5);
-}
-.banner-card-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-.banner-card-heading h2 {
-  font-size: var(--text-base);
-}
 .banner-editor {
   width: min(760px, calc(100vw - var(--space-8)));
 }
-.banner-editor .banner-preview {
-  border-radius: var(--radius-small);
+.banner-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.banner-target-search {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+}
+.banner-target-search .field {
+  flex: 1;
 }

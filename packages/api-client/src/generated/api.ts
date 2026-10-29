@@ -632,6 +632,22 @@ export interface paths {
         };
         get: operations["listAdminBanners"];
         put?: never;
+        post: operations["createAdminBanner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/banners/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdminBannerTargets"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -639,7 +655,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/banners/{slot}": {
+    "/api/v1/admin/banners/{banner_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -647,8 +663,24 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["updateAdminBanner"];
+        put?: never;
         post?: never;
+        delete: operations["deleteAdminBanner"];
+        options?: never;
+        head?: never;
+        patch: operations["updateAdminBanner"];
+        trace?: never;
+    };
+    "/api/v1/admin/banners/{slot}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resetAdminBannerSlot"];
         delete?: never;
         options?: never;
         head?: never;
@@ -695,6 +727,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getAdminBannerImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/banners/statistics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAdminBannerStatistics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7454,7 +7502,9 @@ export interface operations {
     };
     getAppBanners: {
         parameters: {
-            query?: never;
+            query?: {
+                format?: "carousel";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7475,6 +7525,18 @@ export interface operations {
                             is_enabled: boolean;
                             version: number;
                             updated_at: string | null;
+                        }[];
+                    } | {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            slot: "fitness-plan-library" | "fitness-template-library";
+                            image_path: string | null;
+                            target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates" | "official-plan" | "official-template";
+                            target_id: string | null;
+                            target_name: string | null;
+                            version: number;
+                            sort_order: number;
                         }[];
                     };
                 };
@@ -7572,13 +7634,346 @@ export interface operations {
                 content: {
                     "application/json": {
                         items: {
+                            id: string;
                             slot: "fitness-plan-library" | "fitness-template-library";
                             image_path: string | null;
-                            target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates";
-                            is_enabled: boolean;
+                            target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates" | "official-plan" | "official-template";
+                            target_id: string | null;
+                            target_name: string | null;
                             version: number;
+                            sort_order: number;
+                            source: "builtin" | "remote";
                             updated_at: string | null;
+                            updated_by: string | null;
                         }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createAdminBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    slot: "fitness-plan-library" | "fitness-template-library";
+                    image_id: string;
+                    target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates" | "official-plan" | "official-template";
+                    target_id: string | null;
+                    sort_order: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        slot: "fitness-plan-library" | "fitness-template-library";
+                        image_path: string | null;
+                        target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates" | "official-plan" | "official-template";
+                        target_id: string | null;
+                        target_name: string | null;
+                        version: number;
+                        sort_order: number;
+                        source: "builtin" | "remote";
+                        updated_at: string | null;
+                        updated_by: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listAdminBannerTargets: {
+        parameters: {
+            query: {
+                kind: "plan" | "template";
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            name: {
+                                zh: string;
+                                zh_hant: string;
+                                en: string;
+                            };
+                        }[];
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteAdminBanner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                banner_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    version: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        ok: true;
                     };
                 };
             };
@@ -7663,17 +8058,19 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slot: "fitness-plan-library" | "fitness-template-library";
+                banner_id: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
                 "application/json": {
+                    slot: "fitness-plan-library" | "fitness-template-library";
+                    image_id: string;
+                    target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates" | "official-plan" | "official-template";
+                    target_id: string | null;
+                    sort_order: number;
                     version: number;
-                    image_id: string | null;
-                    target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates";
-                    is_enabled: boolean;
                 };
             };
         };
@@ -7685,12 +8082,126 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        id: string;
                         slot: "fitness-plan-library" | "fitness-template-library";
                         image_path: string | null;
-                        target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates";
-                        is_enabled: boolean;
+                        target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates" | "official-plan" | "official-template";
+                        target_id: string | null;
+                        target_name: string | null;
                         version: number;
+                        sort_order: number;
+                        source: "builtin" | "remote";
                         updated_at: string | null;
+                        updated_by: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    resetAdminBannerSlot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slot: "fitness-plan-library" | "fitness-template-library";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    revisions: {
+                        /** Format: uuid */
+                        id: string;
+                        version: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        ok: true;
                     };
                 };
             };
@@ -8068,6 +8579,128 @@ export interface operations {
             };
         };
     };
+    getAdminBannerStatistics: {
+        parameters: {
+            query: {
+                start_date: string;
+                end_date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        range: {
+                            start_date: string;
+                            end_date: string;
+                            /** @enum {string} */
+                            timezone: "Asia/Shanghai";
+                        };
+                        /** @enum {string} */
+                        scope: "current";
+                        items: {
+                            banner_id: string | "builtin:fitness-plan-library" | "builtin:fitness-template-library";
+                            slot: "fitness-plan-library" | "fitness-template-library";
+                            source: "builtin" | "remote";
+                            version: number;
+                            impressions: number;
+                            clicks: number;
+                            ctr: number | null;
+                        }[];
+                        coverage: {
+                            /** Format: date-time */
+                            collection_started_at: string;
+                            complete: boolean;
+                            /** @enum {string} */
+                            audience: "authenticated_users";
+                        };
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     postAnalyticsEvents: {
         parameters: {
             query?: never;
@@ -8087,12 +8720,16 @@ export interface operations {
                         page_id?: "home" | "accounting" | "accounting.transaction" | "accounting.transaction.editor" | "accounting.statistics" | "accounting.categories" | "accounting.aa_split.editor" | "accounting.aa_statistics" | "accounting.member_statistics" | "accounting.ledgers.edit" | "accounting.sharing" | "fitness" | "fitness.exercises" | "fitness.exercise" | "fitness.templates" | "fitness.template" | "fitness.plans" | "fitness.plan" | "fitness.workouts" | "fitness.workout" | "fitness.statistics" | "fitness.calendar" | "fitness.templates.library" | "fitness.templates.library.detail" | "fitness.plans.library.detail" | "fitness.library" | "fitness.workouts.editor" | "memos" | "memos.detail" | "memos.editor" | "credentials" | "credentials.detail" | "credentials.editor" | "credentials.books.edit" | "days" | "days.detail" | "days.editor" | "days.calendar" | "calendar" | "settings" | "settings.profile" | "accounting.categories.edit" | "accounting.categories.templates.flat" | "accounting.categories.templates.hierarchical" | "accounting.categories.detail" | "accounting.aa_member.detail" | "accounting.ledgers" | "accounting.ledgers.archived" | "accounting.ledgers.join" | "accounting.currency" | "accounting.exchange_rate" | "accounting.recurring.editor" | "fitness.spaces" | "fitness.spaces.edit" | "fitness.exercises.edit" | "fitness.templates.edit" | "fitness.plans.library" | "fitness.plans.edit" | "memos.tools" | "memos.books" | "memos.books.edit" | "days.tools" | "days.books" | "days.books.edit" | "settings.profile.name" | "settings.profile.avatar" | "settings.profile.gender" | "settings.reminder" | "settings.language" | "settings.theme" | "settings.app_lock" | "settings.cloud" | "settings.sync";
                         platform: "app" | "web";
                         app_version?: string;
-                        event_name?: "home_view" | "accounting_view" | "accounting_transaction_view" | "accounting_transaction_editor_view" | "accounting_statistics_view" | "accounting_categories_view" | "accounting_aa_split_editor_view" | "accounting_aa_statistics_view" | "accounting_member_statistics_view" | "accounting_ledgers_edit_view" | "accounting_sharing_view" | "fitness_view" | "fitness_exercises_view" | "fitness_exercise_view" | "fitness_templates_view" | "fitness_template_view" | "fitness_plans_view" | "fitness_plan_view" | "fitness_workouts_view" | "fitness_workout_view" | "fitness_statistics_view" | "fitness_calendar_view" | "fitness_templates_library_view" | "fitness_templates_library_detail_view" | "fitness_plans_library_detail_view" | "fitness_library_view" | "fitness_workouts_editor_view" | "memos_view" | "memos_detail_view" | "memos_editor_view" | "credentials_view" | "credentials_detail_view" | "credentials_editor_view" | "credentials_books_edit_view" | "days_view" | "days_detail_view" | "days_editor_view" | "days_calendar_view" | "calendar_view" | "settings_view" | "settings_profile_view" | "accounting_categories_edit_view" | "accounting_categories_templates_flat_view" | "accounting_categories_templates_hierarchical_view" | "accounting_categories_detail_view" | "accounting_aa_member_detail_view" | "accounting_ledgers_view" | "accounting_ledgers_archived_view" | "accounting_ledgers_join_view" | "accounting_currency_view" | "accounting_exchange_rate_view" | "accounting_recurring_editor_view" | "fitness_spaces_view" | "fitness_spaces_edit_view" | "fitness_exercises_edit_view" | "fitness_templates_edit_view" | "fitness_plans_library_view" | "fitness_plans_edit_view" | "memos_tools_view" | "memos_books_view" | "memos_books_edit_view" | "days_tools_view" | "days_books_view" | "days_books_edit_view" | "settings_profile_name_view" | "settings_profile_avatar_view" | "settings_profile_gender_view" | "settings_reminder_view" | "settings_language_view" | "settings_theme_view" | "settings_app_lock_view" | "settings_cloud_view" | "settings_sync_view" | "navigation_mode_select" | "navigation_tab_select" | "accounting_ledger_select" | "accounting_transaction_create_click" | "accounting_transaction_open_click" | "accounting_transaction_edit_click" | "accounting_transaction_save_click" | "accounting_transaction_created" | "accounting_transaction_updated" | "accounting_transaction_deleted" | "accounting_statistics_open_click" | "accounting_categories_open_click" | "fitness_tab_select" | "fitness_space_select" | "fitness_workout_create_click" | "fitness_workout_open_click" | "fitness_workout_save_click" | "fitness_workout_created" | "fitness_workout_updated" | "fitness_workout_start_click" | "fitness_workout_started" | "fitness_workout_pause_click" | "fitness_workout_paused" | "fitness_workout_finish_click" | "fitness_workout_completed" | "fitness_template_save_click" | "fitness_template_saved" | "fitness_plan_save_click" | "fitness_plan_saved" | "fitness_template_add_click" | "fitness_template_added" | "fitness_plan_add_click" | "fitness_plan_added" | "memos_note_create_click" | "memos_note_open_click" | "memos_note_save_click" | "memos_note_saved" | "memos_note_created" | "memos_note_deleted" | "memos_book_select" | "credentials_create_click" | "credentials_open_click" | "credentials_save_click" | "credentials_saved" | "credentials_created" | "credentials_deleted" | "credentials_book_select" | "days_event_create_click" | "days_event_open_click" | "days_event_save_click" | "days_event_saved" | "days_event_created" | "days_event_deleted" | "days_book_select" | "calendar_day_select" | "calendar_section_open_click" | "calendar_create_click" | "settings_theme_changed" | "settings_language_changed" | "settings_app_lock_changed" | "settings_reminder_changed";
+                        event_name?: "banner_impression" | "banner_click" | "home_view" | "accounting_view" | "accounting_transaction_view" | "accounting_transaction_editor_view" | "accounting_statistics_view" | "accounting_categories_view" | "accounting_aa_split_editor_view" | "accounting_aa_statistics_view" | "accounting_member_statistics_view" | "accounting_ledgers_edit_view" | "accounting_sharing_view" | "fitness_view" | "fitness_exercises_view" | "fitness_exercise_view" | "fitness_templates_view" | "fitness_template_view" | "fitness_plans_view" | "fitness_plan_view" | "fitness_workouts_view" | "fitness_workout_view" | "fitness_statistics_view" | "fitness_calendar_view" | "fitness_templates_library_view" | "fitness_templates_library_detail_view" | "fitness_plans_library_detail_view" | "fitness_library_view" | "fitness_workouts_editor_view" | "memos_view" | "memos_detail_view" | "memos_editor_view" | "credentials_view" | "credentials_detail_view" | "credentials_editor_view" | "credentials_books_edit_view" | "days_view" | "days_detail_view" | "days_editor_view" | "days_calendar_view" | "calendar_view" | "settings_view" | "settings_profile_view" | "accounting_categories_edit_view" | "accounting_categories_templates_flat_view" | "accounting_categories_templates_hierarchical_view" | "accounting_categories_detail_view" | "accounting_aa_member_detail_view" | "accounting_ledgers_view" | "accounting_ledgers_archived_view" | "accounting_ledgers_join_view" | "accounting_currency_view" | "accounting_exchange_rate_view" | "accounting_recurring_editor_view" | "fitness_spaces_view" | "fitness_spaces_edit_view" | "fitness_exercises_edit_view" | "fitness_templates_edit_view" | "fitness_plans_library_view" | "fitness_plans_edit_view" | "memos_tools_view" | "memos_books_view" | "memos_books_edit_view" | "days_tools_view" | "days_books_view" | "days_books_edit_view" | "settings_profile_name_view" | "settings_profile_avatar_view" | "settings_profile_gender_view" | "settings_reminder_view" | "settings_language_view" | "settings_theme_view" | "settings_app_lock_view" | "settings_cloud_view" | "settings_sync_view" | "navigation_mode_select" | "navigation_tab_select" | "accounting_ledger_select" | "accounting_transaction_create_click" | "accounting_transaction_open_click" | "accounting_transaction_edit_click" | "accounting_transaction_save_click" | "accounting_transaction_created" | "accounting_transaction_updated" | "accounting_transaction_deleted" | "accounting_statistics_open_click" | "accounting_categories_open_click" | "fitness_tab_select" | "fitness_space_select" | "fitness_workout_create_click" | "fitness_workout_open_click" | "fitness_workout_save_click" | "fitness_workout_created" | "fitness_workout_updated" | "fitness_workout_start_click" | "fitness_workout_started" | "fitness_workout_pause_click" | "fitness_workout_paused" | "fitness_workout_finish_click" | "fitness_workout_completed" | "fitness_template_save_click" | "fitness_template_saved" | "fitness_plan_save_click" | "fitness_plan_saved" | "fitness_template_add_click" | "fitness_template_added" | "fitness_plan_add_click" | "fitness_plan_added" | "memos_note_create_click" | "memos_note_open_click" | "memos_note_save_click" | "memos_note_saved" | "memos_note_created" | "memos_note_deleted" | "memos_book_select" | "credentials_create_click" | "credentials_open_click" | "credentials_save_click" | "credentials_saved" | "credentials_created" | "credentials_deleted" | "credentials_book_select" | "days_event_create_click" | "days_event_open_click" | "days_event_save_click" | "days_event_saved" | "days_event_created" | "days_event_deleted" | "days_book_select" | "calendar_day_select" | "calendar_section_open_click" | "calendar_create_click" | "settings_theme_changed" | "settings_language_changed" | "settings_app_lock_changed" | "settings_reminder_changed";
                         /** Format: uuid */
                         session_id: string;
                         event_sequence: number;
                         /** Format: uuid */
                         flow_id?: string;
+                        banner_slot?: "fitness-plan-library" | "fitness-template-library";
+                        banner_id?: string | "builtin:fitness-plan-library" | "builtin:fitness-template-library";
+                        banner_source?: "builtin" | "remote";
+                        banner_version?: number;
                     }[];
                 };
             };
@@ -8320,7 +8957,7 @@ export interface operations {
                 platform?: "all" | "app" | "web";
                 bucket?: "auto" | "hour" | "day" | "month";
                 page_id?: "home" | "accounting" | "accounting.transaction" | "accounting.transaction.editor" | "accounting.statistics" | "accounting.categories" | "accounting.aa_split.editor" | "accounting.aa_statistics" | "accounting.member_statistics" | "accounting.ledgers.edit" | "accounting.sharing" | "fitness" | "fitness.exercises" | "fitness.exercise" | "fitness.templates" | "fitness.template" | "fitness.plans" | "fitness.plan" | "fitness.workouts" | "fitness.workout" | "fitness.statistics" | "fitness.calendar" | "fitness.templates.library" | "fitness.templates.library.detail" | "fitness.plans.library.detail" | "fitness.library" | "fitness.workouts.editor" | "memos" | "memos.detail" | "memos.editor" | "credentials" | "credentials.detail" | "credentials.editor" | "credentials.books.edit" | "days" | "days.detail" | "days.editor" | "days.calendar" | "calendar" | "settings" | "settings.profile" | "accounting.categories.edit" | "accounting.categories.templates.flat" | "accounting.categories.templates.hierarchical" | "accounting.categories.detail" | "accounting.aa_member.detail" | "accounting.ledgers" | "accounting.ledgers.archived" | "accounting.ledgers.join" | "accounting.currency" | "accounting.exchange_rate" | "accounting.recurring.editor" | "fitness.spaces" | "fitness.spaces.edit" | "fitness.exercises.edit" | "fitness.templates.edit" | "fitness.plans.library" | "fitness.plans.edit" | "memos.tools" | "memos.books" | "memos.books.edit" | "days.tools" | "days.books" | "days.books.edit" | "settings.profile.name" | "settings.profile.avatar" | "settings.profile.gender" | "settings.reminder" | "settings.language" | "settings.theme" | "settings.app_lock" | "settings.cloud" | "settings.sync";
-                event_name?: "home_view" | "accounting_view" | "accounting_transaction_view" | "accounting_transaction_editor_view" | "accounting_statistics_view" | "accounting_categories_view" | "accounting_aa_split_editor_view" | "accounting_aa_statistics_view" | "accounting_member_statistics_view" | "accounting_ledgers_edit_view" | "accounting_sharing_view" | "fitness_view" | "fitness_exercises_view" | "fitness_exercise_view" | "fitness_templates_view" | "fitness_template_view" | "fitness_plans_view" | "fitness_plan_view" | "fitness_workouts_view" | "fitness_workout_view" | "fitness_statistics_view" | "fitness_calendar_view" | "fitness_templates_library_view" | "fitness_templates_library_detail_view" | "fitness_plans_library_detail_view" | "fitness_library_view" | "fitness_workouts_editor_view" | "memos_view" | "memos_detail_view" | "memos_editor_view" | "credentials_view" | "credentials_detail_view" | "credentials_editor_view" | "credentials_books_edit_view" | "days_view" | "days_detail_view" | "days_editor_view" | "days_calendar_view" | "calendar_view" | "settings_view" | "settings_profile_view" | "accounting_categories_edit_view" | "accounting_categories_templates_flat_view" | "accounting_categories_templates_hierarchical_view" | "accounting_categories_detail_view" | "accounting_aa_member_detail_view" | "accounting_ledgers_view" | "accounting_ledgers_archived_view" | "accounting_ledgers_join_view" | "accounting_currency_view" | "accounting_exchange_rate_view" | "accounting_recurring_editor_view" | "fitness_spaces_view" | "fitness_spaces_edit_view" | "fitness_exercises_edit_view" | "fitness_templates_edit_view" | "fitness_plans_library_view" | "fitness_plans_edit_view" | "memos_tools_view" | "memos_books_view" | "memos_books_edit_view" | "days_tools_view" | "days_books_view" | "days_books_edit_view" | "settings_profile_name_view" | "settings_profile_avatar_view" | "settings_profile_gender_view" | "settings_reminder_view" | "settings_language_view" | "settings_theme_view" | "settings_app_lock_view" | "settings_cloud_view" | "settings_sync_view" | "navigation_mode_select" | "navigation_tab_select" | "accounting_ledger_select" | "accounting_transaction_create_click" | "accounting_transaction_open_click" | "accounting_transaction_edit_click" | "accounting_transaction_save_click" | "accounting_transaction_created" | "accounting_transaction_updated" | "accounting_transaction_deleted" | "accounting_statistics_open_click" | "accounting_categories_open_click" | "fitness_tab_select" | "fitness_space_select" | "fitness_workout_create_click" | "fitness_workout_open_click" | "fitness_workout_save_click" | "fitness_workout_created" | "fitness_workout_updated" | "fitness_workout_start_click" | "fitness_workout_started" | "fitness_workout_pause_click" | "fitness_workout_paused" | "fitness_workout_finish_click" | "fitness_workout_completed" | "fitness_template_save_click" | "fitness_template_saved" | "fitness_plan_save_click" | "fitness_plan_saved" | "fitness_template_add_click" | "fitness_template_added" | "fitness_plan_add_click" | "fitness_plan_added" | "memos_note_create_click" | "memos_note_open_click" | "memos_note_save_click" | "memos_note_saved" | "memos_note_created" | "memos_note_deleted" | "memos_book_select" | "credentials_create_click" | "credentials_open_click" | "credentials_save_click" | "credentials_saved" | "credentials_created" | "credentials_deleted" | "credentials_book_select" | "days_event_create_click" | "days_event_open_click" | "days_event_save_click" | "days_event_saved" | "days_event_created" | "days_event_deleted" | "days_book_select" | "calendar_day_select" | "calendar_section_open_click" | "calendar_create_click" | "settings_theme_changed" | "settings_language_changed" | "settings_app_lock_changed" | "settings_reminder_changed";
+                event_name?: "banner_impression" | "banner_click" | "home_view" | "accounting_view" | "accounting_transaction_view" | "accounting_transaction_editor_view" | "accounting_statistics_view" | "accounting_categories_view" | "accounting_aa_split_editor_view" | "accounting_aa_statistics_view" | "accounting_member_statistics_view" | "accounting_ledgers_edit_view" | "accounting_sharing_view" | "fitness_view" | "fitness_exercises_view" | "fitness_exercise_view" | "fitness_templates_view" | "fitness_template_view" | "fitness_plans_view" | "fitness_plan_view" | "fitness_workouts_view" | "fitness_workout_view" | "fitness_statistics_view" | "fitness_calendar_view" | "fitness_templates_library_view" | "fitness_templates_library_detail_view" | "fitness_plans_library_detail_view" | "fitness_library_view" | "fitness_workouts_editor_view" | "memos_view" | "memos_detail_view" | "memos_editor_view" | "credentials_view" | "credentials_detail_view" | "credentials_editor_view" | "credentials_books_edit_view" | "days_view" | "days_detail_view" | "days_editor_view" | "days_calendar_view" | "calendar_view" | "settings_view" | "settings_profile_view" | "accounting_categories_edit_view" | "accounting_categories_templates_flat_view" | "accounting_categories_templates_hierarchical_view" | "accounting_categories_detail_view" | "accounting_aa_member_detail_view" | "accounting_ledgers_view" | "accounting_ledgers_archived_view" | "accounting_ledgers_join_view" | "accounting_currency_view" | "accounting_exchange_rate_view" | "accounting_recurring_editor_view" | "fitness_spaces_view" | "fitness_spaces_edit_view" | "fitness_exercises_edit_view" | "fitness_templates_edit_view" | "fitness_plans_library_view" | "fitness_plans_edit_view" | "memos_tools_view" | "memos_books_view" | "memos_books_edit_view" | "days_tools_view" | "days_books_view" | "days_books_edit_view" | "settings_profile_name_view" | "settings_profile_avatar_view" | "settings_profile_gender_view" | "settings_reminder_view" | "settings_language_view" | "settings_theme_view" | "settings_app_lock_view" | "settings_cloud_view" | "settings_sync_view" | "navigation_mode_select" | "navigation_tab_select" | "accounting_ledger_select" | "accounting_transaction_create_click" | "accounting_transaction_open_click" | "accounting_transaction_edit_click" | "accounting_transaction_save_click" | "accounting_transaction_created" | "accounting_transaction_updated" | "accounting_transaction_deleted" | "accounting_statistics_open_click" | "accounting_categories_open_click" | "fitness_tab_select" | "fitness_space_select" | "fitness_workout_create_click" | "fitness_workout_open_click" | "fitness_workout_save_click" | "fitness_workout_created" | "fitness_workout_updated" | "fitness_workout_start_click" | "fitness_workout_started" | "fitness_workout_pause_click" | "fitness_workout_paused" | "fitness_workout_finish_click" | "fitness_workout_completed" | "fitness_template_save_click" | "fitness_template_saved" | "fitness_plan_save_click" | "fitness_plan_saved" | "fitness_template_add_click" | "fitness_template_added" | "fitness_plan_add_click" | "fitness_plan_added" | "memos_note_create_click" | "memos_note_open_click" | "memos_note_save_click" | "memos_note_saved" | "memos_note_created" | "memos_note_deleted" | "memos_book_select" | "credentials_create_click" | "credentials_open_click" | "credentials_save_click" | "credentials_saved" | "credentials_created" | "credentials_deleted" | "credentials_book_select" | "days_event_create_click" | "days_event_open_click" | "days_event_save_click" | "days_event_saved" | "days_event_created" | "days_event_deleted" | "days_book_select" | "calendar_day_select" | "calendar_section_open_click" | "calendar_create_click" | "settings_theme_changed" | "settings_language_changed" | "settings_app_lock_changed" | "settings_reminder_changed";
                 behavior?: "view" | "click" | "complete";
             };
             header?: never;
@@ -8373,6 +9010,12 @@ export interface operations {
                             event_name: string;
                             name: string;
                             behavior: "click" | "complete";
+                            total: number;
+                            users: number;
+                        }[];
+                        exposures?: {
+                            event_name: string;
+                            name: string;
                             total: number;
                             users: number;
                         }[];

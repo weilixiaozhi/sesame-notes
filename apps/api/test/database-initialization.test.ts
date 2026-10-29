@@ -981,8 +981,49 @@ it('旧 TEXT 标题升级为 JSON 字符串时逐字保留标题、正文、版�
 it('已有数据的库增量升级保留数据，失败迁移不丢数据且不记为已应用', async () => {
   await withIsolatedDatabase(async (url, database) => {
     let project: string | undefined;
+    let previousSetup: string | undefined;
     try {
+      previousSetup = await createUpgradeProject({}, '20261029002000_banner_analytics');
+      await initialize(url, database, previousSetup);
+      const imageId = 'a'.repeat(64);
+      const oldTime = new Date('2026-10-29T01:00:00Z');
+      await database.$executeRaw`
+        INSERT INTO app_banner_media (id,file_name,byte_size,width,height)
+        VALUES (${imageId},'previous-banner.webp',100,600,200)
+      `;
+      await database.$executeRaw`
+        INSERT INTO app_banners (slot,image_id,target,is_enabled,version,updated_at)
+        VALUES ('fitness-plan-library',${imageId},'fitness-plan-library',true,7,${oldTime}),
+          ('fitness-template-library',NULL,'fitness-template-library',false,3,${oldTime})
+      `;
+      const previousEventId = randomUUID();
+      await database.$executeRaw`
+        INSERT INTO product_analytics_events
+          (actor_key,event_id,kind,occurred_at,platform,page_id,event_name,banner_slot,banner_source,banner_version)
+        VALUES (${'b'.repeat(64)},${previousEventId}::uuid,'action',${oldTime},'app','fitness.plans',
+          'banner_impression','fitness-plan-library','remote',7)
+      `;
       await initialize(url, database);
+      const migrated = await database.appBanner.findMany({ orderBy: { slot: 'asc' } });
+      expect(migrated).toHaveLength(2);
+      expect(migrated[0]).toMatchObject({
+        slot: 'fitness-plan-library',
+        imageId,
+        target: 'fitness-plan-library',
+        targetId: null,
+        version: 7,
+        sortOrder: 0,
+        isEnabled: true,
+        deletedAt: null,
+        updatedAt: oldTime,
+      });
+      expect(migrated[0]!.id).toMatch(/^[a-f0-9-]{36}$/);
+      expect(migrated[1]).toMatchObject({ version: 3, isEnabled: false, deletedAt: oldTime });
+      expect(
+        (await database.productAnalyticsEvent.findFirstOrThrow({ where: { eventId: previousEventId } })).bannerId,
+      ).toBeNull();
+      await initialize(url, database);
+      expect(await database.appBanner.findMany({ orderBy: { slot: 'asc' } })).toEqual(migrated);
       await database.$executeRawUnsafe(
         `INSERT INTO users (id, phone_e164, sesame_number, password_hash, created_at)
          VALUES (gen_random_uuid(), '+8613900000000', '100000001', 'probe-hash', now())`,
@@ -1009,6 +1050,7 @@ it('已有数据的库增量升级保留数据，失败迁移不丢数据且不�
       throw new Error('增量迁移验收失败，请查看原始错误', { cause });
     } finally {
       if (project) await removeOwnedFixture(dirname(dirname(project)));
+      if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
     }
   });
 }, 180_000);

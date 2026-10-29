@@ -695,6 +695,35 @@ function actionLocation(event: string): string {
 }
 
 export const ANALYTICS_DEFINITIONS: AnalyticsDefinition[] = [
+  {
+    id: 'banner_impression',
+    event_name: 'banner_impression',
+    page_id: null,
+    kind: 'action',
+    behavior: 'view',
+    name: 'Banner_曝光',
+    location:
+      'App：计划页或模板页；当前轮播图片有效、应用在前台、当前路由无遮挡且图片至少 50% 可见，同次页面访问内每张图片及版本记录一次；预加载邻图不计曝光，切图不增加页面访问',
+    platforms: ['app'],
+    source_pages: [
+      { page_id: 'fitness.plans', platforms: ['app'] },
+      { page_id: 'fitness.templates', platforms: ['app'] },
+    ],
+  },
+  {
+    id: 'banner_click',
+    event_name: 'banner_click',
+    page_id: null,
+    kind: 'action',
+    behavior: 'click',
+    name: 'Banner_点击',
+    location: 'App：计划页或模板页的图片入口；仅记录用户真实点击，归因于当时实际显示的内置或在线素材及版本',
+    platforms: ['app'],
+    source_pages: [
+      { page_id: 'fitness.plans', platforms: ['app'] },
+      { page_id: 'fitness.templates', platforms: ['app'] },
+    ],
+  },
   ...ANALYTICS_PAGE_IDS.map((page_id): AnalyticsDefinition => ({
     id: analyticsPageEventName(page_id),
     page_id,

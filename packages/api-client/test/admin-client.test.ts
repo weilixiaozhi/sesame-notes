@@ -13,11 +13,20 @@ describe('后台客户端凭证边界', () => {
     const fetch = vi.fn().mockResolvedValue(response(409, { code: 'BANNER_VERSION_CONFLICT', message: '配置已变化' }));
     vi.stubGlobal('fetch', fetch);
     const api = new AdminApiClient({ baseUrl: 'https://admin.example' });
-    const body = { version: 3, image_id: 'a'.repeat(64), target: 'fitness-exercises' as const, is_enabled: true };
-    await expect(api.adminBanners.update('fitness-plan-library', body)).rejects.toMatchObject({ status: 409 });
+    const id = '11111111-1111-4111-8111-111111111111';
+    const body = {
+      version: 3,
+      slot: 'fitness-plan-library' as const,
+      image_id: 'a'.repeat(64),
+      target: 'fitness-exercises' as const,
+      target_id: null,
+      sort_order: 0,
+    };
+    await expect(api.adminBanners.update(id, body)).rejects.toMatchObject({ status: 409 });
     expect(fetch).toHaveBeenCalledOnce();
     const sent = fetch.mock.calls[0]![0] as Request;
-    expect(sent.url).toBe('https://admin.example/api/v1/admin/banners/fitness-plan-library');
+    expect(sent.url).toBe(`https://admin.example/api/v1/admin/banners/${id}`);
+    expect(sent.method).toBe('PATCH');
     expect(sent.credentials).toBe('include');
     expect(sent.headers.get('X-Admin-Request')).toBe('1');
     expect(sent.headers.has('authorization')).toBe(false);

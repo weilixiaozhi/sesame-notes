@@ -1,5 +1,11 @@
 import { Type, type Static } from '@sinclair/typebox';
 import { ANALYTICS_EVENT_NAMES, ANALYTICS_PAGE_IDS } from './analytics-catalog.js';
+import {
+  AnalyticsBannerSlotSchema,
+  AnalyticsBannerIdSchema,
+  AnalyticsBannerSourceSchema,
+  AnalyticsBannerVersionSchema,
+} from './analytics-banner-contract.js';
 
 export const AnalyticsEventSchema = Type.Object(
   {
@@ -13,6 +19,10 @@ export const AnalyticsEventSchema = Type.Object(
     session_id: Type.String({ format: 'uuid' }),
     event_sequence: Type.Integer({ minimum: 1, maximum: 2_147_483_647 }),
     flow_id: Type.Optional(Type.String({ format: 'uuid' })),
+    banner_slot: Type.Optional(AnalyticsBannerSlotSchema),
+    banner_id: Type.Optional(AnalyticsBannerIdSchema),
+    banner_source: Type.Optional(AnalyticsBannerSourceSchema),
+    banner_version: Type.Optional(AnalyticsBannerVersionSchema),
   },
   { additionalProperties: false },
 );
@@ -97,6 +107,16 @@ export const AnalyticsDetailsSchema = Type.Object({
       total: Type.Integer({ minimum: 0 }),
       users: Type.Integer({ minimum: 0 }),
     }),
+  ),
+  exposures: Type.Optional(
+    Type.Array(
+      Type.Object({
+        event_name: Type.String(),
+        name: Type.String(),
+        total: Type.Integer({ minimum: 0 }),
+        users: Type.Integer({ minimum: 0 }),
+      }),
+    ),
   ),
   coverage: Type.Object({
     collection_started_at: Type.String({ format: 'date-time' }),

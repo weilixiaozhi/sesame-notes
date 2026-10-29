@@ -47,6 +47,10 @@ model ProductAnalyticsEvent {
   sessionId     String?  @map("session_id") @db.Uuid
   eventSequence Int?     @map("event_sequence")
   flowId        String?  @map("flow_id") @db.Uuid
+  bannerSlot    String?  @map("banner_slot") @db.VarChar(64)
+  bannerSource  String?  @map("banner_source") @db.VarChar(16)
+  bannerVersion Int?     @map("banner_version")
+  bannerId      String?  @map("banner_id") @db.VarChar(96)
 
   @@unique([actorKey, eventId])
   @@index([occurredAt, kind])
@@ -55,12 +59,15 @@ model ProductAnalyticsEvent {
   @@index([eventName, occurredAt])
   @@index([sessionId, actorKey, occurredAt])
   @@index([flowId, actorKey, occurredAt])
+  @@index([bannerSlot, bannerSource, bannerVersion, occurredAt], map: "product_analytics_banner_dimension_time_idx")
+  @@index([bannerId, bannerSlot, bannerSource, bannerVersion, occurredAt], map: "product_analytics_banner_slide_time_idx")
   @@map("product_analytics_events")
 }
 
 model ProductAnalyticsState {
-  id        Int      @id
-  startedAt DateTime @map("started_at") @db.Timestamptz(3)
+  id              Int      @id
+  startedAt       DateTime @map("started_at") @db.Timestamptz(3)
+  bannerStartedAt DateTime @default(now()) @map("banner_started_at") @db.Timestamptz(3)
 
   @@map("product_analytics_state")
 }
@@ -119,16 +126,21 @@ model OfficialFitnessMedia {
 }
 
 model AppBanner {
-  slot      String          @id @db.VarChar(64)
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slot      String          @db.VarChar(64)
   imageId   String?         @map("image_id") @db.VarChar(64)
   image     AppBannerMedia? @relation(fields: [imageId], references: [id], onDelete: Restrict)
   target    String          @db.VarChar(64)
+  targetId  String?         @map("target_id") @db.VarChar(128)
   isEnabled Boolean         @default(false) @map("is_enabled")
   version   Int             @default(1)
+  sortOrder Int             @default(0) @map("sort_order")
+  deletedAt DateTime?        @map("deleted_at") @db.Timestamptz(3)
   updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   updatedBy String?         @map("updated_by") @db.VarChar(100)
 
   @@index([imageId, isEnabled])
+  @@index([slot, deletedAt, isEnabled, sortOrder, id], map: "app_banners_slot_display_idx")
   @@map("app_banners")
 }
 

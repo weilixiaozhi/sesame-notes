@@ -11475,6 +11475,19 @@
         "tags": [
           "banners"
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "carousel"
+              ]
+            },
+            "in": "query",
+            "name": "format",
+            "required": false
+          }
+        ],
         "security": [],
         "responses": {
           "200": {
@@ -11482,108 +11495,247 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "items"
-                  ],
-                  "properties": {
-                    "items": {
-                      "maxItems": 2,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "slot",
-                          "image_path",
-                          "target",
-                          "is_enabled",
-                          "version",
-                          "updated_at"
-                        ],
-                        "properties": {
-                          "slot": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "fitness-plan-library"
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "slot",
+                              "image_path",
+                              "target",
+                              "is_enabled",
+                              "version",
+                              "updated_at"
+                            ],
+                            "properties": {
+                              "slot": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-plan-library"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-template-library"
+                                    ]
+                                  }
                                 ]
                               },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "fitness-template-library"
+                              "image_path": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "target": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-plan-library"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-template-library"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-exercises"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-plans"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-templates"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "is_enabled": {
+                                "type": "boolean"
+                              },
+                              "version": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "updated_at": {
+                                "anyOf": [
+                                  {
+                                    "format": "date-time",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
                                 ]
                               }
-                            ]
-                          },
-                          "image_path": {
-                            "anyOf": [
-                              {
-                                "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "items"
+                      ],
+                      "properties": {
+                        "items": {
+                          "maxItems": 40,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "slot",
+                              "image_path",
+                              "target",
+                              "target_id",
+                              "target_name",
+                              "version",
+                              "sort_order"
+                            ],
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
                                 "type": "string"
                               },
-                              {
-                                "type": "null"
+                              "slot": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-plan-library"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-template-library"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "image_path": {
+                                "anyOf": [
+                                  {
+                                    "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "target": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-plan-library"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-template-library"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-exercises"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-plans"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "fitness-templates"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "official-plan"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "official-template"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "target_id": {
+                                "anyOf": [
+                                  {
+                                    "format": "uuid",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "target_name": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "version": {
+                                "minimum": 1,
+                                "maximum": 2147483646,
+                                "type": "integer"
+                              },
+                              "sort_order": {
+                                "minimum": 0,
+                                "maximum": 9999,
+                                "type": "integer"
                               }
-                            ]
-                          },
-                          "target": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "fitness-plan-library"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "fitness-template-library"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "fitness-exercises"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "fitness-plans"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "fitness-templates"
-                                ]
-                              }
-                            ]
-                          },
-                          "is_enabled": {
-                            "type": "boolean"
-                          },
-                          "version": {
-                            "minimum": 0,
-                            "type": "integer"
-                          },
-                          "updated_at": {
-                            "anyOf": [
-                              {
-                                "format": "date-time",
-                                "type": "string"
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
+                            }
                           }
                         }
                       }
                     }
-                  }
+                  ]
                 }
               }
             }
@@ -11702,19 +11854,36 @@
                   ],
                   "properties": {
                     "items": {
-                      "maxItems": 2,
+                      "maxItems": 40,
                       "type": "array",
                       "items": {
                         "type": "object",
                         "required": [
+                          "id",
                           "slot",
                           "image_path",
                           "target",
-                          "is_enabled",
+                          "target_id",
+                          "target_name",
                           "version",
-                          "updated_at"
+                          "sort_order",
+                          "source",
+                          "updated_at",
+                          "updated_by"
                         ],
                         "properties": {
+                          "id": {
+                            "anyOf": [
+                              {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              {
+                                "pattern": "^builtin:fitness-(?:plan|template)-library$",
+                                "type": "string"
+                              }
+                            ]
+                          },
                           "slot": {
                             "anyOf": [
                               {
@@ -11773,20 +11942,81 @@
                                 "enum": [
                                   "fitness-templates"
                                 ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "official-plan"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "official-template"
+                                ]
                               }
                             ]
                           },
-                          "is_enabled": {
-                            "type": "boolean"
+                          "target_id": {
+                            "anyOf": [
+                              {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "target_name": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "version": {
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "sort_order": {
+                            "minimum": 0,
+                            "maximum": 9999,
+                            "type": "integer"
+                          },
+                          "source": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "builtin"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "remote"
+                                ]
+                              }
+                            ]
+                          },
                           "updated_at": {
                             "anyOf": [
                               {
                                 "format": "date-time",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "updated_by": {
+                            "anyOf": [
+                              {
                                 "type": "string"
                               },
                               {
@@ -11891,11 +12121,9 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/admin/banners/{slot}": {
-      "put": {
-        "operationId": "updateAdminBanner",
+      },
+      "post": {
+        "operationId": "createAdminBanner",
         "tags": [
           "admin-banners"
         ],
@@ -11907,27 +12135,32 @@
                 "additionalProperties": false,
                 "type": "object",
                 "required": [
-                  "version",
+                  "slot",
                   "image_id",
                   "target",
-                  "is_enabled"
+                  "target_id",
+                  "sort_order"
                 ],
                 "properties": {
-                  "version": {
-                    "minimum": 0,
-                    "maximum": 2147483646,
-                    "type": "integer"
-                  },
-                  "image_id": {
+                  "slot": {
                     "anyOf": [
                       {
-                        "pattern": "^[a-f0-9]{64}$",
-                        "type": "string"
+                        "type": "string",
+                        "enum": [
+                          "fitness-plan-library"
+                        ]
                       },
                       {
-                        "type": "null"
+                        "type": "string",
+                        "enum": [
+                          "fitness-template-library"
+                        ]
                       }
                     ]
+                  },
+                  "image_id": {
+                    "pattern": "^[a-f0-9]{64}$",
+                    "type": "string"
                   },
                   "target": {
                     "anyOf": [
@@ -11960,61 +12193,80 @@
                         "enum": [
                           "fitness-templates"
                         ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "official-plan"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "official-template"
+                        ]
                       }
                     ]
                   },
-                  "is_enabled": {
-                    "type": "boolean"
+                  "target_id": {
+                    "anyOf": [
+                      {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sort_order": {
+                    "minimum": 0,
+                    "maximum": 9999,
+                    "type": "integer"
                   }
                 }
               }
             }
           }
         },
-        "parameters": [
-          {
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "fitness-plan-library"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "fitness-template-library"
-                  ]
-                }
-              ]
-            },
-            "in": "path",
-            "name": "slot",
-            "required": true
-          }
-        ],
         "security": [
           {
             "adminSessionAuth": []
           }
         ],
         "responses": {
-          "200": {
+          "201": {
             "description": "Default Response",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "required": [
+                    "id",
                     "slot",
                     "image_path",
                     "target",
-                    "is_enabled",
+                    "target_id",
+                    "target_name",
                     "version",
-                    "updated_at"
+                    "sort_order",
+                    "source",
+                    "updated_at",
+                    "updated_by"
                   ],
                   "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        {
+                          "pattern": "^builtin:fitness-(?:plan|template)-library$",
+                          "type": "string"
+                        }
+                      ]
+                    },
                     "slot": {
                       "anyOf": [
                         {
@@ -12073,15 +12325,66 @@
                           "enum": [
                             "fitness-templates"
                           ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "official-plan"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "official-template"
+                          ]
                         }
                       ]
                     },
-                    "is_enabled": {
-                      "type": "boolean"
+                    "target_id": {
+                      "anyOf": [
+                        {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target_name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "version": {
                       "minimum": 0,
                       "type": "integer"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "maximum": 9999,
+                      "type": "integer"
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "builtin"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "remote"
+                          ]
+                        }
+                      ]
                     },
                     "updated_at": {
                       "anyOf": [
@@ -12092,6 +12395,942 @@
                         {
                           "type": "null"
                         }
+                      ]
+                    },
+                    "updated_by": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/targets": {
+      "get": {
+        "operationId": "listAdminBannerTargets",
+        "tags": [
+          "admin-banners"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "plan"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "template"
+                  ]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "kind",
+            "required": true
+          },
+          {
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            },
+            "in": "query",
+            "name": "q",
+            "required": false
+          }
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "maxItems": 100,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "object",
+                            "required": [
+                              "zh",
+                              "zh_hant",
+                              "en"
+                            ],
+                            "properties": {
+                              "zh": {
+                                "type": "string"
+                              },
+                              "zh_hant": {
+                                "type": "string"
+                              },
+                              "en": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/{banner_id}": {
+      "patch": {
+        "operationId": "updateAdminBanner",
+        "tags": [
+          "admin-banners"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "slot",
+                  "image_id",
+                  "target",
+                  "target_id",
+                  "sort_order",
+                  "version"
+                ],
+                "properties": {
+                  "slot": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-plan-library"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-template-library"
+                        ]
+                      }
+                    ]
+                  },
+                  "image_id": {
+                    "pattern": "^[a-f0-9]{64}$",
+                    "type": "string"
+                  },
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-plan-library"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-template-library"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-exercises"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-plans"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-templates"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "official-plan"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "official-template"
+                        ]
+                      }
+                    ]
+                  },
+                  "target_id": {
+                    "anyOf": [
+                      {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sort_order": {
+                    "minimum": 0,
+                    "maximum": 9999,
+                    "type": "integer"
+                  },
+                  "version": {
+                    "minimum": 1,
+                    "maximum": 2147483646,
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "banner_id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "slot",
+                    "image_path",
+                    "target",
+                    "target_id",
+                    "target_name",
+                    "version",
+                    "sort_order",
+                    "source",
+                    "updated_at",
+                    "updated_by"
+                  ],
+                  "properties": {
+                    "id": {
+                      "anyOf": [
+                        {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        {
+                          "pattern": "^builtin:fitness-(?:plan|template)-library$",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "slot": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-plan-library"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-template-library"
+                          ]
+                        }
+                      ]
+                    },
+                    "image_path": {
+                      "anyOf": [
+                        {
+                          "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-plan-library"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-template-library"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-exercises"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-plans"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-templates"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "official-plan"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "official-template"
+                          ]
+                        }
+                      ]
+                    },
+                    "target_id": {
+                      "anyOf": [
+                        {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target_name": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "version": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "sort_order": {
+                      "minimum": 0,
+                      "maximum": 9999,
+                      "type": "integer"
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "builtin"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "remote"
+                          ]
+                        }
+                      ]
+                    },
+                    "updated_at": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "updated_by": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminBanner",
+        "tags": [
+          "admin-banners"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "version"
+                ],
+                "properties": {
+                  "version": {
+                    "minimum": 1,
+                    "maximum": 2147483646,
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "banner_id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/{slot}/reset": {
+      "post": {
+        "operationId": "resetAdminBannerSlot",
+        "tags": [
+          "admin-banners"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "revisions"
+                ],
+                "properties": {
+                  "revisions": {
+                    "maxItems": 20,
+                    "uniqueItems": true,
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "version"
+                      ],
+                      "properties": {
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "version": {
+                          "minimum": 1,
+                          "maximum": 2147483646,
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "fitness-plan-library"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "fitness-template-library"
+                  ]
+                }
+              ]
+            },
+            "in": "path",
+            "name": "slot",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
                       ]
                     }
                   }
@@ -12507,6 +13746,292 @@
                 "schema": {
                   "format": "binary",
                   "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/statistics": {
+      "get": {
+        "operationId": "getAdminBannerStatistics",
+        "tags": [
+          "admin-banners"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "start_date",
+            "required": true
+          },
+          {
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            "in": "query",
+            "name": "end_date",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "range",
+                    "scope",
+                    "items",
+                    "coverage"
+                  ],
+                  "properties": {
+                    "range": {
+                      "type": "object",
+                      "required": [
+                        "start_date",
+                        "end_date",
+                        "timezone"
+                      ],
+                      "properties": {
+                        "start_date": {
+                          "type": "string"
+                        },
+                        "end_date": {
+                          "type": "string"
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "enum": [
+                            "Asia/Shanghai"
+                          ]
+                        }
+                      }
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "current"
+                      ]
+                    },
+                    "items": {
+                      "minItems": 2,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "banner_id",
+                          "slot",
+                          "source",
+                          "version",
+                          "impressions",
+                          "clicks",
+                          "ctr"
+                        ],
+                        "properties": {
+                          "banner_id": {
+                            "anyOf": [
+                              {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "builtin:fitness-plan-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "builtin:fitness-template-library"
+                                ]
+                              }
+                            ]
+                          },
+                          "slot": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-plan-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-template-library"
+                                ]
+                              }
+                            ]
+                          },
+                          "source": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "builtin"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "remote"
+                                ]
+                              }
+                            ]
+                          },
+                          "version": {
+                            "minimum": 0,
+                            "maximum": 2147483647,
+                            "type": "integer"
+                          },
+                          "impressions": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "clicks": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "ctr": {
+                            "anyOf": [
+                              {
+                                "minimum": 0,
+                                "type": "number"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "coverage": {
+                      "type": "object",
+                      "required": [
+                        "collection_started_at",
+                        "complete",
+                        "audience"
+                      ],
+                      "properties": {
+                        "collection_started_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "complete": {
+                          "type": "boolean"
+                        },
+                        "audience": {
+                          "type": "string",
+                          "enum": [
+                            "authenticated_users"
+                          ]
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -13130,6 +14655,18 @@
                         },
                         "event_name": {
                           "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "banner_impression"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "banner_click"
+                              ]
+                            },
                             {
                               "type": "string",
                               "enum": [
@@ -13948,6 +15485,63 @@
                         "flow_id": {
                           "format": "uuid",
                           "type": "string"
+                        },
+                        "banner_slot": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "fitness-plan-library"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "fitness-template-library"
+                              ]
+                            }
+                          ]
+                        },
+                        "banner_id": {
+                          "anyOf": [
+                            {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "builtin:fitness-plan-library"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "builtin:fitness-template-library"
+                              ]
+                            }
+                          ]
+                        },
+                        "banner_source": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "builtin"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "enum": [
+                                "remote"
+                              ]
+                            }
+                          ]
+                        },
+                        "banner_version": {
+                          "minimum": 0,
+                          "maximum": 2147483647,
+                          "type": "integer"
                         }
                       }
                     }
@@ -14960,6 +16554,18 @@
           {
             "schema": {
               "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "banner_impression"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "banner_click"
+                  ]
+                },
                 {
                   "type": "string",
                   "enum": [
@@ -16034,6 +17640,34 @@
                                 ]
                               }
                             ]
+                          },
+                          "total": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "users": {
+                            "minimum": 0,
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "exposures": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "event_name",
+                          "name",
+                          "total",
+                          "users"
+                        ],
+                        "properties": {
+                          "event_name": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
                           },
                           "total": {
                             "minimum": 0,

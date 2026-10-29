@@ -24,10 +24,33 @@ import { ANALYTICS_DEFINITIONS } from './analytics-catalog.js';
 import { analyticsActorKey, ingestAnalyticsEvents, readAnalyticsReport } from './analytics-service.js';
 import { readAnalyticsDetails } from './analytics-details.js';
 import { readAnalyticsFunnel } from './analytics-funnel.js';
+import {
+  BannerStatisticsQuerySchema,
+  BannerStatisticsSchema,
+  type BannerStatisticsQuery,
+} from './analytics-banner-contract.js';
+import { readBannerStatistics } from './analytics-banner-statistics.js';
 
 /** 产品事件只从真实登录账号采集；后台只读查询固定目录、整体指标与行为分析。 */
 export function registerAnalyticsRoutes(app: FastifyInstance, prisma: PrismaClient, config: ApiConfig): void {
   try {
+    app.get(
+      '/api/v1/admin/banners/statistics',
+      {
+        onRequest: verifyAdminWriteRequest(config),
+        preHandler: authenticateAdmin(config, prisma, 'banners:read'),
+        schema: {
+          tags: ['admin-banners'],
+          operationId: 'getAdminBannerStatistics',
+          querystring: BannerStatisticsQuerySchema,
+          response: { 200: BannerStatisticsSchema },
+        },
+      },
+      async (request) =>
+        execute(request, '查询 Banner 统计', async () =>
+          readBannerStatistics(prisma, request.query as BannerStatisticsQuery),
+        ),
+    );
     app.post(
       '/api/v1/analytics/events',
       {

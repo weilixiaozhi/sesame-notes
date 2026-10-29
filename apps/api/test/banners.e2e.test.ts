@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
@@ -22,6 +22,7 @@ let groupId: string | undefined;
 let writerCookie = '';
 let readerCookie = '';
 let uploadedId: string | undefined;
+const officialIds: string[] = [];
 
 /** 经过正式登录入口取得独立管理会话，测试请求不伪造认证上下文。 */
 async function login(username: string): Promise<string> {
@@ -83,6 +84,7 @@ afterAll(async () => {
     await app?.close();
     await prisma.appBanner.deleteMany({ where: { updatedBy: writerName } });
     if (uploadedId) await prisma.appBannerMedia.deleteMany({ where: { id: uploadedId, createdBy: writerName } });
+    await prisma.officialFitnessContent.deleteMany({ where: { id: { in: officialIds } } });
     await prisma.adminAccount.deleteMany({ where: { username: { in: [writerName, readerName] } } });
     if (groupId) await prisma.adminGroup.delete({ where: { id: groupId } });
     await prisma.$disconnect();
@@ -92,16 +94,22 @@ afterAll(async () => {
   }
 });
 
-describe('Banner 公开展示与管理生命周期', () => {
-  it('默认、上传预览、启用、修改跳转、版本冲突、权限和停用回退均遵循真实数据库契约', async () => {
+describe('Banner 轮播管理与客户端兼容', () => {
+  it('每张独立跳转和排序，旧客户端只取首张，删除与位置恢复默认保持原子性', async () => {
     try {
       const initial = await app!.inject({ method: 'GET', url: '/api/v1/admin/banners', headers: headers() });
       expect(initial.statusCode, initial.body).toBe(200);
       expect(initial.json().items).toHaveLength(2);
-      expect(initial.json().items.every((entry: { version: number }) => entry.version === 0)).toBe(true);
-      const anonymous = await app!.inject({ method: 'GET', url: '/api/v1/banners' });
-      expect(anonymous.statusCode).toBe(200);
-      expect(anonymous.json()).toEqual({ items: [] });
+      expect(
+        initial
+          .json()
+          .items.every(
+            (entry: { source: string; version: number }) => entry.source === 'builtin' && entry.version === 0,
+          ),
+      ).toBe(true);
+      expect((await app!.inject({ method: 'GET', url: '/api/v1/banners?format=carousel' })).json()).toEqual({
+        items: [],
+      });
       expect((await app!.inject({ method: 'GET', url: '/api/v1/admin/banners' })).statusCode).toBe(401);
 
       const bytes = await sharp({ create: { width: 600, height: 200, channels: 3, background: '#263f59' } })
@@ -115,67 +123,207 @@ describe('Banner 公开展示与管理生命周期', () => {
       });
       expect(upload.statusCode, upload.body).toBe(201);
       uploadedId = upload.json().id;
-      const publicPath = upload.json().image_path as string;
-      expect((await app!.inject({ method: 'GET', url: publicPath })).statusCode).toBe(404);
+      const imagePath = upload.json().image_path as string;
+      expect((await app!.inject({ method: 'GET', url: imagePath })).statusCode).toBe(404);
       const preview = await app!.inject({
         method: 'GET',
         url: `/api/v1/admin/banners/media/${uploadedId}`,
         headers: { cookie: readerCookie },
       });
       expect(preview.statusCode, preview.body).toBe(200);
-      expect(preview.headers['content-type']).toBe('image/webp');
-      expect(preview.headers['cache-control']).toBe('no-store');
       expect(preview.rawPayload).toEqual(await readFile(bannerMediaFile(directory!, uploadedId!)));
 
-      const url = '/api/v1/admin/banners/fitness-plan-library';
-      const payload = { version: 0, image_id: uploadedId, target: 'fitness-plan-library', is_enabled: true };
-      expect((await app!.inject({ method: 'PUT', url, headers: headers(readerCookie), payload })).statusCode).toBe(403);
+      const planId = randomUUID();
+      const templateId = randomUUID();
+      for (const [kind, id] of [
+        ['plan', planId],
+        ['template', templateId],
+      ] as const) {
+        const sample = await prisma.officialFitnessContent.findFirstOrThrow({ where: { kind, isEnabled: true } });
+        const original = sample.content as Record<string, unknown>;
+        await prisma.officialFitnessContent.create({
+          data: {
+            id,
+            kind,
+            isEnabled: true,
+            updatedBy: writerName,
+            content: {
+              ...original,
+              id,
+              name: { zh: `轮播${kind}${runId}`, zh_hant: '輪播測試', en: 'Carousel test' },
+            } as Prisma.InputJsonObject,
+          },
+        });
+        officialIds.push(id);
+      }
+      const options = await app!.inject({
+        method: 'GET',
+        url: `/api/v1/admin/banners/targets?kind=plan&q=${encodeURIComponent(runId)}`,
+        headers: headers(readerCookie),
+      });
+      expect(options.statusCode, options.body).toBe(200);
+      expect(options.json().items.map((item: { id: string }) => item.id)).toContain(planId);
+
+      const base = {
+        slot: 'fitness-plan-library',
+        image_id: uploadedId,
+        target: 'fitness-plan-library',
+        target_id: null,
+        sort_order: 20,
+      };
+      const denied = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners',
+        headers: headers(readerCookie),
+        payload: base,
+      });
+      expect(denied.statusCode).toBe(403);
       expect(
         (
           await app!.inject({
-            method: 'PUT',
-            url,
+            method: 'POST',
+            url: '/api/v1/admin/banners',
             headers: headers(),
-            payload: { ...payload, target: 'https://evil.test' },
+            payload: { ...base, target: 'official-template', target_id: planId },
           })
-        ).statusCode,
-      ).toBe(400);
+        ).json().code,
+      ).toBe('BANNER_TARGET_UNAVAILABLE');
       expect(
-        (await app!.inject({ method: 'PUT', url, headers: headers(), payload: { ...payload, image_id: null } })).json()
-          .code,
-      ).toBe('BANNER_IMAGE_REQUIRED');
+        (
+          await app!.inject({
+            method: 'POST',
+            url: '/api/v1/admin/banners',
+            headers: headers(),
+            payload: { ...base, target: 'official-plan', target_id: null },
+          })
+        ).json().code,
+      ).toBe('BANNER_TARGET_REQUIRED');
+      const first = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners',
+        headers: headers(),
+        payload: base,
+      });
+      expect(first.statusCode, first.body).toBe(201);
+      const firstId = first.json().id as string;
+      const second = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners',
+        headers: headers(),
+        payload: { ...base, target: 'official-plan', target_id: planId, sort_order: 10 },
+      });
+      expect(second.statusCode, second.body).toBe(201);
+      const secondId = second.json().id as string;
+      expect(second.json()).toMatchObject({
+        target_id: planId,
+        target_name: `轮播plan${runId}`,
+        source: 'remote',
+        updated_by: writerName,
+      });
+      const third = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners',
+        headers: headers(),
+        payload: {
+          ...base,
+          slot: 'fitness-template-library',
+          target: 'official-template',
+          target_id: templateId,
+          sort_order: 0,
+        },
+      });
+      expect(third.statusCode, third.body).toBe(201);
+      const thirdId = third.json().id as string;
+      const carousel = (await app!.inject({ method: 'GET', url: '/api/v1/banners?format=carousel' })).json().items;
+      expect(carousel.map((entry: { id: string }) => entry.id)).toEqual([secondId, firstId, thirdId]);
+      expect(carousel[0]).toMatchObject({ target: 'official-plan', target_id: planId, version: 1, sort_order: 10 });
+      expect(carousel[0]).not.toHaveProperty('updated_by');
+      const legacy = (await app!.inject({ method: 'GET', url: '/api/v1/banners' })).json().items;
+      expect(legacy).toHaveLength(2);
+      expect(legacy.map((entry: { target: string }) => entry.target)).toEqual([
+        'fitness-plan-library',
+        'fitness-template-library',
+      ]);
+      expect(new Set(legacy.map((entry: { slot: string }) => entry.slot)).size).toBe(2);
+      expect((await app!.inject({ method: 'GET', url: imagePath })).statusCode).toBe(200);
 
-      const saved = await app!.inject({ method: 'PUT', url, headers: headers(), payload });
-      expect(saved.statusCode, saved.body).toBe(200);
-      expect(saved.json()).toMatchObject({ version: 1, target: 'fitness-plan-library', image_path: publicPath });
-      expect((await app!.inject({ method: 'GET', url: publicPath })).statusCode).toBe(200);
-      expect((await app!.inject({ method: 'GET', url: '/api/v1/banners' })).json().items).toEqual([saved.json()]);
-
-      const competing = await Promise.all(
-        ['fitness-template-library', 'fitness-exercises'].map((target) =>
-          app!.inject({ method: 'PUT', url, headers: headers(), payload: { ...payload, version: 1, target } }),
+      const races = await Promise.all(
+        ['fitness-exercises', 'fitness-plans'].map((target) =>
+          app!.inject({
+            method: 'PATCH',
+            url: `/api/v1/admin/banners/${secondId}`,
+            headers: headers(),
+            payload: { ...base, target, sort_order: 10, version: 1 },
+          }),
         ),
       );
-      expect(competing.map((response) => response.statusCode).sort()).toEqual([200, 409]);
-      const winner = competing.find((response) => response.statusCode === 200)!.json();
-      expect(winner.version).toBe(2);
-      expect(['fitness-template-library', 'fitness-exercises']).toContain(winner.target);
+      expect(races.map((response) => response.statusCode).sort()).toEqual([200, 409]);
+      expect(races.find((response) => response.statusCode === 200)!.json().version).toBe(2);
+      await prisma.officialFitnessContent.update({ where: { id: templateId }, data: { isEnabled: false } });
+      const afterUnavailable = (await app!.inject({ method: 'GET', url: '/api/v1/banners?format=carousel' })).json()
+        .items;
+      expect(afterUnavailable.some((entry: { id: string }) => entry.id === thirdId)).toBe(false);
+      await prisma.officialFitnessContent.update({ where: { id: templateId }, data: { isEnabled: true } });
 
-      const disabled = await app!.inject({
-        method: 'PUT',
-        url,
+      const removed = await app!.inject({
+        method: 'DELETE',
+        url: `/api/v1/admin/banners/${firstId}`,
         headers: headers(),
-        payload: { ...payload, version: 2, is_enabled: false },
+        payload: { version: 1 },
       });
-      expect(disabled.statusCode, disabled.body).toBe(200);
+      expect(removed.statusCode, removed.body).toBe(200);
+      expect((await prisma.appBanner.findUniqueOrThrow({ where: { id: firstId } })).deletedAt).not.toBeNull();
+      expect(
+        (
+          await app!.inject({
+            method: 'DELETE',
+            url: `/api/v1/admin/banners/${firstId}`,
+            headers: headers(),
+            payload: { version: 1 },
+          })
+        ).statusCode,
+      ).toBe(404);
+      const staleReset = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners/fitness-plan-library/reset',
+        headers: headers(),
+        payload: { revisions: [{ id: secondId, version: 1 }] },
+      });
+      expect(staleReset.statusCode, staleReset.body).toBe(409);
+      const reset = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners/fitness-plan-library/reset',
+        headers: headers(),
+        payload: { revisions: [{ id: secondId, version: 2 }] },
+      });
+      expect(reset.statusCode, reset.body).toBe(200);
+      const rows = (await app!.inject({ method: 'GET', url: '/api/v1/admin/banners', headers: headers() })).json()
+        .items;
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toMatchObject({
+        id: 'builtin:fitness-plan-library',
+        version: 0,
+        source: 'builtin',
+        target: 'fitness-plan-library',
+      });
+      expect(rows[1]).toMatchObject({ id: thirdId, source: 'remote' });
+      const finalReset = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners/fitness-template-library/reset',
+        headers: headers(),
+        payload: { revisions: [{ id: thirdId, version: 1 }] },
+      });
+      expect(finalReset.statusCode, finalReset.body).toBe(200);
+      expect((await app!.inject({ method: 'GET', url: '/api/v1/banners?format=carousel' })).json()).toEqual({
+        items: [],
+      });
       expect((await app!.inject({ method: 'GET', url: '/api/v1/banners' })).json()).toEqual({ items: [] });
-      expect((await app!.inject({ method: 'GET', url: publicPath })).statusCode).toBe(404);
-      const audit = await prisma.auditLog.count({
-        where: { action: 'banner.update', target: { path: ['id'], equals: 'fitness-plan-library' } },
-      });
-      expect(audit).toBeGreaterThanOrEqual(3);
+      expect((await app!.inject({ method: 'GET', url: imagePath })).statusCode).toBe(404);
+      const last = (await app!.inject({ method: 'GET', url: '/api/v1/admin/banners', headers: headers() })).json()
+        .items;
+      expect(last.every((entry: { source: string }) => entry.source === 'builtin')).toBe(true);
     } catch (cause) {
-      throw new Error('Banner 管理与客户端公开契约验证失败', { cause });
+      throw new Error('Banner 轮播管理与兼容契约验证失败', { cause });
     }
   });
 });

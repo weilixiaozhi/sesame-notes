@@ -47,6 +47,7 @@ async function application(permissions = ['analytics:read']) {
     productAnalyticsState: {
       findUnique: vi.fn().mockResolvedValue({
         startedAt: new Date('2020-01-01'),
+        bannerStartedAt: new Date('2026-10-01'),
       }),
     },
     $queryRaw: vi.fn().mockResolvedValue([]),
@@ -81,9 +82,59 @@ it('埋点目录无需日期即可读取，保留事件身份与平台范围', a
   expect(result.events.find((event) => event.id === 'accounting_transaction_view')).toMatchObject({
     platforms: ['app', 'web'],
   });
+  expect(result.events.find((event) => event.id === 'banner_impression')).toMatchObject({
+    kind: 'action',
+    behavior: 'view',
+    platforms: ['app'],
+  });
+  expect(result.events.find((event) => event.id === 'banner_click')).toMatchObject({
+    kind: 'action',
+    behavior: 'click',
+    platforms: ['app'],
+  });
   expect(db.productAnalyticsState.findUnique).not.toHaveBeenCalled();
   expect(db.$queryRaw.mock.calls).toHaveLength(1);
   expect(String(db.$queryRaw.mock.calls[0]![0])).toContain('pg_advisory_xact_lock');
+});
+
+it('Banner 列表统计只需要 Banner 读取权限，统计后台权限不能代替入口管理授权', async () => {
+  const { app, db } = await application(['banners:read']);
+  db.$queryRaw.mockImplementation(async (query) =>
+    String(query.sql ?? query).includes('current_banners')
+      ? [
+          {
+            banner_id: 'builtin:fitness-plan-library',
+            slot: 'fitness-plan-library',
+            source: 'builtin',
+            version: 0,
+            impressions: 2n,
+            clicks: 3n,
+          },
+          {
+            banner_id: 'builtin:fitness-template-library',
+            slot: 'fitness-template-library',
+            source: 'builtin',
+            version: 0,
+            impressions: 0n,
+            clicks: 0n,
+          },
+        ]
+      : [],
+  );
+  const url = '/api/v1/admin/banners/statistics?start_date=2026-10-12&end_date=2026-10-12';
+  const result = await app.inject({ method: 'GET', url, headers });
+  expect(result.statusCode, result.body).toBe(200);
+  expect(result.json()).toMatchObject({
+    scope: 'current',
+    items: [
+      { impressions: 2, clicks: 3, ctr: 1.5 },
+      { impressions: 0, clicks: 0, ctr: null },
+    ],
+    coverage: { audience: 'authenticated_users', complete: true },
+  });
+  expect((await app.inject({ method: 'GET', url, headers: { origin: ORIGIN } })).statusCode).toBe(401);
+  const denied = await application(['analytics:read']);
+  expect((await denied.app.inject({ method: 'GET', url, headers })).statusCode).toBe(403);
 });
 
 it('目录和事件分析沿用统计读取权限并拒绝不可信来源和普通用户凭据', async () => {
