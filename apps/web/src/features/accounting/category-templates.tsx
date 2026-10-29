@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { ChevronRight, MoreVertical } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError, unwrap, type components } from '@sesame-notes/api-client';
 import { captureSessionOperation, queryClient } from '../../lib/session';
 import { useDraftClose } from '../../components/use-draft-close';
 import { useProductAnalyticsPage } from '../../lib/use-product-analytics';
-import { Button, Dialog, ErrorState, Field } from '../../components/ui';
+import { Button, Dialog, ErrorState } from '../../components/ui';
 import { CategoryIcon } from './category-icons';
 import {
   CategoryTemplateTargetUnavailableError,
@@ -13,6 +13,7 @@ import {
   templatePlan,
   unifiedCategoryTemplates,
 } from './category-template-plan';
+import './transaction-category-picker.css';
 import './category-templates.css';
 
 type Category = components['schemas']['Category'];
@@ -34,20 +35,18 @@ export function CategoryTemplates({
   const [mode, setMode] = useState<'new' | 'attach'>('new');
   const [targetParentId, setTargetParentId] = useState('');
   const [selected, setSelected] = useState(new Set<string>());
-  const [expanded, setExpanded] = useState(new Set<string>());
-  const [search, setSearch] = useState('');
-  const [targetSearch, setTargetSearch] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false);
+  const [pendingTargetId, setPendingTargetId] = useState('');
   const [uncertain, setUncertain] = useState(false);
   const [verified, setVerified] = useState<{ source: Category[]; rows: Category[] } | null>(null);
   const [grid, setGrid] = useState<HTMLDivElement | null>(null);
-  const [columns, setColumns] = useState(3);
+  const [columns, setColumns] = useState(4);
   const lifecycle = useRef<AbortController | null>(null);
   const submitting = useRef(false);
   const attempt = useRef<{ key: string; body: ReturnType<typeof templatePlan>; sent: boolean } | null>(null);
   useProductAnalyticsPage('accounting.categories.templates.flat', true, 3);
   const wanted = selectedTemplateKeys(items, selected, mode === 'attach');
-  const parentCount = mode === 'new' ? parents.filter((item) => wanted.has(item.key)).length : 0;
-  const childCount = wanted.size - parentCount;
   const currentCategories = verified?.source === categories ? verified.rows : categories;
   const targets = currentCategories.filter((row) => row.parent_id === null && !row.deleted_at);
   const target = targets.find((row) => row.id === targetParentId);
@@ -59,6 +58,8 @@ export function CategoryTemplates({
     submitting.current = false;
     setSelected(new Set());
     setTargetParentId('');
+    setPendingTargetId('');
+    setTargetPickerOpen(false);
     setUncertain(false);
     setVerified(null);
     return () => active.abort();
@@ -77,7 +78,7 @@ export function CategoryTemplates({
         const style = window.getComputedStyle(container);
         const font = Number.parseFloat(style.fontSize) || 16;
         const gap = Number.parseFloat(style.columnGap) || 8;
-        const next = Math.max(1, Math.min(4, Math.floor((width + gap) / (font * 6 + gap))));
+        const next = Math.max(1, Math.min(6, Math.floor((width + gap) / (font * 5.5 + gap))));
         setColumns((previous) => (previous === next ? previous : next));
       } catch (error) {
         console.error('[category-templates] 计算模板网格布局失败', error);
@@ -167,6 +168,7 @@ export function CategoryTemplates({
         (error instanceof ApiError && error.code === 'CATEGORY_PARENT_UNAVAILABLE');
       if (targetUnavailable) {
         setTargetParentId('');
+        setPendingTargetId('');
         // 服务端在最终提交时也可能发现目标已变化；失效项立即移出本次候选。
         setVerified((previous) => ({
           source: categories,
@@ -200,17 +202,13 @@ export function CategoryTemplates({
       throw error;
     }
   }
-  const query = search.trim();
-  const visible = parents.filter((parent) => {
-    const children = items.filter((item) => item.parentKey === parent.key);
-    return !query || parent.name.includes(query) || children.some((child) => child.name.includes(query));
-  });
-
   /** 切换操作清空本次选择，避免把新建父项的意图带入已有父项。 */
   function changeMode(next: 'new' | 'attach') {
     if (locked || mode === next) return;
     setMode(next);
+    setExpandedId(null);
     setSelected(new Set());
+    setTargetPickerOpen(false);
     save.reset();
   }
 
@@ -227,6 +225,7 @@ export function CategoryTemplates({
   /** 取消父项同时取消依赖的子项；单独取消子项仍保留用户明确选择的父项。 */
   function toggleParent(key: string) {
     if (locked) return;
+    setExpandedId(items.some((child) => child.parentKey === key) ? key : null);
     if (mode === 'attach' || !wanted.has(key)) {
       toggle(key);
       return;
@@ -239,235 +238,242 @@ export function CategoryTemplates({
     });
   }
 
-  /** 选择当前搜索范围内的节点；无子项的分类在追加模式中也能批量选中。 */
-  function selectVisible(includeChildren: boolean) {
+  /** 全选仅作用于本次草稿，追加模式的每个节点都独立加入明确目标。 */
+  function toggleAll() {
     if (locked) return;
-    setSelected(
-      new Set([
-        ...selected,
-        ...visible.map((parent) => parent.key),
-        ...(includeChildren
-          ? items
-              .filter(
-                (item) =>
-                  item.parentKey !== null &&
-                  visible.some((parent) => parent.key === item.parentKey) &&
-                  (!query ||
-                    item.name.includes(query) ||
-                    parents.find((parent) => parent.key === item.parentKey)?.name.includes(query)),
-              )
-              .map((item) => item.key)
-          : []),
-      ]),
+    setSelected(wanted.size === items.length ? new Set() : new Set(items.map((item) => item.key)));
+  }
+
+  /** 弹层单独保存候选，用户确认后才替换已指定的目标身份。 */
+  function openTargetPicker() {
+    if (locked) return;
+    setPendingTargetId(targetParentId);
+    setTargetPickerOpen(true);
+  }
+
+  /** 卡片保持同一密度，关联信息仅在新建模式的独立展开区呈现。 */
+  function choice(
+    item: (typeof items)[number],
+    checked: boolean,
+    label: string,
+    onChange: () => void,
+    hasChildren = false,
+  ) {
+    return (
+      <label className="category-template-card-choice">
+        <input
+          type="checkbox"
+          aria-label={label}
+          disabled={locked}
+          checked={checked}
+          onChange={onChange}
+          aria-expanded={hasChildren ? expandedId === item.key : undefined}
+        />
+        <span className="transaction-category-symbol category-template-icon">
+          <CategoryIcon name={item.icon} size={20} />
+          {hasChildren && (
+            <span className="transaction-category-badge" aria-hidden>
+              <MoreVertical size={10} />
+            </span>
+          )}
+        </span>
+        <span className="transaction-category-name category-template-name">{item.name}</span>
+      </label>
     );
   }
 
+  const columnStyle = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` };
+  const footer = (
+    <div className="category-template-footer">
+      <span role="status">已选 {wanted.size} 项</span>
+      <Button variant="ghost" disabled={locked} onClick={toggleAll}>
+        {wanted.size === items.length ? '取消全选' : '全选'}
+      </Button>
+      <Button
+        disabled={save.isPending || (!uncertain && (wanted.size === 0 || (mode === 'attach' && !target)))}
+        onClick={() => {
+          if (submitting.current || !lifecycle.current) return;
+          submitting.current = true;
+          save.mutate(lifecycle.current);
+        }}
+      >
+        {save.isPending ? '添加中…' : uncertain ? '重试上次添加' : `添加 ${wanted.size} 项`}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog open title="分类模板" description="选择需要的分类，添加后可自由修改。" onClose={close} mobileFullscreen>
-      <div className="stack category-templates">
-        <div className="category-template-modes" aria-label="添加方式">
-          <Button
-            variant={mode === 'new' ? 'primary' : 'secondary'}
-            aria-pressed={mode === 'new'}
-            disabled={locked}
-            onClick={() => changeMode('new')}
-          >
-            新建分类
-          </Button>
-          <Button
-            variant={mode === 'attach' ? 'primary' : 'secondary'}
-            aria-pressed={mode === 'attach'}
-            disabled={locked}
-            onClick={() => changeMode('attach')}
-          >
-            添加到已有分类
-          </Button>
-        </div>
-        <p className="muted">
-          {mode === 'new'
-            ? '可以单独选择分类，也可以展开并选择它的子分类。'
-            : '先选择已有分类，所选模板都会直接作为它的子分类加入。'}
-        </p>
-        {mode === 'attach' && (
-          <fieldset className="category-template-targets" disabled={locked}>
-            <legend>选择目标分类</legend>
-            <Field label="查找已有分类">
-              <input
-                value={targetSearch}
-                onChange={(event) => setTargetSearch(event.target.value)}
-                placeholder="按名称查找"
-              />
-            </Field>
-            <div className="category-template-target-list">
-              {targets
-                .filter((row) => row.name.includes(targetSearch.trim()))
-                .map((row) => (
-                  <label className="category-template-option" key={row.id}>
-                    <input
-                      type="radio"
-                      name="template-target"
-                      value={row.id}
-                      checked={targetParentId === row.id}
-                      onChange={() => setTargetParentId(row.id)}
-                    />
-                    <CategoryIcon name={row.icon} />
-                    <span>
-                      {row.name}
-                      <small>
-                        {currentCategories.filter((child) => child.parent_id === row.id && !child.deleted_at).length}{' '}
-                        个子分类
-                      </small>
-                    </span>
-                  </label>
-                ))}
-            </div>
-            {targets.length === 0 && <p className="muted">还没有可用的分类，请先使用“新建分类”。</p>}
-          </fieldset>
-        )}
-        <Field label="搜索模板">
-          <input
-            disabled={locked}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索分类或子分类"
-          />
-        </Field>
-        <div className="toolbar">
-          {mode === 'new' && (
-            <Button variant="ghost" disabled={locked} onClick={() => selectVisible(false)}>
-              选择当前分类
+    <>
+      <Dialog
+        open
+        title="分类模板库"
+        description="添加到我的分类目录"
+        className="category-template-dialog"
+        onClose={close}
+        mobileFullscreen
+        footer={footer}
+      >
+        <div className="category-templates">
+          <div className="category-template-modes" aria-label="添加方式">
+            <Button
+              variant={mode === 'new' ? 'primary' : 'secondary'}
+              aria-pressed={mode === 'new'}
+              disabled={locked}
+              onClick={() => changeMode('new')}
+            >
+              新建分类
             </Button>
+            <Button
+              variant={mode === 'attach' ? 'primary' : 'secondary'}
+              aria-pressed={mode === 'attach'}
+              disabled={locked}
+              onClick={() => changeMode('attach')}
+            >
+              添加到已有分类
+            </Button>
+          </div>
+          {mode === 'new' ? (
+            <p className="category-template-hint">点击分类可选择，有子分类时自动展开。</p>
+          ) : (
+            <button
+              type="button"
+              className="category-template-target-trigger"
+              aria-label={target ? `更换目标分类${target.name}` : '选择已有分类'}
+              disabled={locked}
+              onClick={openTargetPicker}
+            >
+              <span className="category-template-target-prefix">添加到</span>
+              {target && (
+                <span className="transaction-category-symbol category-template-icon">
+                  <CategoryIcon name={target.icon} size={20} />
+                </span>
+              )}
+              <span className="category-template-target-name">{target?.name ?? '选择已有分类'}</span>
+              <span className="category-template-target-action">{target ? '更换' : '选择'}</span>
+              <ChevronRight size={18} />
+            </button>
           )}
-          <Button variant="ghost" disabled={locked} onClick={() => selectVisible(true)}>
-            {mode === 'attach' ? '选择当前模板' : '选择当前分类及子分类'}
-          </Button>
-          <Button variant="ghost" disabled={locked || selected.size === 0} onClick={() => setSelected(new Set())}>
-            清空选择
-          </Button>
-        </div>
-        <div className="category-template-groups" ref={setGrid}>
-          {Array.from({ length: Math.ceil(visible.length / columns) }, (_, rowIndex) => {
-            const row = visible.slice(rowIndex * columns, rowIndex * columns + columns);
-            return (
-              <div className="category-template-row" key={row[0]!.key}>
-                <div
-                  className="category-template-card-grid"
-                  style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
-                >
-                  {row.map((parent) => {
-                    const children = items.filter((item) => item.parentKey === parent.key);
-                    const open = expanded.has(parent.key) || Boolean(query);
-                    const chosen = mode === 'new' ? wanted.has(parent.key) : selected.has(parent.key);
-                    return (
-                      <section className={`category-template-card${chosen ? ' is-selected' : ''}`} key={parent.key}>
-                        <label className="category-template-card-choice">
-                          <input
-                            type="checkbox"
-                            aria-label={`选择分类${parent.name}`}
-                            disabled={locked}
-                            checked={chosen}
-                            onChange={() => toggleParent(parent.key)}
-                          />
-                          <CategoryIcon name={parent.icon} size={26} />
-                          <span>{parent.name}</span>
-                        </label>
-                        {children.length > 0 ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            aria-expanded={open}
-                            aria-label={`${open ? '收起' : '展开'}${parent.name}子分类`}
-                            onClick={() =>
-                              setExpanded((previous) => {
-                                const next = new Set(previous);
-                                if (!next.delete(parent.key)) next.add(parent.key);
-                                return next;
-                              })
-                            }
-                          >
-                            {children.length} 个子分类{open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                          </Button>
-                        ) : (
-                          <span className="category-template-no-children">无子分类</span>
-                        )}
-                      </section>
-                    );
-                  })}
-                </div>
-                {row
-                  .filter((parent) => expanded.has(parent.key) || Boolean(query))
-                  .map((parent) => {
-                    const children = items.filter(
-                      (item) =>
-                        item.parentKey === parent.key &&
-                        (!query || parent.name.includes(query) || item.name.includes(query)),
-                    );
-                    if (!children.length) return null;
-                    return (
-                      <section
-                        className="category-template-children"
-                        key={parent.key}
-                        aria-label={`${parent.name}的子分类`}
-                      >
-                        <p>{parent.name} · 子分类</p>
-                        {mode === 'new' &&
-                          !selected.has(parent.key) &&
-                          children.some((child) => selected.has(child.key)) && (
-                            <p className="category-template-auto">将一起新建所属分类「{parent.name}」</p>
-                          )}
-                        <div className="category-template-grid">
-                          {children.map((child) => (
-                            <label className="category-template-option" key={child.key}>
-                              <input
-                                type="checkbox"
-                                aria-label={`选择${parent.name}中的${child.name}`}
-                                disabled={locked}
-                                checked={selected.has(child.key)}
-                                onChange={() => toggle(child.key)}
-                              />
-                              <CategoryIcon name={child.icon} />
-                              <span>{child.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </section>
-                    );
-                  })}
+
+          <div className="category-template-groups" ref={setGrid}>
+            {mode === 'attach' ? (
+              <div className="category-template-flat-grid" style={columnStyle} aria-label="可添加分类">
+                {items.map((item) => (
+                  <section
+                    className={`category-template-card${selected.has(item.key) ? ' is-selected' : ''}`}
+                    key={item.key}
+                  >
+                    {choice(item, selected.has(item.key), `选择分类${item.name}`, () => toggle(item.key))}
+                  </section>
+                ))}
               </div>
-            );
-          })}
-          {visible.length === 0 && <p className="muted">没有找到相关模板，试试其他名称。</p>}
+            ) : (
+              Array.from({ length: Math.ceil(parents.length / columns) }, (_, rowIndex) => {
+                const row = parents.slice(rowIndex * columns, rowIndex * columns + columns);
+                return (
+                  <div className="category-template-row" key={row[0]!.key}>
+                    <div className="category-template-card-grid" style={columnStyle}>
+                      {row.map((parent) => {
+                        const children = items.filter((item) => item.parentKey === parent.key);
+
+                        const chosen = wanted.has(parent.key);
+                        return (
+                          <section className={`category-template-card${chosen ? ' is-selected' : ''}`} key={parent.key}>
+                            {choice(
+                              parent,
+                              chosen,
+                              `选择分类${parent.name}`,
+                              () => toggleParent(parent.key),
+                              children.length > 0,
+                            )}
+                          </section>
+                        );
+                      })}
+                    </div>
+                    {row
+                      .filter((parent) => expandedId === parent.key)
+                      .map((parent) => {
+                        const children = items.filter((item) => item.parentKey === parent.key);
+                        if (!children.length) return null;
+                        return (
+                          <section
+                            className="category-template-children"
+                            key={parent.key}
+                            aria-label={`${parent.name}的子分类`}
+                          >
+                            <div className="category-template-child-heading">
+                              <span>{parent.name}</span>
+                              <span>已选 {children.filter((child) => selected.has(child.key)).length}</span>
+                            </div>
+                            <div className="category-template-child-grid" style={columnStyle}>
+                              {children.map((child) => (
+                                <section
+                                  className={`category-template-card${selected.has(child.key) ? ' is-selected' : ''}`}
+                                  key={child.key}
+                                >
+                                  {choice(child, selected.has(child.key), `选择${parent.name}中的${child.name}`, () =>
+                                    toggle(child.key),
+                                  )}
+                                </section>
+                              ))}
+                            </div>
+                          </section>
+                        );
+                      })}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {save.isError && <ErrorState error={save.error} />}
+          {uncertain && <p className="notice">上次添加的结果尚未确认，请重试同一次添加。</p>}
         </div>
-        <div className="category-template-summary" role="status">
-          {mode === 'new'
-            ? `本次新建 ${parentCount} 个分类、${childCount} 个子分类`
-            : target
-              ? `向「${target.name}」添加 ${childCount} 个子分类`
-              : '请选择目标分类'}
-        </div>
-        {save.isError && <ErrorState error={save.error} />}
-        {uncertain && <p className="notice">上次添加的结果尚未确认，请重试同一次添加。</p>}
-        <div className="dialog-actions">
-          <Button
-            disabled={save.isPending || (!uncertain && (wanted.size === 0 || (mode === 'attach' && !target)))}
-            onClick={() => {
-              if (submitting.current || !lifecycle.current) return;
-              submitting.current = true;
-              save.mutate(lifecycle.current);
-            }}
-          >
-            <Plus size={17} />
-            {save.isPending
-              ? '添加中…'
-              : uncertain
-                ? '重试上次添加'
-                : mode === 'new'
-                  ? `新建 ${wanted.size} 个分类`
-                  : `添加 ${childCount} 个子分类`}
-          </Button>
-        </div>
-      </div>
-      {confirmation}
-    </Dialog>
+        {confirmation}
+      </Dialog>
+      {targetPickerOpen && (
+        <Dialog
+          open
+          title="选择已有分类"
+          showCloseButton={false}
+          className="category-template-target-dialog"
+          overlayClassName="category-template-target-overlay"
+          onClose={() => setTargetPickerOpen(false)}
+          footer={
+            <Button
+              disabled={locked || !targets.some((row) => row.id === pendingTargetId)}
+              onClick={() => {
+                setTargetParentId(pendingTargetId);
+                setTargetPickerOpen(false);
+              }}
+            >
+              确定
+            </Button>
+          }
+        >
+          <div className="category-template-target-list" style={columnStyle}>
+            {targets.map((row) => (
+              <label
+                className={`category-template-card category-template-card-choice${pendingTargetId === row.id ? ' is-selected' : ''}`}
+                key={row.id}
+              >
+                <input
+                  type="radio"
+                  name="template-target"
+                  value={row.id}
+                  checked={pendingTargetId === row.id}
+                  disabled={locked}
+                  onChange={() => setPendingTargetId(row.id)}
+                  aria-label={`选择已有分类${row.name}`}
+                />
+                <span className="transaction-category-symbol category-template-icon">
+                  <CategoryIcon name={row.icon} size={20} />
+                </span>
+                <span className="transaction-category-name category-template-name">{row.name}</span>
+              </label>
+            ))}
+          </div>
+          {targets.length === 0 && <p className="muted">还没有可用的分类，请先使用“新建分类”。</p>}
+        </Dialog>
+      )}
+    </>
   );
 }

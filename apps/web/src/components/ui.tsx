@@ -99,8 +99,10 @@ export function Dialog({
   footer,
   heading,
   className,
+  overlayClassName,
   mobileFullscreen = false,
   autoFocus = true,
+  showCloseButton = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -110,8 +112,10 @@ export function Dialog({
   footer?: ReactNode;
   heading?: ReactNode;
   className?: string;
+  overlayClassName?: string;
   mobileFullscreen?: boolean;
   autoFocus?: boolean;
+  showCloseButton?: boolean;
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const viewportStyle = useDialogViewport(open && mobileFullscreen);
@@ -128,7 +132,7 @@ export function Dialog({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="dialog-overlay" />
+        <DialogPrimitive.Overlay className={clsx('dialog-overlay', overlayClassName)} />
         <DialogPrimitive.Content
           ref={contentRef}
           className={clsx('dialog', mobileFullscreen && 'dialog-mobile-fullscreen', className)}
@@ -167,9 +171,11 @@ export function Dialog({
                 {description && <DialogPrimitive.Description>{description}</DialogPrimitive.Description>}
               </div>
             )}
-            <button type="button" className="icon-button" aria-label="关闭弹窗" onClick={onClose}>
-              <X size={20} />
-            </button>
+            {showCloseButton && (
+              <button type="button" className="icon-button" aria-label="关闭弹窗" onClick={onClose}>
+                <X size={20} />
+              </button>
+            )}
           </header>
           <div className="dialog-body">{children}</div>
           {footer && <footer className="dialog-footer">{footer}</footer>}
