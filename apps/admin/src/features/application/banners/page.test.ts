@@ -25,6 +25,12 @@ vi.mock('../../../api/client', () => ({
   InputError: class extends Error {},
 }));
 vi.mock('@tanstack/react-query', () => ({
+  hashKey: (key: unknown) => JSON.stringify(key),
+  useQueryClient: () => ({
+    getQueryState: () => ({ fetchStatus: 'idle' }),
+    invalidateQueries: vi.fn().mockResolvedValue(undefined),
+    refetchQueries: vi.fn().mockResolvedValue(undefined),
+  }),
   useQuery: ({ queryKey }: { queryKey: string[] }) => ({
     isPending: false,
     isError: false,
@@ -101,10 +107,25 @@ describe('Banner 管理列表交互', () => {
     expect(host.textContent).toContain('20%');
     expect(host.textContent).toContain('曝光次数');
     expect(host.textContent).not.toMatch(
-      /投放时间|上线|下线|启用|停用|恢复默认|查找|查询|重置|开始采集|已登录 App 用户|内置默认|自定义|统计范围/,
+      /投放时间|上线|下线|启用|停用|恢复默认|查找|开始采集|已登录 App 用户|内置默认|自定义|统计范围/,
     );
-    expect(host.querySelectorAll('.page-heading select')).toHaveLength(1);
+    expect(host.querySelector('.page-heading select')).toBeNull();
+    expect(host.querySelectorAll('.panel > form.toolbar select')).toHaveLength(1);
     expect([...host.querySelectorAll('button')].some((button) => button.textContent === '预览')).toBe(false);
+    const position = host.querySelector('form.toolbar select') as HTMLSelectElement;
+    await act(async () => {
+      position.value = 'fitness-template-library';
+      position.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(host.querySelectorAll('tbody tr')).toHaveLength(2);
+    const search = [...host.querySelectorAll('button')].find((button) => button.textContent === '查询')!;
+    await act(async () => search.click());
+    expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(host.querySelector('tbody')?.textContent).toContain('模板页');
+    const reset = [...host.querySelectorAll('button')].find((button) => button.textContent === '重置')!;
+    await act(async () => reset.click());
+    expect(position.value).toBe('');
+    expect(host.querySelectorAll('tbody tr')).toHaveLength(2);
   });
   it('添加图片时可按名称选择具体官方模板，没有投放状态开关', async () => {
     await act(async () => root.render(createElement(BannersPage, { active: true })));

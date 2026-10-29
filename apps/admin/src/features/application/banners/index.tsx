@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api, request } from '../../../api/client';
 import { dateTime, initialPaging, type Paging } from '../../../api/types';
 import { useClampPage } from '../../../api/paging';
+import { useListQuerySubmit } from '../../../lib/use-list-query-submit';
 import { useSession } from '../../../auth/session';
 import { Button, Empty, Loading, Modal, Pagination, RequestError } from '../../../components/ui';
 import { bannerMetricCount, bannerSlots, bannerTargetLabel, bannerMetrics } from './model';
@@ -23,6 +24,8 @@ export function BannersPage({ active }: { active: boolean }) {
   const [dialog, setDialog] = useState<Dialog>();
   const [paging, setPaging] = useState<Paging>(initialPaging);
   const [position, setPosition] = useState<BannerSlot | ''>('');
+  const [draftPosition, setDraftPosition] = useState<BannerSlot | ''>('');
+  const submitQuery = useListQuerySubmit(queryKey, active);
   const query = useQuery({
     queryKey,
     enabled: active,
@@ -40,16 +43,27 @@ export function BannersPage({ active }: { active: boolean }) {
     <>
       <div className="page-heading">
         <h1>Banner 管理</h1>
-        <div className="row-actions">
-          <label className="field banner-position-filter">
+        {canWrite && (
+          <Button variant="primary" onClick={() => setDialog({ mode: 'edit' })}>
+            添加 Banner
+          </Button>
+        )}
+      </div>
+      <section className="panel">
+        <form
+          className="toolbar"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitQuery(queryKey, () => {
+              setPosition(draftPosition);
+              setPaging(initialPaging);
+              void statistics.refetch();
+            });
+          }}
+        >
+          <label className="field search-field">
             展示位置
-            <select
-              value={position}
-              onChange={(event) => {
-                setPosition(event.target.value as BannerSlot | '');
-                setPaging(initialPaging);
-              }}
-            >
+            <select value={draftPosition} onChange={(event) => setDraftPosition(event.target.value as BannerSlot | '')}>
               <option value="">全部位置</option>
               {Object.entries(bannerSlots).map(([value, item]) => (
                 <option key={value} value={value}>
@@ -58,14 +72,19 @@ export function BannersPage({ active }: { active: boolean }) {
               ))}
             </select>
           </label>
-          {canWrite && (
-            <Button variant="primary" onClick={() => setDialog({ mode: 'edit' })}>
-              添加 Banner
-            </Button>
-          )}
-        </div>
-      </div>
-      <section className="panel">
+          <Button type="submit" variant="primary" disabled={query.isFetching || statistics.isFetching}>
+            查询
+          </Button>
+          <Button
+            onClick={() => {
+              setDraftPosition('');
+              setPosition('');
+              setPaging(initialPaging);
+            }}
+          >
+            重置
+          </Button>
+        </form>
         {statistics.isError && <RequestError error={statistics.error} retry={() => void statistics.refetch()} />}
         <div className="table-wrap">
           <table className="banner-table">
