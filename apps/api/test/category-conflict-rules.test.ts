@@ -1,4 +1,5 @@
 import type { Category, Prisma } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { validateParentCategory } from '../src/modules/accounting/index.js';
@@ -30,27 +31,15 @@ const row: Category = {
 const draft = { name: row.name, kind: 'expense', level: 1, parent_id: null, sort_order: 3, icon: 'cloud' } as const;
 
 describe('官方分类身份与基线规则', () => {
-  it('完整官方清单逐项等于Web模板固定身份，并包含真实默认目录及父关系', () => {
-    const web = JSON.parse(
-      readFileSync(new URL('../../web/src/features/accounting/category-catalog.json', import.meta.url), 'utf8'),
-    ) as {
-      flat: Array<{ seed_id: string; key: string; level: number; parent_key: string | null }>;
-      hierarchical: Array<{ seed_id: string; key: string; level: number; parent_key: string | null }>;
-    };
-    const items = [...web.flat, ...web.hierarchical];
-    const parents = new Map(items.filter((item) => item.level === 1).map((item) => [item.key, item.seed_id]));
-    const expected = new Map(
-      items.map((item) => [
-        item.seed_id,
-        {
-          id: item.seed_id,
-          key: item.key,
-          level: item.level,
-          parent_id: item.parent_key ? parents.get(item.parent_key)! : null,
-        },
-      ]),
+  it('已发布分类身份保持稳定，默认目录及父关系完整', () => {
+    // 固定已有身份的业务字段快照，来源摘要与模板内容调整不能改变用户分类身份。
+    const stable = identities.items
+      .map(({ id, key, level, parent_id }) => ({ id, key, level, parent_id }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    expect(stable).toHaveLength(159);
+    expect(createHash('sha256').update(JSON.stringify(stable)).digest('hex')).toBe(
+      'a0cf81b4a229e8e3b082b1354f075e1a5372677a56840e704377fccc9ae69a2a',
     );
-    expect(identities.items).toEqual([...expected.values()].sort((a, b) => a.id.localeCompare(b.id)));
     const defaults = JSON.parse(
       readFileSync(new URL('../src/modules/accounting/default-category-catalog.json', import.meta.url), 'utf8'),
     ) as { items: Array<{ id: string; key: string; level: number; parent_id: string | null }> };
