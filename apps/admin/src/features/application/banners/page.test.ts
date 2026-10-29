@@ -103,7 +103,7 @@ describe('Banner 管理列表交互', () => {
     expect(host.textContent).not.toMatch(
       /投放时间|上线|下线|启用|停用|恢复默认|查找|查询|重置|开始采集|已登录 App 用户|内置默认|自定义|统计范围/,
     );
-    expect(host.querySelector('.page-heading select')).toBeNull();
+    expect(host.querySelectorAll('.page-heading select')).toHaveLength(1);
     expect([...host.querySelectorAll('button')].some((button) => button.textContent === '预览')).toBe(false);
   });
   it('添加图片时可按名称选择具体官方模板，没有投放状态开关', async () => {

@@ -15,8 +15,21 @@
   height: 100%;
   object-fit: cover;
 }
+.banner-position-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+.banner-position-filter select {
+  width: auto;
+}
 .banner-table td {
   vertical-align: middle;
+}
+.banner-table .banner-delete-action {
+  color: var(--danger);
 }
 .banner-preview {
   display: block;

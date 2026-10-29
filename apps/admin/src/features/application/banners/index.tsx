@@ -6,7 +6,7 @@ import { useClampPage } from '../../../api/paging';
 import { useSession } from '../../../auth/session';
 import { Button, Empty, Loading, Modal, Pagination, RequestError } from '../../../components/ui';
 import { bannerMetricCount, bannerSlots, bannerTargetLabel, bannerMetrics } from './model';
-import type { BannerEntry } from './model';
+import type { BannerEntry, BannerSlot } from './model';
 import { BannerPreview, BannerThumbnail } from './preview';
 import { BannerEditor } from './editor';
 import { BannerDelete } from './operations';
@@ -22,6 +22,7 @@ export function BannersPage({ active }: { active: boolean }) {
   const canWrite = session?.admin.permissions.includes('banners:write');
   const [dialog, setDialog] = useState<Dialog>();
   const [paging, setPaging] = useState<Paging>(initialPaging);
+  const [position, setPosition] = useState<BannerSlot | ''>('');
   const query = useQuery({
     queryKey,
     enabled: active,
@@ -32,18 +33,37 @@ export function BannersPage({ active }: { active: boolean }) {
     enabled: active,
     queryFn: ({ signal }) => request(() => api.adminBanners.statistics(signal), 'banner-statistics'),
   });
-  const rows = query.data?.items ?? [];
+  const rows = query.data?.items.filter((entry) => !position || entry.slot === position) ?? [];
   useClampPage(query.data ? rows.length : undefined, paging, setPaging);
 
   return (
     <>
       <div className="page-heading">
         <h1>Banner 管理</h1>
-        {canWrite && (
-          <Button variant="primary" onClick={() => setDialog({ mode: 'edit' })}>
-            添加 Banner
-          </Button>
-        )}
+        <div className="row-actions">
+          <label className="field banner-position-filter">
+            展示位置
+            <select
+              value={position}
+              onChange={(event) => {
+                setPosition(event.target.value as BannerSlot | '');
+                setPaging(initialPaging);
+              }}
+            >
+              <option value="">全部位置</option>
+              {Object.entries(bannerSlots).map(([value, item]) => (
+                <option key={value} value={value}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          {canWrite && (
+            <Button variant="primary" onClick={() => setDialog({ mode: 'edit' })}>
+              添加 Banner
+            </Button>
+          )}
+        </div>
       </div>
       <section className="panel">
         {statistics.isError && <RequestError error={statistics.error} retry={() => void statistics.refetch()} />}
@@ -111,7 +131,11 @@ export function BannersPage({ active }: { active: boolean }) {
                             <Button variant="ghost" onClick={() => setDialog({ mode: 'edit', row: entry })}>
                               修改
                             </Button>
-                            <Button variant="ghost" onClick={() => setDialog({ mode: 'delete', row: entry })}>
+                            <Button
+                              variant="ghost"
+                              className="banner-delete-action"
+                              onClick={() => setDialog({ mode: 'delete', row: entry })}
+                            >
                               删除
                             </Button>
                           </div>
@@ -136,7 +160,7 @@ export function BannersPage({ active }: { active: boolean }) {
       {dialog?.mode === 'edit' && canWrite && (
         <BannerEditor
           current={dialog.row}
-          initialSlot={dialog.row?.slot ?? 'fitness-plan-library'}
+          initialSlot={dialog.row?.slot ?? (position || 'fitness-plan-library')}
           onClose={() => setDialog(undefined)}
         />
       )}
