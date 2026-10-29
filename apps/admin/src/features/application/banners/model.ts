@@ -5,9 +5,12 @@ export type BannerEntry = Awaited<ReturnType<typeof api.adminBanners.list>>['ite
 export type BannerTarget = BannerEntry['target'];
 export type BannerSlot = BannerEntry['slot'];
 export type BannerStatistics = Awaited<ReturnType<typeof api.adminBanners.statistics>>;
+export type BannerDraft = Pick<BannerEntry, 'slot' | 'target' | 'target_id' | 'target_name' | 'sort_order'> & {
+  image_path: string | null;
+};
 export const bannerSlots = {
-  'fitness-plan-library': { title: '计划页 · 计划库入口', image: '/banner-defaults/plan-library.png' },
-  'fitness-template-library': { title: '模板页 · 模板库入口', image: '/banner-defaults/template-library.png' },
+  'fitness-plan-library': { title: '计划页 · 计划库入口' },
+  'fitness-template-library': { title: '模板页 · 模板库入口' },
 };
 export const bannerTargets: Record<BannerTarget, string> = {
   'fitness-plan-library': '计划库',
@@ -29,26 +32,21 @@ export function bannerImageId(path: string | null): string | null {
   }
 }
 
-/** 自定义图片使用鉴权预览，默认内容与客户端内置素材一致。 */
-export function bannerPreview(entry: BannerEntry): string {
-  const id = entry.source === 'remote' ? bannerImageId(entry.image_path) : null;
-  return id ? `/api/v1/admin/banners/media/${id}` : bannerSlots[entry.slot].image;
+/** 服务器图片使用鉴权预览，尚未选图的编辑草稿没有预览地址。 */
+export function bannerPreview(entry: Pick<BannerDraft, 'image_path'>): string | undefined {
+  const id = bannerImageId(entry.image_path);
+  return id ? `/api/v1/admin/banners/media/${id}` : undefined;
 }
 
-/** 内置入口只用于预览和离线回退，不作为可删除的自定义图片。 */
-export function builtinBanner(slot: BannerSlot): BannerEntry {
+/** 新增草稿只携带编辑字段，默认跳转对应位置的内容库。 */
+export function newBannerDraft(slot: BannerSlot): BannerDraft {
   return {
-    id: `builtin:${slot}`,
     slot,
-    source: 'builtin',
-    version: 0,
     image_path: null,
     target: slot,
     target_id: null,
     target_name: null,
     sort_order: 0,
-    updated_at: null,
-    updated_by: null,
   };
 }
 
@@ -61,11 +59,12 @@ export function bannerTargetLabel(entry: BannerEntry): string {
 
 /** 只展示与当前图片及跳转配置匹配的统计，防止两次请求跨越修改时串用旧数据。 */
 export function currentBannerMetrics(entry: BannerEntry, report?: BannerStatistics) {
-  const source = entry.source;
-  const version = source === 'remote' ? entry.version : 0;
   return report?.items.find(
     (item) =>
-      item.banner_id === entry.id && item.slot === entry.slot && item.source === source && item.version === version,
+      item.banner_id === entry.id &&
+      item.slot === entry.slot &&
+      item.source === 'remote' &&
+      item.version === entry.version,
   );
 }
 

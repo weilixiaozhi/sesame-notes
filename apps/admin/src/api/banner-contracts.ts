@@ -12,15 +12,15 @@ export const bannerTargetSchema = z.enum([
 ]);
 export const bannerImagePathSchema = z.string().regex(/^\/api\/v1\/banners\/media\/[a-f0-9]{64}$/);
 export const bannerEntrySchema = z.object({
-  id: z.string(),
+  id: z.uuid(),
   slot: bannerSlotSchema,
   image_path: bannerImagePathSchema.nullable(),
   target: bannerTargetSchema,
-  source: z.enum(['builtin', 'remote']),
+  source: z.literal('remote'),
   target_id: z.string().nullable(),
   target_name: z.string().nullable(),
   sort_order: z.number().int().nonnegative(),
-  version: z.number().int().nonnegative(),
+  version: z.number().int().positive(),
   updated_at: z.iso.datetime().nullable(),
   updated_by: z.string().nullable(),
 });

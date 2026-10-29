@@ -4,13 +4,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BannersPage } from './index';
-import { builtinBanner } from './model';
 
 const mocks = vi.hoisted(() => ({
   entries: [] as unknown[],
   metrics: [] as unknown[],
   create: vi.fn(),
-  reset: vi.fn(),
+  remove: vi.fn(),
 }));
 vi.mock('../../../auth/session', () => ({
   useSession: () => ({ session: { admin: { permissions: ['banners:read', 'banners:write'] } } }),
@@ -18,7 +17,7 @@ vi.mock('../../../auth/session', () => ({
 }));
 vi.mock('../../../api/client', () => ({
   api: {
-    adminBanners: { list: vi.fn(), statistics: vi.fn(), targets: vi.fn(), create: mocks.create, reset: mocks.reset },
+    adminBanners: { list: vi.fn(), statistics: vi.fn(), targets: vi.fn(), create: mocks.create, remove: mocks.remove },
   },
   request: (operation: () => Promise<unknown>) => operation(),
   reportError: vi.fn(),
@@ -62,14 +61,26 @@ beforeEach(() => {
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
-  mocks.entries = [builtinBanner('fitness-plan-library'), builtinBanner('fitness-template-library')];
+  mocks.entries = ['fitness-plan-library', 'fitness-template-library'].map((slot, index) => ({
+    id: index ? '22222222-2222-4222-8222-222222222222' : '11111111-1111-4111-8111-111111111111',
+    slot,
+    source: 'remote',
+    version: 1,
+    target: slot,
+    target_id: null,
+    target_name: null,
+    image_path: `/api/v1/banners/media/${'a'.repeat(64)}`,
+    sort_order: 0,
+    updated_at: '2026-10-29T00:00:00.000Z',
+    updated_by: null,
+  }));
   mocks.metrics = mocks.entries.map((entry) => {
     const value = entry as { id: string; slot: string };
     return {
       banner_id: value.id,
       slot: value.slot,
-      source: 'builtin',
-      version: 0,
+      source: 'remote',
+      version: 1,
       impressions: 5,
       clicks: 1,
       ctr: 0.2,
@@ -90,11 +101,14 @@ describe('Banner 管理列表交互', () => {
     expect(host.querySelector('.banner-preview')).toBeNull();
     expect(host.textContent).toContain('20%');
     expect(host.textContent).toContain('曝光次数');
-    expect(host.textContent).not.toMatch(/投放时间|上线|下线|启用|停用/);
+    expect(host.textContent).not.toMatch(
+      /投放时间|上线|下线|启用|停用|恢复默认|查找|查询|重置|开始采集|已登录 App 用户|内置默认|自定义/,
+    );
+    expect([...host.querySelectorAll('button')].some((button) => button.textContent === '预览')).toBe(false);
   });
   it('添加图片时可按名称选择具体官方模板，没有投放状态开关', async () => {
     await act(async () => root.render(createElement(BannersPage, { active: true })));
-    const add = [...host.querySelectorAll('button')].find((button) => button.textContent === '添加图片')!;
+    const add = [...host.querySelectorAll('button')].find((button) => button.textContent === '添加 Banner')!;
     await act(async () => add.click());
     const dialog = document.querySelector('[role="dialog"]')!;
     expect(dialog).not.toBeNull();
@@ -106,7 +120,35 @@ describe('Banner 管理列表交互', () => {
       target.dispatchEvent(new Event('change', { bubbles: true }));
     });
     expect(dialog.textContent).toContain('三分化·胸三头');
+    expect(dialog.textContent).toContain('添加 Banner');
+    expect(dialog.textContent).not.toContain('查找');
     expect(dialog.querySelector('input[type="checkbox"]')).toBeNull();
     expect(dialog.querySelector('input[type="datetime-local"]')).toBeNull();
+  });
+  it('点击缩略图只打开图片，不重复显示位置和跳转信息', async () => {
+    await act(async () => root.render(createElement(BannersPage, { active: true })));
+    await act(async () => (host.querySelector('.banner-thumbnail') as HTMLButtonElement).click());
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.querySelectorAll('img')).toHaveLength(1);
+    expect(dialog.querySelector('p')).toBeNull();
+    expect(dialog.textContent).not.toMatch(/点击进入|计划页|计划库/);
+  });
+  it('删除最后一条后列表为空，不生成不可删除的默认记录', async () => {
+    mocks.entries = mocks.entries.slice(0, 1);
+    mocks.remove.mockImplementation(async () => {
+      mocks.entries = [];
+      return { ok: true };
+    });
+    await act(async () => root.render(createElement(BannersPage, { active: true })));
+    const remove = [...host.querySelectorAll('button')].find((button) => button.textContent === '删除')!;
+    await act(async () => remove.click());
+    const confirm = [...document.querySelectorAll('[role="dialog"] button')].find(
+      (button) => button.textContent === '确认删除',
+    ) as HTMLButtonElement;
+    await act(async () => confirm.click());
+    expect(mocks.remove).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111', { version: 1 });
+    expect(host.querySelectorAll('tbody tr')).toHaveLength(0);
+    expect(host.textContent).toContain('暂无 Banner');
+    expect(host.textContent).not.toContain('内置默认');
   });
 });

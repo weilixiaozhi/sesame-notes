@@ -95,18 +95,11 @@ afterAll(async () => {
 });
 
 describe('Banner 轮播管理与客户端兼容', () => {
-  it('每张独立跳转和排序，旧客户端只取首张，删除与位置恢复默认保持原子性', async () => {
+  it('每张独立跳转和排序，旧客户端只取首张，逐张删除后由客户端使用默认入口', async () => {
     try {
       const initial = await app!.inject({ method: 'GET', url: '/api/v1/admin/banners', headers: headers() });
       expect(initial.statusCode, initial.body).toBe(200);
-      expect(initial.json().items).toHaveLength(2);
-      expect(
-        initial
-          .json()
-          .items.every(
-            (entry: { source: string; version: number }) => entry.source === 'builtin' && entry.version === 0,
-          ),
-      ).toBe(true);
+      expect(initial.json().items).toEqual([]);
       expect((await app!.inject({ method: 'GET', url: '/api/v1/banners?format=carousel' })).json()).toEqual({
         items: [],
       });
@@ -158,7 +151,7 @@ describe('Banner 轮播管理与客户端兼容', () => {
       }
       const options = await app!.inject({
         method: 'GET',
-        url: `/api/v1/admin/banners/targets?kind=plan&q=${encodeURIComponent(runId)}`,
+        url: '/api/v1/admin/banners/targets?kind=plan',
         headers: headers(readerCookie),
       });
       expect(options.statusCode, options.body).toBe(200);
@@ -283,37 +276,31 @@ describe('Banner 轮播管理与客户端兼容', () => {
           })
         ).statusCode,
       ).toBe(404);
-      const staleReset = await app!.inject({
-        method: 'POST',
-        url: '/api/v1/admin/banners/fitness-plan-library/reset',
+      const staleDelete = await app!.inject({
+        method: 'DELETE',
+        url: `/api/v1/admin/banners/${secondId}`,
         headers: headers(),
-        payload: { revisions: [{ id: secondId, version: 1 }] },
+        payload: { version: 1 },
       });
-      expect(staleReset.statusCode, staleReset.body).toBe(409);
-      const reset = await app!.inject({
-        method: 'POST',
-        url: '/api/v1/admin/banners/fitness-plan-library/reset',
+      expect(staleDelete.statusCode, staleDelete.body).toBe(409);
+      const removedSecond = await app!.inject({
+        method: 'DELETE',
+        url: `/api/v1/admin/banners/${secondId}`,
         headers: headers(),
-        payload: { revisions: [{ id: secondId, version: 2 }] },
+        payload: { version: 2 },
       });
-      expect(reset.statusCode, reset.body).toBe(200);
+      expect(removedSecond.statusCode, removedSecond.body).toBe(200);
       const rows = (await app!.inject({ method: 'GET', url: '/api/v1/admin/banners', headers: headers() })).json()
         .items;
-      expect(rows).toHaveLength(2);
-      expect(rows[0]).toMatchObject({
-        id: 'builtin:fitness-plan-library',
-        version: 0,
-        source: 'builtin',
-        target: 'fitness-plan-library',
-      });
-      expect(rows[1]).toMatchObject({ id: thirdId, source: 'remote' });
-      const finalReset = await app!.inject({
-        method: 'POST',
-        url: '/api/v1/admin/banners/fitness-template-library/reset',
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ id: thirdId, source: 'remote' });
+      const removedThird = await app!.inject({
+        method: 'DELETE',
+        url: `/api/v1/admin/banners/${thirdId}`,
         headers: headers(),
-        payload: { revisions: [{ id: thirdId, version: 1 }] },
+        payload: { version: 1 },
       });
-      expect(finalReset.statusCode, finalReset.body).toBe(200);
+      expect(removedThird.statusCode, removedThird.body).toBe(200);
       expect((await app!.inject({ method: 'GET', url: '/api/v1/banners?format=carousel' })).json()).toEqual({
         items: [],
       });
@@ -321,9 +308,52 @@ describe('Banner 轮播管理与客户端兼容', () => {
       expect((await app!.inject({ method: 'GET', url: imagePath })).statusCode).toBe(404);
       const last = (await app!.inject({ method: 'GET', url: '/api/v1/admin/banners', headers: headers() })).json()
         .items;
-      expect(last.every((entry: { source: string }) => entry.source === 'builtin')).toBe(true);
+      expect(last).toEqual([]);
+      const removedResetRoute = await app!.inject({
+        method: 'POST',
+        url: '/api/v1/admin/banners/fitness-plan-library/reset',
+        headers: headers(),
+        payload: { revisions: [] },
+      });
+      expect(removedResetRoute.statusCode, removedResetRoute.body).toBe(404);
     } catch (cause) {
       throw new Error('Banner 轮播管理与兼容契约验证失败', { cause });
+    }
+  });
+
+  it('官方内容下拉完整返回超过一百条的可用选项，排除已停用内容', async () => {
+    try {
+      const sample = await prisma.officialFitnessContent.findFirstOrThrow({
+        where: { kind: 'template', isEnabled: true },
+      });
+      const original = sample.content as Record<string, unknown>;
+      const data = Array.from({ length: 102 }, (_, index) => {
+        const id = randomUUID();
+        officialIds.push(id);
+        return {
+          id,
+          kind: 'template',
+          isEnabled: index < 101,
+          updatedBy: writerName,
+          content: {
+            ...original,
+            id,
+            name: { zh: `完整下拉${index}${runId}`, zh_hant: '完整選項', en: 'Complete option' },
+          } as Prisma.InputJsonObject,
+        };
+      });
+      await prisma.officialFitnessContent.createMany({ data });
+      const response = await app!.inject({
+        method: 'GET',
+        url: '/api/v1/admin/banners/targets?kind=template',
+        headers: headers(readerCookie),
+      });
+      expect(response.statusCode, response.body).toBe(200);
+      const ids = new Set(response.json().items.map((item: { id: string }) => item.id));
+      for (const row of data.slice(0, 101)) expect(ids.has(row.id)).toBe(true);
+      expect(ids.has(data[101]!.id)).toBe(false);
+    } catch (cause) {
+      throw new Error('官方内容下拉完整性验证失败', { cause });
     }
   });
 });

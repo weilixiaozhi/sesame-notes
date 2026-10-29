@@ -42,9 +42,7 @@ export const BannerCarouselSchema = Type.Object({
 });
 export const AdminBannerEntrySchema = Type.Object({
   ...BannerSlideSchema.properties,
-  id: Type.Union([BannerIdSchema, Type.String({ pattern: '^builtin:fitness-(?:plan|template)-library$' })]),
-  version: Type.Integer({ minimum: 0 }),
-  source: Type.Union([Type.Literal('builtin'), Type.Literal('remote')]),
+  source: Type.Literal('remote'),
   updated_at: nullableDate,
   updated_by: Type.Union([Type.String(), Type.Null()]),
 });
@@ -64,22 +62,12 @@ export const BannerUpdateSchema = Type.Object(
   { additionalProperties: false },
 );
 export const BannerDeleteSchema = Type.Object({ version: BannerVersionSchema }, { additionalProperties: false });
-export const BannerResetSchema = Type.Object(
-  {
-    revisions: Type.Array(
-      Type.Object({ id: BannerIdSchema, version: BannerVersionSchema }, { additionalProperties: false }),
-      { maxItems: MAX_BANNER_SLIDES_PER_SLOT, uniqueItems: true },
-    ),
-  },
-  { additionalProperties: false },
-);
 export const BannerTargetOptionsSchema = Type.Object({
   items: Type.Array(
     Type.Object({
       id: BannerIdSchema,
       name: Type.Object({ zh: Type.String(), zh_hant: Type.String(), en: Type.String() }),
     }),
-    { maxItems: 100 },
   ),
 });
 export const BannerUploadResponseSchema = Type.Object({
@@ -91,4 +79,3 @@ export const BannerUploadResponseSchema = Type.Object({
 export type BannerSlot = (typeof BANNER_SLOTS)[number];
 export type BannerCreate = Static<typeof BannerCreateSchema>;
 export type BannerUpdate = Static<typeof BannerUpdateSchema>;
-export type BannerReset = Static<typeof BannerResetSchema>;

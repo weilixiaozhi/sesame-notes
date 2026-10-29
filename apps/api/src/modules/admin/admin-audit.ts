@@ -44,7 +44,6 @@ const ADMIN_ACTION_LABELS: Readonly<Record<string, string>> = {
   'banner.update': '配置应用 Banner',
   'banner.create': '添加 Banner 图片',
   'banner.delete': '移除 Banner 图片',
-  'banner.reset': '恢复 Banner 默认图片',
   'banner.media.upload': '上传 Banner 图片',
   'fitness.taxonomy.create': '新增部位或器械',
   'fitness.taxonomy.update': '修改部位或器械',
@@ -54,6 +53,7 @@ const ADMIN_ACTION_LABELS: Readonly<Record<string, string>> = {
 /** 历史操作保留原始业务含义；当前操作目录只提供仍可执行的操作。 */
 const AUDIT_HISTORY_LABELS: Readonly<Record<string, string>> = {
   ...ADMIN_ACTION_LABELS,
+  'banner.reset': '恢复 Banner 默认图片',
   'fitness.exercise.publish': '发布动作',
   'fitness.template.publish': '发布训练模板',
   'fitness.plan.publish': '发布训练计划',

@@ -6,7 +6,8 @@ import {
   bannerImageId,
   bannerSlots,
   bannerTargets,
-  builtinBanner,
+  newBannerDraft,
+  type BannerDraft,
   type BannerEntry,
   type BannerSlot,
   type BannerTarget,
@@ -38,19 +39,16 @@ export function BannerEditor({
   initialSlot: BannerSlot;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState<BannerEntry>(() => current ?? builtinBanner(initialSlot));
+  const [draft, setDraft] = useState<BannerDraft>(() => current ?? newBannerDraft(initialSlot));
   const [busy, setBusy] = useState<'upload' | 'save' | null>(null);
   const [error, setError] = useState('');
-  const [targetSearch, setTargetSearch] = useState('');
-  const [searchInput, setSearchInput] = useState('');
   const lock = useRef(false);
   const official = draft.target === 'official-plan' || draft.target === 'official-template';
   const kind = draft.target === 'official-plan' ? 'plan' : 'template';
   const targets = useQuery({
-    queryKey: ['admin', 'banner-targets', kind, targetSearch],
+    queryKey: ['admin', 'banner-targets', kind],
     enabled: official,
-    queryFn: ({ signal }) =>
-      request(() => api.adminBanners.targets({ kind, q: targetSearch || undefined }, signal), 'banner-targets'),
+    queryFn: ({ signal }) => request(() => api.adminBanners.targets({ kind }, signal), 'banner-targets'),
   });
 
   /** 上传完成并经服务端校验后才替换草稿，失败时保留此前图片。 */
@@ -66,7 +64,7 @@ export function BannerEditor({
     try {
       const data_base64 = await encodeImage(file);
       const media = await request(() => api.adminBanners.upload({ filename: file.name, data_base64 }), 'banner-upload');
-      setDraft((value) => ({ ...value, image_path: media.image_path, source: 'remote' }));
+      setDraft((value) => ({ ...value, image_path: media.image_path }));
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {
@@ -178,8 +176,6 @@ export function BannerEditor({
             disabled={busy !== null}
             onChange={(event) => {
               setDraft({ ...draft, target: event.target.value as BannerTarget, target_id: null, target_name: null });
-              setSearchInput('');
-              setTargetSearch('');
             }}
           >
             {Object.entries(bannerTargets).map(([value, label]) => (
@@ -191,31 +187,6 @@ export function BannerEditor({
         </label>
         {official && (
           <>
-            <div className="banner-target-search">
-              <label className="field">
-                查找官方{kind === 'plan' ? '计划' : '模板'}
-                <input
-                  value={searchInput}
-                  disabled={busy !== null}
-                  onChange={(event) => setSearchInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      setTargetSearch(searchInput.trim());
-                    }
-                  }}
-                />
-              </label>
-              <Button
-                disabled={busy !== null || targets.isFetching}
-                onClick={() => {
-                  if (targetSearch === searchInput.trim()) void targets.refetch();
-                  else setTargetSearch(searchInput.trim());
-                }}
-              >
-                查找
-              </Button>
-            </div>
             {targets.isPending ? (
               <Loading label="正在加载官方内容…" />
             ) : targets.isError ? (

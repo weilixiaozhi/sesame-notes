@@ -14,7 +14,6 @@ import {
   bannerOrder,
   bannerSlideResponse,
   bannerTargetNames,
-  builtinBannerResponse,
   editableBanner,
   officialBannerName,
   validateBannerContent,
@@ -29,24 +28,15 @@ import {
   BannerIdSchema,
   BannerListSchema,
   BannerMediaIdSchema,
-  BannerResetSchema,
-  BannerSlotSchema,
   BannerTargetOptionsSchema,
   BannerUpdateSchema,
   BannerUploadResponseSchema,
   type BannerCreate,
-  type BannerReset,
-  type BannerSlot,
   type BannerUpdate,
 } from './banner-schemas.js';
 
-const slotNames: Record<BannerSlot, string> = {
-  'fitness-plan-library': '计划库入口',
-  'fitness-template-library': '模板库入口',
-};
 const idParams = Type.Object({ banner_id: BannerIdSchema });
 const okSchema = Type.Object({ ok: Type.Literal(true) });
-type AdminBannerDisplay = ReturnType<typeof adminBannerResponse> | ReturnType<typeof builtinBannerResponse>;
 
 /** 公开配置按显式格式返回；旧客户端每个位置只得到首张及其可识别的库入口。 */
 export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient, config: ApiConfig): void {
@@ -110,12 +100,7 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
             const rows = await tx.appBanner.findMany({ where: activeBannerWhere, orderBy: [...bannerOrder] });
             const names = await bannerTargetNames(tx, rows);
             return {
-              items: BANNER_SLOTS.flatMap<AdminBannerDisplay>((slot) => {
-                const selected = rows.filter((row) => row.slot === slot);
-                return selected.length
-                  ? selected.map((row) => adminBannerResponse(row, names))
-                  : [builtinBannerResponse(slot)];
-              }),
+              items: rows.map((row) => adminBannerResponse(row, names)),
             };
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
@@ -132,7 +117,6 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
         querystring: Type.Object(
           {
             kind: Type.Union([Type.Literal('plan'), Type.Literal('template')]),
-            q: Type.Optional(Type.String({ maxLength: 100 })),
           },
           { additionalProperties: false },
         ),
@@ -141,15 +125,13 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
     },
     async (request) =>
       execute(request, '查询 Banner 跳转内容', async () => {
-        const query = request.query as { kind: 'plan' | 'template'; q?: string };
+        const query = request.query as { kind: 'plan' | 'template' };
         const rows = await prisma.officialFitnessContent.findMany({
           where: {
             kind: query.kind,
             isEnabled: true,
-            ...(query.q?.trim() ? { content: { path: ['name', 'zh'], string_contains: query.q.trim() } } : {}),
           },
           orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-          take: 100,
           select: { id: true, content: true },
         });
         return {
@@ -282,50 +264,6 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
             requestId: request.id,
             ip: request.ip,
             metadata: { slot: row.slot },
-          });
-          return { ok: true as const };
-        });
-      }),
-  );
-  app.post(
-    '/api/v1/admin/banners/:slot/reset',
-    {
-      onRequest: verifyAdminWriteRequest(config),
-      preHandler: authenticateAdmin(config, prisma, 'banners:write'),
-      schema: {
-        tags: ['admin-banners'],
-        operationId: 'resetAdminBannerSlot',
-        params: Type.Object({ slot: BannerSlotSchema }),
-        body: BannerResetSchema,
-        response: { 200: okSchema },
-      },
-    },
-    async (request) =>
-      execute(request, '恢复 Banner 默认图片', async () => {
-        const { slot } = request.params as { slot: BannerSlot };
-        const body = request.body as BannerReset;
-        return withAdminMutation(prisma, request, 'banners:write', async (tx, auth) => {
-          const rows = await tx.appBanner.findMany({ where: { ...activeBannerWhere, slot } });
-          const requested = new Map(body.revisions.map((row) => [row.id, row.version]));
-          // 必须与管理员看到的完整位置快照一致，不能悄悄清除后来新增或修改的图片。
-          if (
-            requested.size !== body.revisions.length ||
-            rows.length !== requested.size ||
-            rows.some((row) => requested.get(row.id) !== row.version)
-          )
-            throw new ApiError(409, 'BANNER_VERSION_CONFLICT', '此位置的图片已变化，请刷新并确认后重试');
-          if (rows.length)
-            await tx.appBanner.updateMany({
-              where: { ...activeBannerWhere, slot },
-              data: { deletedAt: new Date(), isEnabled: false, updatedBy: auth.username, version: { increment: 1 } },
-            });
-          await writeAuditLog(tx, {
-            actor: `admin:${auth.adminId}`,
-            action: 'banner.reset',
-            target: { type: 'app_banner_slot', id: slot },
-            requestId: request.id,
-            ip: request.ip,
-            metadata: { count: rows.length, target_display: slotNames[slot] },
           });
           return { ok: true as const };
         });

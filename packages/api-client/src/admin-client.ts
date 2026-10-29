@@ -73,11 +73,6 @@ export class AdminApiClient extends ApiClient {
     /** 删除一张自定义图片；最后一张删除后应用使用内置入口。 */
     remove: async (banner_id: string, body: Body<paths['/api/v1/admin/banners/{banner_id}']['delete']>) =>
       unwrap(await this.client.DELETE('/api/v1/admin/banners/{banner_id}', { params: { path: { banner_id } }, body })),
-    /** 比对位置内完整修订快照后恢复默认，避免覆盖他人新增图片。 */
-    reset: async (
-      slot: paths['/api/v1/admin/banners/{slot}/reset']['post']['parameters']['path']['slot'],
-      body: Body<paths['/api/v1/admin/banners/{slot}/reset']['post']>,
-    ) => unwrap(await this.client.POST('/api/v1/admin/banners/{slot}/reset', { params: { path: { slot } }, body })),
     /** 查询可跳转的官方计划或模板，权限沿用 Banner 管理。 */
     targets: async (query: Query<paths['/api/v1/admin/banners/targets']['get']>, signal?: AbortSignal) =>
       unwrap(await this.client.GET('/api/v1/admin/banners/targets', { params: { query }, signal })),

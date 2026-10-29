@@ -671,22 +671,6 @@ export interface paths {
         patch: operations["updateAdminBanner"];
         trace?: never;
     };
-    "/api/v1/admin/banners/{slot}/reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["resetAdminBannerSlot"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/admin/banners/media": {
         parameters: {
             query?: never;
@@ -7634,6 +7618,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         items: {
+                            /** Format: uuid */
                             id: string;
                             slot: "fitness-plan-library" | "fitness-template-library";
                             image_path: string | null;
@@ -7642,7 +7627,8 @@ export interface operations {
                             target_name: string | null;
                             version: number;
                             sort_order: number;
-                            source: "builtin" | "remote";
+                            /** @enum {string} */
+                            source: "remote";
                             updated_at: string | null;
                             updated_by: string | null;
                         }[];
@@ -7751,6 +7737,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** Format: uuid */
                         id: string;
                         slot: "fitness-plan-library" | "fitness-template-library";
                         image_path: string | null;
@@ -7759,7 +7746,8 @@ export interface operations {
                         target_name: string | null;
                         version: number;
                         sort_order: number;
-                        source: "builtin" | "remote";
+                        /** @enum {string} */
+                        source: "remote";
                         updated_at: string | null;
                         updated_by: string | null;
                     };
@@ -7845,7 +7833,6 @@ export interface operations {
         parameters: {
             query: {
                 kind: "plan" | "template";
-                q?: string;
             };
             header?: never;
             path?: never;
@@ -8082,6 +8069,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** Format: uuid */
                         id: string;
                         slot: "fitness-plan-library" | "fitness-template-library";
                         image_path: string | null;
@@ -8090,118 +8078,10 @@ export interface operations {
                         target_name: string | null;
                         version: number;
                         sort_order: number;
-                        source: "builtin" | "remote";
+                        /** @enum {string} */
+                        source: "remote";
                         updated_at: string | null;
                         updated_by: string | null;
-                    };
-                };
-            };
-            /** @description Default Response */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Default Response */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Default Response */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Default Response */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Default Response */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
-            429: {
-                headers: {
-                    /** @description 距离允许重试的秒数 */
-                    "Retry-After"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Default Response */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Default Response */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    resetAdminBannerSlot: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slot: "fitness-plan-library" | "fitness-template-library";
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    revisions: {
-                        /** Format: uuid */
-                        id: string;
-                        version: number;
-                    }[];
-                };
-            };
-        };
-        responses: {
-            /** @description Default Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @enum {boolean} */
-                        ok: true;
                     };
                 };
             };

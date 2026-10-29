@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { reportError } from '../../../api/client';
 import { Button } from '../../../components/ui';
-import { bannerPreview, bannerSlots, type BannerEntry } from './model';
+import { bannerPreview, bannerSlots, type BannerDraft, type BannerEntry } from './model';
 
 /** 表格图片只作为小幅预览入口，加载失败仍可打开独立预览。 */
 export function BannerThumbnail({ entry, onPreview }: { entry: BannerEntry; onPreview: () => void }) {
@@ -24,7 +24,7 @@ export function BannerThumbnail({ entry, onPreview }: { entry: BannerEntry; onPr
 }
 
 /** 大图仅在预览和编辑弹窗显示，失败后允许单独重新读取。 */
-export function BannerPreview({ entry }: { entry: BannerEntry }) {
+export function BannerPreview({ entry }: { entry: Pick<BannerDraft, 'slot' | 'image_path'> }) {
   const source = bannerPreview(entry);
   const [failed, setFailed] = useState<string>();
   if (failed === source)

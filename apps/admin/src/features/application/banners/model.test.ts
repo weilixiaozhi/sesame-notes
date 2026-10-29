@@ -3,7 +3,7 @@ import { bannerListSchema, bannerUploadSchema } from '../../../api/banner-contra
 import {
   bannerImageId,
   bannerPreview,
-  builtinBanner,
+  newBannerDraft,
   currentBannerMetrics,
   bannerMetricCount,
   bannerTargetLabel,
@@ -38,14 +38,14 @@ function report(): BannerStatistics {
 }
 
 describe('轮播入口与统计边界', () => {
-  it('内置图片与默认跳转始终绑定，不作为服务器图片访问', () => {
-    const builtin = builtinBanner('fitness-plan-library');
-    expect(builtin.id).toBe('builtin:fitness-plan-library');
-    expect(builtin.target).toBe('fitness-plan-library');
-    expect(builtin.source).toBe('builtin');
-    expect(builtin.version).toBe(0);
-    expect(bannerPreview(builtin)).toBe('/banner-defaults/plan-library.png');
-    expect(currentBannerMetrics(builtin, report())).toBeUndefined();
+  it('新增草稿没有图片和服务器身份，管理列表允许为空', () => {
+    const draft = newBannerDraft('fitness-plan-library');
+    expect(draft.target).toBe('fitness-plan-library');
+    expect(draft.image_path).toBeNull();
+    expect(draft).not.toHaveProperty('id');
+    expect(bannerPreview(draft)).toBeUndefined();
+    expect(bannerListSchema.safeParse({ items: [] }).success).toBe(true);
+    expect(bannerListSchema.safeParse({ items: [{ ...entry, source: 'builtin', version: 0 }] }).success).toBe(false);
   });
   it('未发布图片只走后台鉴权预览，拒绝外部地址和路径穿越', () => {
     expect(bannerImageId(entry.image_path)).toBe(mediaId);
@@ -55,9 +55,7 @@ describe('轮播入口与统计边界', () => {
   });
   it('同一位置允许多张图片，拒绝重复身份或未注册目标', () => {
     const second = { ...entry, id: '22222222-2222-4222-8222-222222222222', sort_order: 1 };
-    expect(
-      bannerListSchema.safeParse({ items: [entry, second, builtinBanner('fitness-template-library')] }).success,
-    ).toBe(true);
+    expect(bannerListSchema.safeParse({ items: [entry, second] }).success).toBe(true);
     expect(bannerListSchema.safeParse({ items: [entry, entry] }).success).toBe(false);
     expect(bannerListSchema.safeParse({ items: [{ ...entry, target: '/settings' }] }).success).toBe(false);
   });

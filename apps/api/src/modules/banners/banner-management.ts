@@ -52,23 +52,6 @@ export function bannerSlideResponse(row: AppBanner, names: ReadonlyMap<string, s
   };
 }
 
-/** 管理表格按位置显示虚拟默认行；默认图片属于应用资源，不持久化为可删除记录。 */
-export function builtinBannerResponse(slot: BannerSlot) {
-  return {
-    id: `builtin:${slot}`,
-    slot,
-    image_path: null,
-    target: slot,
-    target_id: null,
-    target_name: null,
-    version: 0,
-    sort_order: 0,
-    source: 'builtin' as const,
-    updated_at: null,
-    updated_by: null,
-  };
-}
-
 /** 管理员资料只随管理响应返回，不进入匿名客户端配置。 */
 export function adminBannerResponse(row: AppBanner, names: ReadonlyMap<string, string>) {
   return {

@@ -11873,16 +11873,8 @@
                         ],
                         "properties": {
                           "id": {
-                            "anyOf": [
-                              {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              {
-                                "pattern": "^builtin:fitness-(?:plan|template)-library$",
-                                "type": "string"
-                              }
-                            ]
+                            "format": "uuid",
+                            "type": "string"
                           },
                           "slot": {
                             "anyOf": [
@@ -11979,7 +11971,8 @@
                             ]
                           },
                           "version": {
-                            "minimum": 0,
+                            "minimum": 1,
+                            "maximum": 2147483646,
                             "type": "integer"
                           },
                           "sort_order": {
@@ -11988,19 +11981,9 @@
                             "type": "integer"
                           },
                           "source": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "builtin"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "remote"
-                                ]
-                              }
+                            "type": "string",
+                            "enum": [
+                              "remote"
                             ]
                           },
                           "updated_at": {
@@ -12256,16 +12239,8 @@
                   ],
                   "properties": {
                     "id": {
-                      "anyOf": [
-                        {
-                          "format": "uuid",
-                          "type": "string"
-                        },
-                        {
-                          "pattern": "^builtin:fitness-(?:plan|template)-library$",
-                          "type": "string"
-                        }
-                      ]
+                      "format": "uuid",
+                      "type": "string"
                     },
                     "slot": {
                       "anyOf": [
@@ -12362,7 +12337,8 @@
                       ]
                     },
                     "version": {
-                      "minimum": 0,
+                      "minimum": 1,
+                      "maximum": 2147483646,
                       "type": "integer"
                     },
                     "sort_order": {
@@ -12371,19 +12347,9 @@
                       "type": "integer"
                     },
                     "source": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "builtin"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "remote"
-                          ]
-                        }
+                      "type": "string",
+                      "enum": [
+                        "remote"
                       ]
                     },
                     "updated_at": {
@@ -12530,15 +12496,6 @@
             "in": "query",
             "name": "kind",
             "required": true
-          },
-          {
-            "schema": {
-              "maxLength": 100,
-              "type": "string"
-            },
-            "in": "query",
-            "name": "q",
-            "required": false
           }
         ],
         "security": [
@@ -12558,7 +12515,6 @@
                   ],
                   "properties": {
                     "items": {
-                      "maxItems": 100,
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -12841,16 +12797,8 @@
                   ],
                   "properties": {
                     "id": {
-                      "anyOf": [
-                        {
-                          "format": "uuid",
-                          "type": "string"
-                        },
-                        {
-                          "pattern": "^builtin:fitness-(?:plan|template)-library$",
-                          "type": "string"
-                        }
-                      ]
+                      "format": "uuid",
+                      "type": "string"
                     },
                     "slot": {
                       "anyOf": [
@@ -12947,7 +12895,8 @@
                       ]
                     },
                     "version": {
-                      "minimum": 0,
+                      "minimum": 1,
+                      "maximum": 2147483646,
                       "type": "integer"
                     },
                     "sort_order": {
@@ -12956,19 +12905,9 @@
                       "type": "integer"
                     },
                     "source": {
-                      "anyOf": [
-                        {
-                          "type": "string",
-                          "enum": [
-                            "builtin"
-                          ]
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "remote"
-                          ]
-                        }
+                      "type": "string",
+                      "enum": [
+                        "remote"
                       ]
                     },
                     "updated_at": {
@@ -13121,193 +13060,6 @@
             },
             "in": "path",
             "name": "banner_id",
-            "required": true
-          }
-        ],
-        "security": [
-          {
-            "adminSessionAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "ok"
-                  ],
-                  "properties": {
-                    "ok": {
-                      "type": "boolean",
-                      "enum": [
-                        true
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "距离允许重试的秒数"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/admin/banners/{slot}/reset": {
-      "post": {
-        "operationId": "resetAdminBannerSlot",
-        "tags": [
-          "admin-banners"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "type": "object",
-                "required": [
-                  "revisions"
-                ],
-                "properties": {
-                  "revisions": {
-                    "maxItems": 20,
-                    "uniqueItems": true,
-                    "type": "array",
-                    "items": {
-                      "additionalProperties": false,
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "version"
-                      ],
-                      "properties": {
-                        "id": {
-                          "format": "uuid",
-                          "type": "string"
-                        },
-                        "version": {
-                          "minimum": 1,
-                          "maximum": 2147483646,
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "fitness-plan-library"
-                  ]
-                },
-                {
-                  "type": "string",
-                  "enum": [
-                    "fitness-template-library"
-                  ]
-                }
-              ]
-            },
-            "in": "path",
-            "name": "slot",
             "required": true
           }
         ],
