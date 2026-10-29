@@ -51,6 +51,7 @@ export function BannersPage({ active }: { active: boolean }) {
           <table className="banner-table">
             <thead>
               <tr>
+                <th>序号</th>
                 <th>展示位置</th>
                 <th>图片</th>
                 <th>跳转目标</th>
@@ -65,28 +66,29 @@ export function BannersPage({ active }: { active: boolean }) {
             <tbody>
               {query.isPending ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <Loading />
                   </td>
                 </tr>
               ) : query.isError ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <RequestError error={query.error} retry={() => void query.refetch()} />
                   </td>
                 </tr>
               ) : !rows.length ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <Empty>暂无数据</Empty>
                   </td>
                 </tr>
               ) : (
-                rows.slice((paging.page - 1) * paging.page_size, paging.page * paging.page_size).map((entry) => {
+                rows.slice((paging.page - 1) * paging.page_size, paging.page * paging.page_size).map((entry, index) => {
                   const report = statistics.isError || statistics.isFetching ? undefined : statistics.data;
                   const metrics = bannerMetrics(entry, report);
                   return (
                     <tr key={entry.id}>
+                      <td data-label="序号">{(paging.page - 1) * paging.page_size + index + 1}</td>
                       <td data-label="展示位置">{bannerSlots[entry.slot].title}</td>
                       <td data-label="图片">
                         <BannerThumbnail entry={entry} onPreview={() => setDialog({ mode: 'preview', row: entry })} />

@@ -147,9 +147,9 @@ describe('Banner 管理列表交互', () => {
     ) as HTMLButtonElement;
     await act(async () => confirm.click());
     expect(mocks.remove).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111', { version: 1 });
-    expect(host.querySelectorAll('thead th')).toHaveLength(9);
+    expect(host.querySelectorAll('thead th')).toHaveLength(10);
     expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
-    expect(host.querySelector('tbody td')?.getAttribute('colspan')).toBe('9');
+    expect(host.querySelector('tbody td')?.getAttribute('colspan')).toBe('10');
     expect(host.querySelectorAll('.banner-thumbnail')).toHaveLength(0);
     expect(host.textContent).toContain('暂无数据');
     expect(host.textContent).toMatch(/共\s*0\s*条/);
