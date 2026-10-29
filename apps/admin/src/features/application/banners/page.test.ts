@@ -42,8 +42,7 @@ vi.mock('@tanstack/react-query', () => ({
       : queryKey.includes('banner-statistics')
         ? {
             items: mocks.metrics,
-            scope: 'current',
-            range: { start_date: '2026-10-29', end_date: '2026-10-29', timezone: 'Asia/Shanghai' },
+            scope: 'total',
             coverage: {
               complete: true,
               collection_started_at: '2026-10-28T00:00:00.000Z',
@@ -102,8 +101,9 @@ describe('Banner 管理列表交互', () => {
     expect(host.textContent).toContain('20%');
     expect(host.textContent).toContain('曝光次数');
     expect(host.textContent).not.toMatch(
-      /投放时间|上线|下线|启用|停用|恢复默认|查找|查询|重置|开始采集|已登录 App 用户|内置默认|自定义/,
+      /投放时间|上线|下线|启用|停用|恢复默认|查找|查询|重置|开始采集|已登录 App 用户|内置默认|自定义|统计范围/,
     );
+    expect(host.querySelector('.page-heading select')).toBeNull();
     expect([...host.querySelectorAll('button')].some((button) => button.textContent === '预览')).toBe(false);
   });
   it('添加图片时可按名称选择具体官方模板，没有投放状态开关', async () => {
@@ -147,8 +147,12 @@ describe('Banner 管理列表交互', () => {
     ) as HTMLButtonElement;
     await act(async () => confirm.click());
     expect(mocks.remove).toHaveBeenCalledWith('11111111-1111-4111-8111-111111111111', { version: 1 });
-    expect(host.querySelectorAll('tbody tr')).toHaveLength(0);
-    expect(host.textContent).toContain('暂无 Banner');
+    expect(host.querySelectorAll('thead th')).toHaveLength(9);
+    expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(host.querySelector('tbody td')?.getAttribute('colspan')).toBe('9');
+    expect(host.querySelectorAll('.banner-thumbnail')).toHaveLength(0);
+    expect(host.textContent).toContain('暂无数据');
+    expect(host.textContent).toMatch(/共\s*0\s*条/);
     expect(host.textContent).not.toContain('内置默认');
   });
 });

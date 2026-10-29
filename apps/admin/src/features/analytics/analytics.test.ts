@@ -10,9 +10,11 @@ import {
   analysisQuery,
   eventMeasure,
   eventRows,
+  matchesBehavior,
   measured,
   rowMeasure,
   sourcePageChoices,
+  type EventCatalog,
 } from './model';
 import { analyticsCatalogSchema, analyticsDetailsSchema, analyticsFunnelSchema } from '../../api/analytics-contracts';
 
@@ -106,6 +108,37 @@ function catalog() {
   };
 }
 
+/** 曝光与页面访问保留相同协议浏览分类，界面按 kind 区分统计对象。 */
+function exposureCatalog(): EventCatalog {
+  return {
+    events: [
+      ...catalog().events,
+      {
+        id: 'fitness_plans_view',
+        event_name: 'fitness_plans_view',
+        name: '健身_计划_访问',
+        kind: 'page_view',
+        behavior: 'view',
+        page_id: 'fitness.plans',
+        location: '计划页',
+        platforms: ['app'],
+        source_pages: [],
+      },
+      {
+        id: 'banner_impression',
+        event_name: 'banner_impression',
+        name: 'Banner_曝光',
+        kind: 'action',
+        behavior: 'view',
+        page_id: null,
+        location: 'Banner 可见区域',
+        platforms: ['app'],
+        source_pages: [{ page_id: 'fitness.plans', platforms: ['app'] }],
+      },
+    ],
+  };
+}
+
 /** 关联信息缺失必须区别于完整采集后的零转化。 */
 function funnel() {
   return {
@@ -139,6 +172,63 @@ function funnel() {
 }
 
 describe('统计计算与查询规则', () => {
+  it('曝光独立选项沿用日期查询协议，不混入页面访问选项', () => {
+    const definitions = exposureCatalog();
+    const range = { start_date: '2026-10-01', end_date: '2026-10-02', platform: 'app' as const };
+    const selection = alignSelection(definitions, { behavior: 'exposure', event: '', page: '', bucket: 'day' }, 'app');
+    expect(selection.event).toBe('banner_impression');
+    expect(definitions.events.filter((entry) => matchesBehavior(entry, 'view')).map((entry) => entry.id)).not.toContain(
+      'banner_impression',
+    );
+    expect(definitions.events.filter((entry) => matchesBehavior(entry, 'exposure')).map((entry) => entry.id)).toEqual([
+      'banner_impression',
+    ]);
+    expect(analysisQuery(range, { ...selection, page: 'fitness.plans' }, definitions)).toEqual({
+      ...range,
+      bucket: 'auto',
+      behavior: 'view',
+      event_name: 'banner_impression',
+      page_id: 'fitness.plans',
+    });
+    expect(selectionFromPath(analysisLink(range, 'exposure', 'banner_impression')).selection.behavior).toBe('exposure');
+    expect(() => analysisQuery(range, { ...selection, event: '' }, definitions)).toThrow('具体曝光事件');
+    expect(() => analysisQuery(range, { ...selection, behavior: 'view' }, definitions)).toThrow('不可用');
+  });
+  it('曝光范围次数与去重人数来自 exposures，不能读取页面指标或伪造时间桶', () => {
+    const report = {
+      ...details(),
+      exposures: [{ event_name: 'banner_impression', name: 'Banner_曝光', total: 8, users: 2 }],
+    };
+    expect(eventMeasure(report, 'exposure', 'total')).toBe(8);
+    expect(eventMeasure(report, 'exposure', 'users')).toBe(2);
+    expect(eventMeasure(report, 'exposure', 'average')).toBe(4);
+    expect(eventRows(report, 'exposure')).toEqual([
+      { id: 'banner_impression', code: 'banner_impression', name: 'Banner_曝光', total: 8, users: 2 },
+    ]);
+    expect(eventMeasure(report, 'view', 'total')).toBe(9);
+    expect(eventMeasure(report, 'exposure', 'total', report.series[0], report.series[0]!.period_start)).toBeNull();
+    expect(eventMeasure(details(), 'exposure', 'total')).toBeNull();
+    const multiple = {
+      ...report,
+      exposures: [...report.exposures, { event_name: 'other_exposure', name: '其他曝光', total: 3, users: 2 }],
+    };
+    expect(eventMeasure(multiple, 'exposure', 'users')).toBeNull();
+  });
+  it('曝光空结果遵循采集覆盖，不把未采集或未知来源填成真实零', () => {
+    const empty = { ...details(), exposures: [] };
+    expect(eventMeasure(empty, 'exposure', 'total')).toBe(0);
+    expect(eventMeasure(empty, 'exposure', 'average')).toBeNull();
+    expect(
+      eventMeasure({ ...empty, coverage: { ...empty.coverage, complete: false } }, 'exposure', 'total'),
+    ).toBeNull();
+    expect(
+      alignSelection(
+        exposureCatalog(),
+        { behavior: 'exposure', event: 'banner_impression', page: 'fitness.plans', bucket: 'day' },
+        'web',
+      ),
+    ).toMatchObject({ event: '', page: '' });
+  });
   it('按当前行为独立计算人均次数，不使用其他行为或逐日去重数之和', () => {
     expect(eventMeasure(details(), 'view', 'average')).toBe(4.5);
     expect(eventMeasure(details(), 'click', 'users')).toBe(1);

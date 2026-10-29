@@ -57,19 +57,13 @@ export function bannerTargetLabel(entry: BannerEntry): string {
     : bannerTargets[entry.target];
 }
 
-/** 只展示与当前图片及跳转配置匹配的统计，防止两次请求跨越修改时串用旧数据。 */
-export function currentBannerMetrics(entry: BannerEntry, report?: BannerStatistics) {
-  return report?.items.find(
-    (item) =>
-      item.banner_id === entry.id &&
-      item.slot === entry.slot &&
-      item.source === 'remote' &&
-      item.version === entry.version,
-  );
+/** 累计统计只按稳定身份对应，修改图片、位置或跳转不会清空该 Banner 的总量。 */
+export function bannerMetrics(entry: BannerEntry, report?: BannerStatistics) {
+  return report?.items.find((item) => item.banner_id === entry.id && item.source === 'remote');
 }
 
-/** 尚未覆盖的零值保留为空，真实事件或完整覆盖范围内的零值正常展示。 */
-export function bannerMetricCount(value: number | undefined, report?: BannerStatistics): string {
-  if (value === undefined || !report || (!value && !report.coverage.complete)) return '—';
+/** 只在统计尚未返回时显示占位，已采集事实的累计零值正常显示。 */
+export function bannerMetricCount(value: number | undefined): string {
+  if (value === undefined) return '—';
   return new Intl.NumberFormat('zh-CN').format(value);
 }

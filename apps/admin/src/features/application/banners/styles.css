@@ -15,15 +15,6 @@
   height: 100%;
   object-fit: cover;
 }
-.banner-range {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-2);
-}
-.banner-range select {
-  width: auto;
-}
 .banner-table td {
   vertical-align: middle;
 }

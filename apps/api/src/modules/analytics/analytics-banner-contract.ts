@@ -1,4 +1,4 @@
-import { Type, type Static } from '@sinclair/typebox';
+import { Type } from '@sinclair/typebox';
 
 export const ANALYTICS_BANNER_PAGES = {
   'fitness-plan-library': 'fitness.plans',
@@ -15,36 +15,22 @@ export const AnalyticsBannerIdSchema = Type.Union([
   Type.Literal('builtin:fitness-template-library'),
 ]);
 export const AnalyticsBannerVersionSchema = Type.Integer({ minimum: 0, maximum: 2_147_483_647 });
-export const BannerStatisticsQuerySchema = Type.Object(
-  {
-    start_date: Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' }),
-    end_date: Type.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$' }),
-  },
-  { additionalProperties: false },
-);
 export const BannerStatisticsSchema = Type.Object({
-  range: Type.Object({
-    start_date: Type.String(),
-    end_date: Type.String(),
-    timezone: Type.Literal('Asia/Shanghai'),
-  }),
-  scope: Type.Literal('current'),
+  scope: Type.Literal('total'),
   items: Type.Array(
     Type.Object({
-      banner_id: AnalyticsBannerIdSchema,
+      banner_id: Type.String({ format: 'uuid' }),
       slot: AnalyticsBannerSlotSchema,
-      source: AnalyticsBannerSourceSchema,
-      version: AnalyticsBannerVersionSchema,
+      source: Type.Literal('remote'),
+      version: Type.Integer({ minimum: 1, maximum: 2_147_483_647 }),
       impressions: Type.Integer({ minimum: 0 }),
       clicks: Type.Integer({ minimum: 0 }),
       ctr: Type.Union([Type.Number({ minimum: 0 }), Type.Null()]),
     }),
-    { minItems: 2 },
   ),
   coverage: Type.Object({
     collection_started_at: Type.String({ format: 'date-time' }),
-    complete: Type.Boolean(),
+    complete: Type.Literal(true),
     audience: Type.Literal('authenticated_users'),
   }),
 });
-export type BannerStatisticsQuery = Static<typeof BannerStatisticsQuerySchema>;

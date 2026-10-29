@@ -61,9 +61,9 @@ export class AdminApiClient extends ApiClient {
   readonly adminBanners = {
     /** 读取应用固定入口的图片、目标和当前修订。 */
     list: async (signal?: AbortSignal) => unwrap(await this.client.GET('/api/v1/admin/banners', { signal })),
-    /** 按北京时间范围查询当前入口配置的真实曝光与点击。 */
-    statistics: async (query: Query<paths['/api/v1/admin/banners/statistics']['get']>, signal?: AbortSignal) =>
-      unwrap(await this.client.GET('/api/v1/admin/banners/statistics', { params: { query }, signal })),
+    /** 查询每个 Banner 的累计曝光与点击，不附加时间或版本筛选。 */
+    statistics: async (signal?: AbortSignal) =>
+      unwrap(await this.client.GET('/api/v1/admin/banners/statistics', { signal })),
     /** 新增同一位置的一张轮播图片。 */
     create: async (body: Body<paths['/api/v1/admin/banners']['post']>) =>
       unwrap(await this.client.POST('/api/v1/admin/banners', { body })),

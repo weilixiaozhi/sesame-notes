@@ -13599,26 +13599,6 @@
         "tags": [
           "admin-banners"
         ],
-        "parameters": [
-          {
-            "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "type": "string"
-            },
-            "in": "query",
-            "name": "start_date",
-            "required": true
-          },
-          {
-            "schema": {
-              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-              "type": "string"
-            },
-            "in": "query",
-            "name": "end_date",
-            "required": true
-          }
-        ],
         "security": [
           {
             "adminSessionAuth": []
@@ -13632,42 +13612,18 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "range",
                     "scope",
                     "items",
                     "coverage"
                   ],
                   "properties": {
-                    "range": {
-                      "type": "object",
-                      "required": [
-                        "start_date",
-                        "end_date",
-                        "timezone"
-                      ],
-                      "properties": {
-                        "start_date": {
-                          "type": "string"
-                        },
-                        "end_date": {
-                          "type": "string"
-                        },
-                        "timezone": {
-                          "type": "string",
-                          "enum": [
-                            "Asia/Shanghai"
-                          ]
-                        }
-                      }
-                    },
                     "scope": {
                       "type": "string",
                       "enum": [
-                        "current"
+                        "total"
                       ]
                     },
                     "items": {
-                      "minItems": 2,
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -13682,24 +13638,8 @@
                         ],
                         "properties": {
                           "banner_id": {
-                            "anyOf": [
-                              {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "builtin:fitness-plan-library"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "builtin:fitness-template-library"
-                                ]
-                              }
-                            ]
+                            "format": "uuid",
+                            "type": "string"
                           },
                           "slot": {
                             "anyOf": [
@@ -13718,23 +13658,13 @@
                             ]
                           },
                           "source": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "builtin"
-                                ]
-                              },
-                              {
-                                "type": "string",
-                                "enum": [
-                                  "remote"
-                                ]
-                              }
+                            "type": "string",
+                            "enum": [
+                              "remote"
                             ]
                           },
                           "version": {
-                            "minimum": 0,
+                            "minimum": 1,
                             "maximum": 2147483647,
                             "type": "integer"
                           },
@@ -13773,7 +13703,10 @@
                           "type": "string"
                         },
                         "complete": {
-                          "type": "boolean"
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
                         },
                         "audience": {
                           "type": "string",

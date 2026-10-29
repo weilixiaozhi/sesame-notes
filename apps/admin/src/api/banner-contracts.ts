@@ -37,14 +37,13 @@ export const bannerUploadSchema = z
   .refine((media) => media.image_path.endsWith(`/${media.id}`));
 
 export const bannerStatisticsSchema = z.object({
-  range: z.object({ start_date: z.string(), end_date: z.string(), timezone: z.literal('Asia/Shanghai') }),
-  scope: z.literal('current'),
+  scope: z.literal('total'),
   items: z
     .array(
       z.object({
         banner_id: z.string(),
         slot: bannerSlotSchema,
-        source: z.enum(['builtin', 'remote']),
+        source: z.literal('remote'),
         version: z.number().int().nonnegative(),
         impressions: z.number().int().nonnegative(),
         clicks: z.number().int().nonnegative(),

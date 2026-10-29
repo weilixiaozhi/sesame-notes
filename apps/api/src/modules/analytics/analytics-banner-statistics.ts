@@ -1,47 +1,40 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { ApiError } from '../../shared/errors.js';
-import { analyticsRange } from './analytics-service.js';
-import type { ANALYTICS_BANNER_PAGES, BannerStatisticsQuery } from './analytics-banner-contract.js';
+import type { ANALYTICS_BANNER_PAGES } from './analytics-banner-contract.js';
 
 type BannerCountRow = {
   banner_id: string;
   slot: keyof typeof ANALYTICS_BANNER_PAGES;
-  source: 'builtin' | 'remote';
+  source: 'remote';
   version: number;
   impressions: bigint;
   clicks: bigint;
 };
 
-/** 同一数据库快照同时确定当前素材和事件范围，换图前的历史不会计入新版本。 */
-export async function readBannerStatistics(prisma: PrismaClient, query: BannerStatisticsQuery, now = new Date()) {
+/** 在同一快照中按图片稳定身份汇总已发生的全部记录，版本和位置只标识当前配置。 */
+export async function readBannerStatistics(prisma: PrismaClient, now = new Date()) {
   try {
-    const { start, end } = analyticsRange(query, now);
     return await prisma.$transaction(
       async (tx) => {
         const state = await tx.productAnalyticsState.findUnique({ where: { id: 1 } });
         if (!state?.bannerStartedAt)
           throw new ApiError(503, 'ANALYTICS_NOT_READY', 'Banner 采集尚未初始化，请稍后再试');
         const rows = await tx.$queryRaw<BannerCountRow[]>(Prisma.sql`
-        WITH positions(slot) AS (VALUES ('fitness-plan-library'), ('fitness-template-library')),
-        current_banners AS (
+        WITH current_banners AS (
           SELECT b.id::text AS banner_id,b.slot,'remote' AS source,b.version,b.sort_order
           FROM app_banners b WHERE b.deleted_at IS NULL AND b.is_enabled
-          UNION ALL
-          SELECT 'builtin:' || p.slot,p.slot,'builtin',0,0 FROM positions p
-          WHERE NOT EXISTS (SELECT 1 FROM app_banners b WHERE b.slot=p.slot AND b.deleted_at IS NULL AND b.is_enabled)
         )
         SELECT b.banner_id,b.slot,b.source,b.version,
           COUNT(e.event_id) FILTER (WHERE e.event_name='banner_impression') AS impressions,
           COUNT(e.event_id) FILTER (WHERE e.event_name='banner_click') AS clicks
         FROM current_banners b LEFT JOIN product_analytics_events e
-          ON e.banner_id=b.banner_id AND e.banner_slot=b.slot AND e.banner_source=b.source AND e.banner_version=b.version
-          AND e.kind='action' AND e.platform='app' AND e.occurred_at>=${start} AND e.occurred_at<${end}
+          ON e.banner_id=b.banner_id AND e.banner_source='remote'
+          AND e.kind='action' AND e.platform='app' AND e.occurred_at<=${now}
           AND e.event_name IN ('banner_impression','banner_click')
         GROUP BY b.banner_id,b.slot,b.source,b.version,b.sort_order ORDER BY b.slot,b.sort_order,b.banner_id
       `);
         return {
-          range: { start_date: query.start_date, end_date: query.end_date, timezone: 'Asia/Shanghai' as const },
-          scope: 'current' as const,
+          scope: 'total' as const,
           items: rows.map((row) => ({
             banner_id: row.banner_id,
             slot: row.slot,
@@ -54,7 +47,7 @@ export async function readBannerStatistics(prisma: PrismaClient, query: BannerSt
           })),
           coverage: {
             collection_started_at: state.bannerStartedAt.toISOString(),
-            complete: start.getTime() >= state.bannerStartedAt.getTime(),
+            complete: true as const,
             audience: 'authenticated_users' as const,
           },
         };

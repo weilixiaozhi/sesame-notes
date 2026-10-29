@@ -142,7 +142,7 @@ describe('Banner 受控采集维度', () => {
   });
 });
 
-describe('当前素材统计口径', () => {
+describe('Banner 累计统计口径', () => {
   it('零曝光保持不可计算，多次真实点击的比率不截断，并标明采集起点', async () => {
     const tx = {
       productAnalyticsState: {
@@ -158,10 +158,10 @@ describe('当前素材统计口径', () => {
           clicks: 3n,
         },
         {
-          banner_id: 'builtin:fitness-template-library',
+          banner_id: randomUUID(),
           slot: 'fitness-template-library',
-          source: 'builtin',
-          version: 0,
+          source: 'remote',
+          version: 1,
           impressions: 0n,
           clicks: 0n,
         },
@@ -170,16 +170,30 @@ describe('当前素材统计口径', () => {
     const db = {
       $transaction: async (operation: (database: typeof tx) => unknown) => operation(tx),
     } as unknown as PrismaClient;
-    const result = await readBannerStatistics(db, { start_date: '2026-10-29', end_date: '2026-10-29' }, now);
+    const result = await readBannerStatistics(db, now);
+    expect(result.scope).toBe('total');
+    expect(result).not.toHaveProperty('range');
     expect(result.items.map((item) => item.ctr)).toEqual([1.5, null]);
     expect(result.coverage).toEqual({
       collection_started_at: '2026-10-29T00:00:00.000Z',
-      complete: false,
+      complete: true,
       audience: 'authenticated_users',
     });
     expect(Value.Check(BannerStatisticsSchema, result)).toBe(true);
     const sql = tx.$queryRaw.mock.calls[0]![0];
-    expect(sql.values[0].toISOString()).toBe('2026-10-28T16:00:00.000Z');
-    expect(sql.values[1].toISOString()).toBe('2026-10-29T08:00:00.001Z');
+    expect(sql.values).toEqual([now]);
+  });
+
+  it('没有自定义 Banner 时返回空累计列表，不伪造默认图记录', async () => {
+    const tx = {
+      productAnalyticsState: { findUnique: vi.fn().mockResolvedValue({ bannerStartedAt: now }) },
+      $queryRaw: vi.fn().mockResolvedValue([]),
+    };
+    const db = {
+      $transaction: async (operation: (database: typeof tx) => unknown) => operation(tx),
+    } as unknown as PrismaClient;
+    const result = await readBannerStatistics(db, now);
+    expect(result.items).toEqual([]);
+    expect(Value.Check(BannerStatisticsSchema, result)).toBe(true);
   });
 });

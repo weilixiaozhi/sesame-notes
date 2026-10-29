@@ -9,6 +9,16 @@ function response(status: number, body: unknown) {
 describe('后台客户端凭证边界', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('Banner 累计统计不发送日期或筛选参数', async () => {
+    const fetch = vi.fn().mockResolvedValue(response(200, { scope: 'total', items: [] }));
+    vi.stubGlobal('fetch', fetch);
+    const api = new AdminApiClient({ baseUrl: 'https://admin.example' });
+    await api.adminBanners.statistics();
+    const sent = fetch.mock.calls[0]![0] as Request;
+    expect(sent.url).toBe('https://admin.example/api/v1/admin/banners/statistics');
+    expect(sent.method).toBe('GET');
+  });
+
   it('Banner 保存携带版本与管理写标记，冲突不会自动覆盖或重放', async () => {
     const fetch = vi.fn().mockResolvedValue(response(409, { code: 'BANNER_VERSION_CONFLICT', message: '配置已变化' }));
     vi.stubGlobal('fetch', fetch);

@@ -11,6 +11,7 @@ import {
   analysisQuery,
   analysisLink,
   alignSelection,
+  matchesBehavior,
   BEHAVIORS,
   displayCount,
   eventMeasure,
@@ -60,7 +61,7 @@ export function selectionFromPath(path: string): Submitted {
       range,
       selection: {
         ...INITIAL_SELECTION,
-        behavior: behavior === 'click' || behavior === 'complete' ? behavior : 'view',
+        behavior: behavior === 'click' || behavior === 'complete' || behavior === 'exposure' ? behavior : 'view',
         event: params.get('event') ?? '',
         page: params.get('page') ?? '',
         bucket: bucket === 'hour' || bucket === 'month' ? bucket : 'day',
@@ -94,6 +95,8 @@ export function EventAnalysis({
   const [measure, setMeasure] = useState<Measure>('total');
   const [mode, setMode] = useState<'events' | 'funnel'>('events');
   const [tableMode, setTableMode] = useState<'events' | 'time'>('events');
+  const exposureMode = submitted.selection.behavior === 'exposure';
+  const displayedTableMode = exposureMode ? 'events' : tableMode;
   const [paging, setPaging] = useState(initialPaging);
   const [error, setError] = useState('');
   const [rangeKey, setRangeKey] = useState(0);
@@ -138,7 +141,7 @@ export function EventAnalysis({
       )
     : [];
   useClampPage(
-    report.data ? (tableMode === 'time' ? report.data.series.length : rows.length) : undefined,
+    report.data ? (displayedTableMode === 'time' ? report.data.series.length : rows.length) : undefined,
     paging,
     setPaging,
   );
@@ -167,7 +170,7 @@ export function EventAnalysis({
   }
   const choices =
     catalog.data?.events.filter(
-      (entry) => entry.behavior === draft.behavior && supportsPlatform(entry, draftRange.platform),
+      (entry) => matchesBehavior(entry, draft.behavior) && supportsPlatform(entry, draftRange.platform),
     ) ?? [];
   const pages = catalog.data ? sourcePageChoices(catalog.data, draft, draftRange.platform) : [];
   const dirty =
@@ -223,7 +226,9 @@ export function EventAnalysis({
                   value={draft.event}
                   onChange={(event) => changeSelection({ ...draft, event: event.target.value })}
                 >
-                  <option value="">全部{BEHAVIORS[draft.behavior]}</option>
+                  <option value="">
+                    {draft.behavior === 'exposure' ? '请选择曝光事件' : `全部${BEHAVIORS[draft.behavior]}`}
+                  </option>
                   {choices.map((entry) => (
                     <option key={entry.id} value={entry.id}>
                       {entry.name}
@@ -247,21 +252,23 @@ export function EventAnalysis({
                   </select>
                 </label>
               )}
-              <label className="field">
-                时间粒度
-                <select
-                  value={draft.bucket}
-                  onChange={(event) =>
-                    changeSelection({ ...draft, bucket: event.target.value as AnalysisSelection['bucket'] })
-                  }
-                >
-                  {Object.entries(TIME_BUCKETS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {draft.behavior !== 'exposure' && (
+                <label className="field">
+                  时间粒度
+                  <select
+                    value={draft.bucket}
+                    onChange={(event) =>
+                      changeSelection({ ...draft, bucket: event.target.value as AnalysisSelection['bucket'] })
+                    }
+                  >
+                    {Object.entries(TIME_BUCKETS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
           </DateRangeBar>
           {dirty && (
@@ -290,8 +297,8 @@ export function EventAnalysis({
             <>
               <div className="analytics-result-caption">
                 <span>
-                  {submitted.range.start_date} — {submitted.range.end_date} · {PLATFORMS[submitted.range.platform]} ·{' '}
-                  {TIME_BUCKETS[data.data.range.bucket]}
+                  {submitted.range.start_date} — {submitted.range.end_date} · {PLATFORMS[submitted.range.platform]}
+                  {!exposureMode && ` · ${TIME_BUCKETS[data.data.range.bucket]}`}
                 </span>
                 <span>{selectedEventName(catalog.data, submitted.selection)}</span>
               </div>
@@ -315,63 +322,67 @@ export function EventAnalysis({
                     </button>
                   ))}
                 </div>
-                <section className="panel analytics-chart-panel">
-                  <div className="analytics-section-heading">
-                    <h2>{MEASURES[measure]}趋势</h2>
-                    <span className="muted">
-                      {measure === 'users'
-                        ? '按每个时间段去重'
-                        : measure === 'average'
-                          ? '次数 ÷ 触发用户数'
-                          : BEHAVIORS[submitted.selection.behavior]}
-                    </span>
-                  </div>
-                  <AnalyticsChart
-                    label={MEASURES[measure]}
-                    fractional={measure === 'average'}
-                    rows={data.data.series.map((row) => ({
-                      label: periodLabel(row.period_start, data.data!.range.bucket, true),
-                      shortLabel: periodLabel(row.period_start, data.data!.range.bucket, false, data.data!.range),
-                      value: eventMeasure(data.data!, submitted.selection.behavior, measure, row, row.period_start),
-                    }))}
-                  />
-                </section>
+                {!exposureMode && (
+                  <section className="panel analytics-chart-panel">
+                    <div className="analytics-section-heading">
+                      <h2>{MEASURES[measure]}趋势</h2>
+                      <span className="muted">
+                        {measure === 'users'
+                          ? '按每个时间段去重'
+                          : measure === 'average'
+                            ? '次数 ÷ 触发用户数'
+                            : BEHAVIORS[submitted.selection.behavior]}
+                      </span>
+                    </div>
+                    <AnalyticsChart
+                      label={MEASURES[measure]}
+                      fractional={measure === 'average'}
+                      rows={data.data.series.map((row) => ({
+                        label: periodLabel(row.period_start, data.data!.range.bucket, true),
+                        shortLabel: periodLabel(row.period_start, data.data!.range.bucket, false, data.data!.range),
+                        value: eventMeasure(data.data!, submitted.selection.behavior, measure, row, row.period_start),
+                      }))}
+                    />
+                  </section>
+                )}
                 <section className="panel analytics-results">
                   <div className="analytics-section-heading">
-                    <h2>数据明细</h2>
-                    <div className="analytics-segmented" role="group" aria-label="明细维度">
-                      <Button
-                        aria-pressed={tableMode === 'events'}
-                        onClick={() => {
-                          setTableMode('events');
-                          setPaging(initialPaging);
-                        }}
-                      >
-                        按事件
-                      </Button>
-                      <Button
-                        aria-pressed={tableMode === 'time'}
-                        onClick={() => {
-                          setTableMode('time');
-                          setPaging(initialPaging);
-                        }}
-                      >
-                        按时间
-                      </Button>
-                    </div>
+                    <h2>{exposureMode ? '曝光汇总' : '数据明细'}</h2>
+                    {!exposureMode && (
+                      <div className="analytics-segmented" role="group" aria-label="明细维度">
+                        <Button
+                          aria-pressed={displayedTableMode === 'events'}
+                          onClick={() => {
+                            setTableMode('events');
+                            setPaging(initialPaging);
+                          }}
+                        >
+                          按事件
+                        </Button>
+                        <Button
+                          aria-pressed={displayedTableMode === 'time'}
+                          onClick={() => {
+                            setTableMode('time');
+                            setPaging(initialPaging);
+                          }}
+                        >
+                          按时间
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div className="table-wrap">
                     <table>
                       <thead>
                         <tr>
-                          <th>{tableMode === 'events' ? '事件名称' : '时间'}</th>
+                          <th>{displayedTableMode === 'events' ? '事件名称' : '时间'}</th>
                           <th>总次数</th>
                           <th>触发用户数</th>
                           <th>人均次数</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {tableMode === 'events'
+                        {displayedTableMode === 'events'
                           ? rows
                               .slice((paging.page - 1) * paging.page_size, paging.page * paging.page_size)
                               .map((row) => (
@@ -410,10 +421,10 @@ export function EventAnalysis({
                       </tbody>
                     </table>
                   </div>
-                  {tableMode === 'events' && !rows.length && <Empty>所选范围没有匹配的事件</Empty>}
+                  {displayedTableMode === 'events' && !rows.length && <Empty>所选范围没有匹配的事件</Empty>}
                   <Pagination
                     value={paging}
-                    total={tableMode === 'events' ? rows.length : data.data.series.length}
+                    total={displayedTableMode === 'events' ? rows.length : data.data.series.length}
                     onChange={setPaging}
                   />
                   <p className="analytics-table-note">触发用户数按登录账号独立去重，不等于各行人数相加。</p>

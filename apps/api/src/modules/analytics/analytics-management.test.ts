@@ -103,35 +103,39 @@ it('Banner 列表统计只需要 Banner 读取权限，统计后台权限不能�
     String(query.sql ?? query).includes('current_banners')
       ? [
           {
-            banner_id: 'builtin:fitness-plan-library',
+            banner_id: '11111111-1111-4111-8111-111111111111',
             slot: 'fitness-plan-library',
-            source: 'builtin',
-            version: 0,
+            source: 'remote',
+            version: 2,
             impressions: 2n,
             clicks: 3n,
           },
           {
-            banner_id: 'builtin:fitness-template-library',
+            banner_id: '22222222-2222-4222-8222-222222222222',
             slot: 'fitness-template-library',
-            source: 'builtin',
-            version: 0,
+            source: 'remote',
+            version: 1,
             impressions: 0n,
             clicks: 0n,
           },
         ]
       : [],
   );
-  const url = '/api/v1/admin/banners/statistics?start_date=2026-10-12&end_date=2026-10-12';
+  const url = '/api/v1/admin/banners/statistics';
   const result = await app.inject({ method: 'GET', url, headers });
   expect(result.statusCode, result.body).toBe(200);
   expect(result.json()).toMatchObject({
-    scope: 'current',
+    scope: 'total',
     items: [
       { impressions: 2, clicks: 3, ctr: 1.5 },
       { impressions: 0, clicks: 0, ctr: null },
     ],
     coverage: { audience: 'authenticated_users', complete: true },
   });
+  expect(result.json()).not.toHaveProperty('range');
+  const ignoredRange = await app.inject({ method: 'GET', url: `${url}?start_date=2026-10-12`, headers });
+  expect(ignoredRange.statusCode, ignoredRange.body).toBe(200);
+  expect(ignoredRange.json()).toEqual(result.json());
   expect((await app.inject({ method: 'GET', url, headers: { origin: ORIGIN } })).statusCode).toBe(401);
   const denied = await application(['analytics:read']);
   expect((await denied.app.inject({ method: 'GET', url, headers })).statusCode).toBe(403);

@@ -5,8 +5,7 @@ import { dateTime, initialPaging, type Paging } from '../../../api/types';
 import { useClampPage } from '../../../api/paging';
 import { useSession } from '../../../auth/session';
 import { Button, Empty, Loading, Modal, Pagination, RequestError } from '../../../components/ui';
-import { presetRange } from '../../analytics/date-range';
-import { bannerMetricCount, bannerSlots, bannerTargetLabel, currentBannerMetrics } from './model';
+import { bannerMetricCount, bannerSlots, bannerTargetLabel, bannerMetrics } from './model';
 import type { BannerEntry } from './model';
 import { BannerPreview, BannerThumbnail } from './preview';
 import { BannerEditor } from './editor';
@@ -17,34 +16,21 @@ const queryKey = ['admin', 'banners'];
 const statisticsKey = ['admin', 'banner-statistics'];
 type Dialog = { mode: 'edit'; row?: BannerEntry } | { mode: 'preview' | 'delete'; row: BannerEntry };
 
-/** 表格管理自定义轮播图，图片直接打开预览，统计范围切换后自动读取。 */
+/** 表格管理自定义轮播图并显示累计统计，空数据保留表头与分页结构。 */
 export function BannersPage({ active }: { active: boolean }) {
   const { session } = useSession();
   const canWrite = session?.admin.permissions.includes('banners:write');
   const [dialog, setDialog] = useState<Dialog>();
   const [paging, setPaging] = useState<Paging>(initialPaging);
-  const [preset, setPreset] = useState<'today' | 'week' | 'month'>('week');
-  const range = presetRange(preset);
   const query = useQuery({
     queryKey,
     enabled: active,
     queryFn: ({ signal }) => request(() => api.adminBanners.list(signal), 'banner-list'),
   });
   const statistics = useQuery({
-    queryKey: [...statisticsKey, range],
+    queryKey: statisticsKey,
     enabled: active,
-    queryFn: ({ signal }) =>
-      request(
-        () =>
-          api.adminBanners.statistics(
-            {
-              start_date: range.start_date,
-              end_date: range.end_date,
-            },
-            signal,
-          ),
-        'banner-statistics',
-      ),
+    queryFn: ({ signal }) => request(() => api.adminBanners.statistics(signal), 'banner-statistics'),
   });
   const rows = query.data?.items ?? [];
   useClampPage(query.data ? rows.length : undefined, paging, setPaging);
@@ -53,50 +39,52 @@ export function BannersPage({ active }: { active: boolean }) {
     <>
       <div className="page-heading">
         <h1>Banner 管理</h1>
-        <div className="row-actions">
-          <label className="field banner-range">
-            统计范围
-            <select value={preset} onChange={(event) => setPreset(event.target.value as typeof preset)}>
-              <option value="today">今天</option>
-              <option value="week">近 7 天</option>
-              <option value="month">近 30 天</option>
-            </select>
-          </label>
-          {canWrite && (
-            <Button variant="primary" onClick={() => setDialog({ mode: 'edit' })}>
-              添加 Banner
-            </Button>
-          )}
-        </div>
+        {canWrite && (
+          <Button variant="primary" onClick={() => setDialog({ mode: 'edit' })}>
+            添加 Banner
+          </Button>
+        )}
       </div>
       <section className="panel">
         {statistics.isError && <RequestError error={statistics.error} retry={() => void statistics.refetch()} />}
-        {query.isPending ? (
-          <Loading />
-        ) : query.isError ? (
-          <RequestError error={query.error} retry={() => void query.refetch()} />
-        ) : !rows.length ? (
-          <Empty>暂无 Banner</Empty>
-        ) : (
-          <div className="table-wrap">
-            <table className="banner-table">
-              <thead>
+        <div className="table-wrap">
+          <table className="banner-table">
+            <thead>
+              <tr>
+                <th>展示位置</th>
+                <th>图片</th>
+                <th>跳转目标</th>
+                <th>顺序</th>
+                <th>曝光次数</th>
+                <th>点击次数</th>
+                <th>点击率</th>
+                <th>更新时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {query.isPending ? (
                 <tr>
-                  <th>展示位置</th>
-                  <th>图片</th>
-                  <th>跳转目标</th>
-                  <th>顺序</th>
-                  <th>曝光次数</th>
-                  <th>点击次数</th>
-                  <th>点击率</th>
-                  <th>更新时间</th>
-                  <th>操作</th>
+                  <td colSpan={9}>
+                    <Loading />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {rows.slice((paging.page - 1) * paging.page_size, paging.page * paging.page_size).map((entry) => {
+              ) : query.isError ? (
+                <tr>
+                  <td colSpan={9}>
+                    <RequestError error={query.error} retry={() => void query.refetch()} />
+                  </td>
+                </tr>
+              ) : !rows.length ? (
+                <tr>
+                  <td colSpan={9}>
+                    <Empty>暂无数据</Empty>
+                  </td>
+                </tr>
+              ) : (
+                rows.slice((paging.page - 1) * paging.page_size, paging.page * paging.page_size).map((entry) => {
                   const report = statistics.isError || statistics.isFetching ? undefined : statistics.data;
-                  const metrics = currentBannerMetrics(entry, report);
+                  const metrics = bannerMetrics(entry, report);
                   return (
                     <tr key={entry.id}>
                       <td data-label="展示位置">{bannerSlots[entry.slot].title}</td>
@@ -105,10 +93,10 @@ export function BannersPage({ active }: { active: boolean }) {
                       </td>
                       <td data-label="跳转目标">{bannerTargetLabel(entry)}</td>
                       <td data-label="顺序">{entry.sort_order}</td>
-                      <td data-label="曝光次数">{bannerMetricCount(metrics?.impressions, report)}</td>
-                      <td data-label="点击次数">{bannerMetricCount(metrics?.clicks, report)}</td>
+                      <td data-label="曝光次数">{bannerMetricCount(metrics?.impressions)}</td>
+                      <td data-label="点击次数">{bannerMetricCount(metrics?.clicks)}</td>
                       <td data-label="点击率">
-                        {metrics?.ctr == null || !report || (!report.coverage.complete && !metrics.clicks)
+                        {metrics?.ctr == null
                           ? '—'
                           : new Intl.NumberFormat('zh-CN', { style: 'percent', maximumFractionDigits: 2 }).format(
                               metrics.ctr,
@@ -129,12 +117,12 @@ export function BannersPage({ active }: { active: boolean }) {
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {!!rows.length && (
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {query.data && (
           <Pagination value={paging} total={rows.length} onChange={setPaging} disabled={query.isFetching} />
         )}
       </section>

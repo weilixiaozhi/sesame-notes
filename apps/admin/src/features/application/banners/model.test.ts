@@ -4,7 +4,7 @@ import {
   bannerImageId,
   bannerPreview,
   newBannerDraft,
-  currentBannerMetrics,
+  bannerMetrics,
   bannerMetricCount,
   bannerTargetLabel,
 } from './model';
@@ -28,8 +28,7 @@ const entry: BannerEntry = {
 /** 构造具有明确采集覆盖和图片身份的统计响应。 */
 function report(): BannerStatistics {
   return {
-    range: { start_date: '2026-10-29', end_date: '2026-10-29', timezone: 'Asia/Shanghai' },
-    scope: 'current',
+    scope: 'total',
     items: [
       { banner_id: entry.id, slot: entry.slot, source: 'remote', version: 2, impressions: 10, clicks: 2, ctr: 0.2 },
     ],
@@ -64,18 +63,16 @@ describe('轮播入口与统计边界', () => {
     expect(bannerUploadSchema.safeParse(upload).success).toBe(true);
     expect(bannerUploadSchema.safeParse({ ...upload, id: 'b'.repeat(64) }).success).toBe(false);
   });
-  it('相同位置不同图片或配置版本不能串用曝光和点击', () => {
-    expect(currentBannerMetrics(entry, report())?.clicks).toBe(2);
-    expect(currentBannerMetrics({ ...entry, version: 3 }, report())).toBeUndefined();
-    expect(currentBannerMetrics({ ...entry, id: 'other' }, report())).toBeUndefined();
-    expect(currentBannerMetrics({ ...entry, slot: 'fitness-template-library' }, report())).toBeUndefined();
+  it('累计统计按同一 Banner 身份匹配，修改版本和位置保留总量', () => {
+    expect(bannerMetrics(entry, report())?.clicks).toBe(2);
+    expect(bannerMetrics({ ...entry, version: 3 }, report())?.clicks).toBe(2);
+    expect(bannerMetrics({ ...entry, slot: 'fitness-template-library' }, report())?.clicks).toBe(2);
+    expect(bannerMetrics({ ...entry, id: 'other' }, report())).toBeUndefined();
   });
-  it('尚未采集的零值为空，真实零值和正数正常展示', () => {
-    const partial = { ...report(), coverage: { ...report().coverage, complete: false } };
-    expect(bannerMetricCount(0, partial)).toBe('—');
-    expect(bannerMetricCount(undefined, report())).toBe('—');
-    expect(bannerMetricCount(0, report())).toBe('0');
-    expect(bannerMetricCount(2, partial)).toBe('2');
+  it('累计统计返回真实零值，只有未加载时使用占位', () => {
+    expect(bannerMetricCount(undefined)).toBe('—');
+    expect(bannerMetricCount(0)).toBe('0');
+    expect(bannerMetricCount(2)).toBe('2');
   });
   it('指定官方内容显示名称，内容不可用时不展示裸标识', () => {
     expect(

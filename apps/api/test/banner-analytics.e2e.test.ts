@@ -65,7 +65,7 @@ function event(overrides: Partial<AnalyticsEventInput> = {}): AnalyticsEventInpu
   };
 }
 
-it('当前素材按位置来源版本统计，重传幂等且恢复默认只显示内置数据', async () => {
+it('同一 Banner 跨日期版本位置累计，重传幂等、未来事件不计数且删除后不返回默认行', async () => {
   await inRollback(async (tx) => {
     await tx.productAnalyticsState.update({
       where: { id: 1 },
@@ -110,6 +110,22 @@ it('当前素材按位置来源版本统计，重传幂等且恢复默认只显�
       event({ occurred_at: '2035-01-19T16:00:00Z' }),
       event({ banner_version: 4 }),
       event({ banner_version: 4, event_name: 'banner_click' }),
+      event({
+        occurred_at: '2035-01-17T00:00:00Z',
+        page_id: 'fitness.templates',
+        banner_slot: 'fitness-template-library',
+        banner_version: 3,
+      }),
+      event({
+        occurred_at: '2035-01-17T00:00:00Z',
+        page_id: 'fitness.templates',
+        banner_slot: 'fitness-template-library',
+        banner_version: 3,
+        event_name: 'banner_click',
+      }),
+      event({ occurred_at: now.toISOString() }),
+      event({ occurred_at: new Date(now.getTime() + 1).toISOString() }),
+      event({ occurred_at: new Date(now.getTime() + 1).toISOString(), event_name: 'banner_click' }),
       event({ banner_id: secondBannerId }),
       event({ banner_id: secondBannerId, event_name: 'banner_click' }),
       event({ banner_source: 'builtin', banner_version: 0 }),
@@ -144,17 +160,18 @@ it('当前素材按位置来源版本统计，重传幂等且恢复默认只显�
     const database = {
       $transaction: async (run: (tx: Prisma.TransactionClient) => unknown) => run(tx),
     } as unknown as PrismaClient;
-    const range = { start_date: '2035-01-19', end_date: '2035-01-19' };
-    const result = await readBannerStatistics(database, range, now);
+    const result = await readBannerStatistics(database, now);
+    expect(result.scope).toBe('total');
+    expect(result).not.toHaveProperty('range');
     expect(result.items).toEqual([
       {
         banner_id: planBannerId,
         slot: 'fitness-plan-library',
         source: 'remote',
         version: 5,
-        impressions: 2,
-        clicks: 3,
-        ctr: 1.5,
+        impressions: 7,
+        clicks: 5,
+        ctr: 5 / 7,
       },
       {
         banner_id: secondBannerId,
@@ -165,46 +182,35 @@ it('当前素材按位置来源版本统计，重传幂等且恢复默认只显�
         clicks: 1,
         ctr: 1,
       },
-      {
-        banner_id: 'builtin:fitness-template-library',
-        slot: 'fitness-template-library',
-        source: 'builtin',
-        version: 0,
-        impressions: 1,
-        clicks: 0,
-        ctr: 0,
-      },
     ]);
     expect(result.coverage.complete).toBe(true);
     await tx.appBanner.update({
       where: { id: planBannerId },
-      data: { version: 6 },
+      data: { version: 6, slot: 'fitness-template-library', sortOrder: 99 },
     });
-    expect((await readBannerStatistics(database, range, now)).items[0]).toMatchObject({
+    expect(
+      (await readBannerStatistics(database, now)).items.find((item) => item.banner_id === planBannerId),
+    ).toMatchObject({
       banner_id: planBannerId,
+      slot: 'fitness-template-library',
       version: 6,
-      impressions: 0,
-      clicks: 0,
-      ctr: null,
+      impressions: 7,
+      clicks: 5,
+      ctr: 5 / 7,
     });
     await tx.appBanner.update({ where: { id: planBannerId }, data: { deletedAt: now, isEnabled: false } });
-    expect((await readBannerStatistics(database, range, now)).items.map((row) => row.banner_id)).toEqual([
-      secondBannerId,
-      'builtin:fitness-template-library',
-    ]);
+    expect((await readBannerStatistics(database, now)).items.map((row) => row.banner_id)).toEqual([secondBannerId]);
     await tx.appBanner.update({ where: { id: secondBannerId }, data: { deletedAt: now, isEnabled: false } });
-    expect((await readBannerStatistics(database, range, now)).items[0]).toEqual({
-      banner_id: 'builtin:fitness-plan-library',
-      slot: 'fitness-plan-library',
-      source: 'builtin',
-      version: 0,
-      impressions: 1,
-      clicks: 1,
-      ctr: 1,
-    });
-    const empty = await readBannerStatistics(database, { start_date: '2035-01-17', end_date: '2035-01-17' }, now);
-    expect(empty.coverage.complete).toBe(false);
-    expect(empty.items.every((item) => item.impressions === 0 && item.clicks === 0 && item.ctr === null)).toBe(true);
+    const empty = await readBannerStatistics(database, now);
+    expect(empty.items).toEqual([]);
+    expect(empty.coverage.complete).toBe(true);
+    expect(
+      await tx.productAnalyticsEvent.count({
+        where: {
+          eventId: { in: input.filter((item) => item.banner_source === 'builtin').map((item) => item.event_id) },
+        },
+      }),
+    ).toBe(3);
   });
 });
 

@@ -8461,10 +8461,7 @@ export interface operations {
     };
     getAdminBannerStatistics: {
         parameters: {
-            query: {
-                start_date: string;
-                end_date: string;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -8478,18 +8475,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        range: {
-                            start_date: string;
-                            end_date: string;
-                            /** @enum {string} */
-                            timezone: "Asia/Shanghai";
-                        };
                         /** @enum {string} */
-                        scope: "current";
+                        scope: "total";
                         items: {
-                            banner_id: string | "builtin:fitness-plan-library" | "builtin:fitness-template-library";
+                            /** Format: uuid */
+                            banner_id: string;
                             slot: "fitness-plan-library" | "fitness-template-library";
-                            source: "builtin" | "remote";
+                            /** @enum {string} */
+                            source: "remote";
                             version: number;
                             impressions: number;
                             clicks: number;
@@ -8498,7 +8491,8 @@ export interface operations {
                         coverage: {
                             /** Format: date-time */
                             collection_started_at: string;
-                            complete: boolean;
+                            /** @enum {boolean} */
+                            complete: true;
                             /** @enum {string} */
                             audience: "authenticated_users";
                         };
