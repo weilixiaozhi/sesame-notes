@@ -1,0 +1,8 @@
+{
+  "app_banner_media.app_banner_media_dimensions_check": "CHECK ((((width >= 1) AND (width <= 4096)) AND ((height >= 1) AND (height <= 4096)) AND (((width)::bigint * height) <= 16000000)))",
+  "app_banner_media.app_banner_media_hash_check": "CHECK (((id)::text ~ '^[a-f0-9]{64}$'::text))",
+  "app_banner_media.app_banner_media_size_check": "CHECK (((byte_size > 0) AND (byte_size <= 8388608)))",
+  "app_banners.app_banners_slot_check": "CHECK (((slot)::text = ANY ((ARRAY['fitness-plan-library'::character varying, 'fitness-template-library'::character varying])::text[])))",
+  "app_banners.app_banners_target_check": "CHECK (((target)::text = ANY ((ARRAY['fitness-plan-library'::character varying, 'fitness-template-library'::character varying, 'fitness-exercises'::character varying, 'fitness-plans'::character varying, 'fitness-templates'::character varying])::text[])))",
+  "app_banners.app_banners_version_check": "CHECK ((version >= 1))"
+}

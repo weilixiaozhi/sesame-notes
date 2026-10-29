@@ -34,6 +34,18 @@ async function auditTargetDisplay(
   target: AuditLogInput['target'],
   metadata?: Prisma.JsonValue,
 ): Promise<string | null> {
+  if (target.type === 'app_banner') {
+    return target.id === 'fitness-plan-library'
+      ? '计划库入口'
+      : target.id === 'fitness-template-library'
+        ? '模板库入口'
+        : null;
+  }
+  if (target.type === 'banner_media') {
+    return displayText(
+      (await tx.appBannerMedia.findUnique({ where: { id: target.id }, select: { fileName: true } }))?.fileName,
+    );
+  }
   if (target.type === 'fitness_taxonomy') {
     const kind = metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata.kind : null;
     if (kind !== 'body_part' && kind !== 'equipment') return null;

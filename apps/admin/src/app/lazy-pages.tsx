@@ -1,6 +1,11 @@
 import { createLazyPage } from '../components/lazy-page';
 import { Modal } from '../components/ui';
 
+export const BannersPage = createLazyPage(
+  async () => ({ default: (await import('../features/application/banners')).BannersPage }),
+  'Banner 管理',
+);
+
 export const UsersPage = createLazyPage(
   async () => ({ default: (await import('../features/application/users')).UsersPage }),
   '用户管理',

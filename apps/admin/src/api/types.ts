@@ -15,6 +15,7 @@ type AuditPage = Awaited<ReturnType<typeof api.adminAudit.list>>;
 export type Audit = AuditPage['items'][number];
 export type PermissionCatalog = Awaited<ReturnType<typeof api.adminCatalog.permissions>>;
 export type PageId =
+  | 'banners'
   | 'users'
   | 'accounts'
   | 'groups'
@@ -28,6 +29,7 @@ export type PageId =
 export type Paging = { page: number; page_size: 10 | 20 | 50 | 100 };
 export const initialPaging: Paging = { page: 1, page_size: 10 };
 export const pageInfo: Record<PageId, { title: string; path: string; permission?: string; accessPage?: string }> = {
+  banners: { title: 'Banner 管理', path: '/application/banners', permission: 'banners:read' },
   analytics: { title: '数据概览', path: '/analytics/overview', permission: 'analytics:read' },
   analytics_events: {
     title: '事件分析',

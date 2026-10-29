@@ -27,6 +27,9 @@ const fitnessConstraintDefinitions = JSON.parse(
 const adminConstraintDefinitions = JSON.parse(
   readFileSync(new URL('./fixtures/admin-database-constraints.json', import.meta.url), 'utf8'),
 ) as Record<string, string>;
+const bannerConstraintDefinitions = JSON.parse(
+  readFileSync(new URL('./fixtures/banner-database-constraints.json', import.meta.url), 'utf8'),
+) as Record<string, string>;
 const analyticsConstraintDefinitions = JSON.parse(
   readFileSync(new URL('./fixtures/analytics-database-constraints.json', import.meta.url), 'utf8'),
 ) as Record<string, string>;
@@ -190,6 +193,7 @@ async function expectCurrentDefinitions(database: PrismaClient): Promise<void> {
     ...memoConstraintDefinitions,
     ...fitnessConstraintDefinitions,
     ...adminConstraintDefinitions,
+    ...bannerConstraintDefinitions,
     ...analyticsConstraintDefinitions,
     ...officialFitnessConstraintDefinitions,
     'category_conflicts.category_conflicts_state_check':

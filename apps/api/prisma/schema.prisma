@@ -118,6 +118,33 @@ model OfficialFitnessMedia {
   @@map("official_fitness_media")
 }
 
+model AppBanner {
+  slot      String          @id @db.VarChar(64)
+  imageId   String?         @map("image_id") @db.VarChar(64)
+  image     AppBannerMedia? @relation(fields: [imageId], references: [id], onDelete: Restrict)
+  target    String          @db.VarChar(64)
+  isEnabled Boolean         @default(false) @map("is_enabled")
+  version   Int             @default(1)
+  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy String?         @map("updated_by") @db.VarChar(100)
+
+  @@index([imageId, isEnabled])
+  @@map("app_banners")
+}
+
+model AppBannerMedia {
+  id        String      @id @db.VarChar(64)
+  fileName  String      @map("file_name") @db.VarChar(200)
+  byteSize  Int         @map("byte_size")
+  width     Int
+  height    Int
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdBy String?     @map("created_by") @db.VarChar(100)
+  banners   AppBanner[]
+
+  @@map("app_banner_media")
+}
+
 model AdminAccount {
   id                  String         @id @default(uuid()) @db.Uuid
   username            String         @unique @db.VarChar(32)

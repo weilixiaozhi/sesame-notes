@@ -2,6 +2,7 @@ import type { PermissionCatalog } from '../../../api/types';
 
 export type PermissionSelection = { permissions: string[]; page_ids: string[] };
 export const businessPages = {
+  banners: 'Banner 管理',
   users: '用户管理',
   audit: '操作日志',
   analytics: '统计页面',
@@ -11,11 +12,13 @@ export const businessPages = {
 } as const;
 export const permissionDirectories = [
   { id: 'statistics', label: '数据统计', pages: ['analytics'] },
-  { id: 'application', label: '应用管理', pages: ['users'] },
+  { id: 'application', label: '应用管理', pages: ['users', 'banners'] },
   { id: 'fitness', label: '健身管理', pages: ['fitness_exercises', 'fitness_templates', 'fitness_plans'] },
   { id: 'system', label: '系统管理', pages: ['audit'] },
 ] as const;
 const businessPermissions = [
+  'banners:read',
+  'banners:write',
   'users:read',
   'users:write',
   'devices:read',
@@ -43,7 +46,7 @@ export function permissionLeaves(catalog: PermissionCatalog, scope = 'all'): str
       (page) =>
         scope === 'all' ||
         scope === page.id ||
-        (scope === 'application' && page.id === 'users') ||
+        (scope === 'application' && (page.id === 'users' || page.id === 'banners')) ||
         (scope === 'statistics' && page.id === 'analytics') ||
         (scope === 'fitness' && page.id.startsWith('fitness_')) ||
         (scope === 'system' && page.id === 'audit'),
@@ -54,11 +57,13 @@ export function permissionLeaves(catalog: PermissionCatalog, scope = 'all'): str
         .filter((permission) =>
           page.id === 'users'
             ? permission.id.startsWith('users:') || permission.id.startsWith('devices:')
-            : page.id === 'audit'
-              ? permission.id === 'audit:read'
-              : page.id === 'analytics'
-                ? permission.id === 'analytics:read'
-                : false,
+            : page.id === 'banners'
+              ? permission.id.startsWith('banners:')
+              : page.id === 'audit'
+                ? permission.id === 'audit:read'
+                : page.id === 'analytics'
+                  ? permission.id === 'analytics:read'
+                  : false,
         )
         .map((permission) => `permission:${permission.id}`),
     ]);

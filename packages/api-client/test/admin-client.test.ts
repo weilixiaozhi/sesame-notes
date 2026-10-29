@@ -9,6 +9,21 @@ function response(status: number, body: unknown) {
 describe('后台客户端凭证边界', () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it('Banner 保存携带版本与管理写标记，冲突不会自动覆盖或重放', async () => {
+    const fetch = vi.fn().mockResolvedValue(response(409, { code: 'BANNER_VERSION_CONFLICT', message: '配置已变化' }));
+    vi.stubGlobal('fetch', fetch);
+    const api = new AdminApiClient({ baseUrl: 'https://admin.example' });
+    const body = { version: 3, image_id: 'a'.repeat(64), target: 'fitness-exercises' as const, is_enabled: true };
+    await expect(api.adminBanners.update('fitness-plan-library', body)).rejects.toMatchObject({ status: 409 });
+    expect(fetch).toHaveBeenCalledOnce();
+    const sent = fetch.mock.calls[0]![0] as Request;
+    expect(sent.url).toBe('https://admin.example/api/v1/admin/banners/fitness-plan-library');
+    expect(sent.credentials).toBe('include');
+    expect(sent.headers.get('X-Admin-Request')).toBe('1');
+    expect(sent.headers.has('authorization')).toBe(false);
+    expect(await sent.json()).toEqual(body);
+  });
+
   it('后台会话读取的空 200 不能确认有效身份', async () => {
     try {
       vi.stubGlobal(

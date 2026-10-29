@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { bannerEntrySchema, bannerListSchema, bannerUploadSchema } from './banner-contracts';
 import type { ResponseValidator } from '@sesame-notes/api-client';
 import { analyticsCatalogSchema, analyticsDetailsSchema, analyticsFunnelSchema } from './analytics-contracts';
 
@@ -152,6 +153,18 @@ function paged(item: z.ZodType) {
 
 /** 每个读取接口检查本页面真正使用的白名单字段，失败由共享客户端转换成友好协议错误。 */
 export const validateAdminResponse: ResponseValidator = ({ method, path, body }) => {
+  if (path === '/api/v1/admin/banners' && method === 'GET') {
+    bannerListSchema.parse(body);
+    return;
+  }
+  if (path === '/api/v1/admin/banners/{slot}' && method === 'PUT') {
+    bannerEntrySchema.parse(body);
+    return;
+  }
+  if (path === '/api/v1/admin/banners/media' && method === 'POST') {
+    bannerUploadSchema.parse(body);
+    return;
+  }
   if (path === '/api/v1/admin/analytics/funnel' && method === 'POST') {
     analyticsFunnelSchema.parse(body);
     return;

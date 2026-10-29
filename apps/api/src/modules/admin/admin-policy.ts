@@ -18,6 +18,8 @@ export const ADMIN_BUSINESS_PERMISSIONS = [
   { id: 'analytics:read', label: '查看数据统计', dependencies: [] },
   { id: 'fitness:read', label: '查看官方健身内容', dependencies: [] },
   { id: 'fitness:write', label: '编辑官方健身内容与素材', dependencies: ['fitness:read'] },
+  { id: 'banners:read', label: '查看应用 Banner', dependencies: [] },
+  { id: 'banners:write', label: '编辑应用 Banner 与图片', dependencies: ['banners:read'] },
 ] as const;
 export type AdminPermission =
   | (typeof ADMIN_BUSINESS_PERMISSIONS)[number]['id']
@@ -26,6 +28,13 @@ export type AdminPermission =
   | 'auth:password'
   | 'auth:logout';
 export const ADMIN_PAGES = [
+  {
+    id: 'banners',
+    label: 'Banner 管理',
+    path: '/application/banners',
+    required_permissions: ['banners:read'],
+    assignable: true,
+  },
   {
     id: 'analytics',
     label: '数据统计',

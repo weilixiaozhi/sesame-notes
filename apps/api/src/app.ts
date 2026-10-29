@@ -19,6 +19,7 @@ import {
   registerAdminRoutes,
 } from './modules/admin/index.js';
 import { registerAppReleaseRoutes } from './modules/app-release/index.js';
+import { registerBannerRoutes } from './modules/banners/index.js';
 import { registerAnalyticsRoutes } from './modules/analytics/index.js';
 import {
   currentSessionAccess,
@@ -305,6 +306,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       registerAdminAuthRoutes(api, prisma, config);
       registerAdminAccountRoutes(api, prisma, config);
       registerAdminRoutes(api, prisma, config);
+      registerBannerRoutes(api, prisma, config);
       registerAnalyticsRoutes(api, prisma, config);
       registerAccountRoutes(api, prisma, config);
       registerAccountingRoutes(api, prisma, config);

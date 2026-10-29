@@ -58,6 +58,19 @@ export class AdminApiClient extends ApiClient {
     this.sessionGeneration += 1;
   }
 
+  readonly adminBanners = {
+    /** 读取应用固定入口的图片、目标和当前修订。 */
+    list: async (signal?: AbortSignal) => unwrap(await this.client.GET('/api/v1/admin/banners', { signal })),
+    /** 按当前修订保存单个入口，关闭覆盖时客户端使用内置图片和默认目标。 */
+    update: async (
+      slot: paths['/api/v1/admin/banners/{slot}']['put']['parameters']['path']['slot'],
+      body: Body<paths['/api/v1/admin/banners/{slot}']['put']>,
+    ) => unwrap(await this.client.PUT('/api/v1/admin/banners/{slot}', { params: { path: { slot } }, body })),
+    /** 上传经过服务端校验的图片，保存配置后才对应用生效。 */
+    upload: async (body: Body<paths['/api/v1/admin/banners/media']['post']>) =>
+      unwrap(await this.client.POST('/api/v1/admin/banners/media', { body })),
+  };
+
   readonly adminAuth = {
     /** 获取当前后台会话及最新授权。 */
     me: async (signal?: AbortSignal) => unwrap(await this.client.GET('/api/v1/admin/auth/me', { signal })),

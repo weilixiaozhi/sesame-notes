@@ -41,6 +41,8 @@ const ADMIN_ACTION_LABELS: Readonly<Record<string, string>> = {
   'fitness.plan.create': '新增训练计划',
   'fitness.plan.update': '修改训练计划',
   'fitness.media.upload': '上传动作 GIF',
+  'banner.update': '配置应用 Banner',
+  'banner.media.upload': '上传 Banner 图片',
   'fitness.taxonomy.create': '新增部位或器械',
   'fitness.taxonomy.update': '修改部位或器械',
   'fitness.taxonomy.delete': '删除部位或器械',
@@ -141,7 +143,7 @@ export function adminAuditSummary(action: string, metadata: Record<string, Prism
   if (typeof metadata.is_enabled === 'boolean') parts.push(`状态：${metadata.is_enabled ? '启用' : '停用'}`);
   if (action.startsWith('fitness.') && typeof metadata.enabled === 'boolean')
     parts.push(`状态：${metadata.enabled ? '启用' : '停用'}`);
-  if (action === 'fitness.media.upload' && typeof metadata.byte_size === 'number')
+  if (['fitness.media.upload', 'banner.media.upload'].includes(action) && typeof metadata.byte_size === 'number')
     parts.push(`素材大小：${Math.ceil(metadata.byte_size / 1024)} KB`);
   const group = auditText(metadata, 'group_name');
   if (group) parts.push(`用户组：${group}`);

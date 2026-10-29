@@ -88,7 +88,7 @@ describe('后台路由默认拒绝漏配置', () => {
     ).toThrow('只读权限');
   });
 
-  it.each(['/api/v1/admin/analytics', '/api/v1/admin/fitness/exercises'])(
+  it.each(['/api/v1/admin/analytics', '/api/v1/admin/fitness/exercises', '/api/v1/admin/banners'])(
     '新模块只读权限不能保护写接口：%s',
     (path) => {
       const app = protectedApp();

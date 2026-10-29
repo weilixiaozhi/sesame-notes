@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Dumbbell,
   Layers,
+  Image,
   Menu,
   Settings2,
   ShieldCheck,
@@ -33,6 +34,7 @@ import {
   EventAnalysis,
   TrackingManagement,
   FitnessManagementPage,
+  BannersPage,
 } from './lazy-pages';
 
 /** 版本来自当前管理后台构建产物，未注入时明确显示缺失状态。 */
@@ -40,6 +42,7 @@ const adminVersion = typeof __ADMIN_APP_VERSION__ === 'undefined' ? '' : __ADMIN
 
 type Tab = { id: PageId; path: string };
 const icons = {
+  banners: Image,
   users: Users,
   accounts: ShieldCheck,
   groups: Settings2,
@@ -214,7 +217,7 @@ function AdminShell() {
               pages: ['analytics', 'analytics_events', 'analytics_tracking'] as PageId[],
               icon: BarChart3,
             },
-            { id: 'application', label: '应用管理', pages: ['users'] as PageId[], icon: AppWindow },
+            { id: 'application', label: '应用管理', pages: ['users', 'banners'] as PageId[], icon: AppWindow },
             {
               id: 'fitness',
               label: '健身管理',
@@ -333,6 +336,8 @@ function AdminShell() {
               >
                 {tab.id === 'users' ? (
                   <UsersPage active={tab.id === active} userId={userId} navigate={(next) => void navigate(next)} />
+                ) : tab.id === 'banners' ? (
+                  <BannersPage active={tab.id === active} />
                 ) : tab.id === 'accounts' ? (
                   <AccountsPage active={tab.id === active} />
                 ) : tab.id === 'groups' ? (

@@ -16,6 +16,8 @@ const PUBLIC_GET_PATHS = new Set([
   '/api/v1/fitness/library',
   '/api/v1/fitness/catalog',
   '/api/v1/fitness/media/:media_id',
+  '/api/v1/banners',
+  '/api/v1/banners/media/:media_id',
   '/api/v1/app/update.json',
   '/api/v1/app/download/:file',
 ]);

@@ -11469,6 +11469,1139 @@
         }
       }
     },
+    "/api/v1/banners": {
+      "get": {
+        "operationId": "getAppBanners",
+        "tags": [
+          "banners"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "maxItems": 2,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "slot",
+                          "image_path",
+                          "target",
+                          "is_enabled",
+                          "version",
+                          "updated_at"
+                        ],
+                        "properties": {
+                          "slot": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-plan-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-template-library"
+                                ]
+                              }
+                            ]
+                          },
+                          "image_path": {
+                            "anyOf": [
+                              {
+                                "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "target": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-plan-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-template-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-exercises"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-plans"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-templates"
+                                ]
+                              }
+                            ]
+                          },
+                          "is_enabled": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updated_at": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners": {
+      "get": {
+        "operationId": "listAdminBanners",
+        "tags": [
+          "admin-banners"
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "maxItems": 2,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "slot",
+                          "image_path",
+                          "target",
+                          "is_enabled",
+                          "version",
+                          "updated_at"
+                        ],
+                        "properties": {
+                          "slot": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-plan-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-template-library"
+                                ]
+                              }
+                            ]
+                          },
+                          "image_path": {
+                            "anyOf": [
+                              {
+                                "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "target": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-plan-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-template-library"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-exercises"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-plans"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "fitness-templates"
+                                ]
+                              }
+                            ]
+                          },
+                          "is_enabled": {
+                            "type": "boolean"
+                          },
+                          "version": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "updated_at": {
+                            "anyOf": [
+                              {
+                                "format": "date-time",
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/{slot}": {
+      "put": {
+        "operationId": "updateAdminBanner",
+        "tags": [
+          "admin-banners"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "version",
+                  "image_id",
+                  "target",
+                  "is_enabled"
+                ],
+                "properties": {
+                  "version": {
+                    "minimum": 0,
+                    "maximum": 2147483646,
+                    "type": "integer"
+                  },
+                  "image_id": {
+                    "anyOf": [
+                      {
+                        "pattern": "^[a-f0-9]{64}$",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-plan-library"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-template-library"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-exercises"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-plans"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "fitness-templates"
+                        ]
+                      }
+                    ]
+                  },
+                  "is_enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "fitness-plan-library"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "fitness-template-library"
+                  ]
+                }
+              ]
+            },
+            "in": "path",
+            "name": "slot",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "slot",
+                    "image_path",
+                    "target",
+                    "is_enabled",
+                    "version",
+                    "updated_at"
+                  ],
+                  "properties": {
+                    "slot": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-plan-library"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-template-library"
+                          ]
+                        }
+                      ]
+                    },
+                    "image_path": {
+                      "anyOf": [
+                        {
+                          "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "target": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-plan-library"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-template-library"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-exercises"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-plans"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "fitness-templates"
+                          ]
+                        }
+                      ]
+                    },
+                    "is_enabled": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "updated_at": {
+                      "anyOf": [
+                        {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/media": {
+      "post": {
+        "operationId": "uploadAdminBannerImage",
+        "tags": [
+          "admin-banners"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "filename",
+                  "data_base64"
+                ],
+                "properties": {
+                  "filename": {
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "type": "string"
+                  },
+                  "data_base64": {
+                    "minLength": 1,
+                    "maxLength": 11184811,
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "image_path",
+                    "width",
+                    "height"
+                  ],
+                  "properties": {
+                    "id": {
+                      "pattern": "^[a-f0-9]{64}$",
+                      "type": "string"
+                    },
+                    "image_path": {
+                      "pattern": "^/api/v1/banners/media/[a-f0-9]{64}$",
+                      "type": "string"
+                    },
+                    "width": {
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "type": "integer"
+                    },
+                    "height": {
+                      "minimum": 1,
+                      "maximum": 4096,
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/banners/media/{media_id}": {
+      "get": {
+        "operationId": "getAppBannerImage",
+        "tags": [
+          "banners"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "media_id",
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/banners/media/{media_id}": {
+      "get": {
+        "operationId": "getAdminBannerImage",
+        "tags": [
+          "admin-banners"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "media_id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "adminSessionAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "请求频率超过限制，请按 Retry-After 指示重试。",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "距离允许重试的秒数"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/analytics/events": {
       "post": {
         "operationId": "postAnalyticsEvents",

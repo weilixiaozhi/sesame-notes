@@ -27,9 +27,15 @@ export function enforceAdminRouteProtection(app: FastifyInstance): void {
       throw new Error(`本人权限只能用于对应本人接口：${route.url}`);
     if (
       methods.some((method) => !['GET', 'HEAD', 'OPTIONS'].includes(method)) &&
-      ['users:read', 'devices:read', 'status:read', 'audit:read', 'analytics:read', 'fitness:read'].includes(
-        policy.permission ?? '',
-      ) &&
+      [
+        'users:read',
+        'devices:read',
+        'status:read',
+        'audit:read',
+        'analytics:read',
+        'fitness:read',
+        'banners:read',
+      ].includes(policy.permission ?? '') &&
       // 漏斗 POST 只承载有长度和窗口限制的只读查询，不修改统计或管理数据。
       !(
         route.url === '/api/v1/admin/analytics/funnel' &&

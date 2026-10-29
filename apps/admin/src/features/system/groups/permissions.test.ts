@@ -42,6 +42,39 @@ const catalog: PermissionCatalog = {
 };
 
 describe('用户组权限与页面授权', () => {
+  it('Banner 页面和读写权限可独立分配，撤销读取会同时撤销编辑和页面', () => {
+    const extended: PermissionCatalog = {
+      ...catalog,
+      permissions: [
+        ...catalog.permissions,
+        { id: 'banners:read', label: '查看 Banner', dependencies: [] },
+        { id: 'banners:write', label: '编辑 Banner', dependencies: ['banners:read'] },
+      ],
+      pages: [
+        ...catalog.pages,
+        {
+          id: 'banners',
+          label: 'Banner 管理',
+          path: '/application/banners',
+          required_permissions: ['banners:read'],
+          assignable: true,
+        },
+      ],
+    };
+    expect(permissionLeaves(extended, 'application')).toContain('permission:banners:write');
+    const granted = changePermissions(
+      { permissions: [], page_ids: [] },
+      ['page:banners', 'permission:banners:write'],
+      true,
+      extended,
+    );
+    expect(granted.permissions.sort()).toEqual(['banners:read', 'banners:write']);
+    expect(granted.page_ids).toEqual(['banners']);
+    expect(changePermissions(granted, ['permission:banners:read'], false, extended)).toEqual({
+      permissions: [],
+      page_ids: [],
+    });
+  });
   it('健身页面分别授权，共用操作权限只在目录中出现一次', () => {
     const extended: PermissionCatalog = {
       ...catalog,

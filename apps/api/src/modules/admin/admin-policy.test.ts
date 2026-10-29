@@ -59,6 +59,7 @@ describe('后台身份与单组权限策略', () => {
     const auth = resolveAdminAuthorization(account('super_admin', [], [], false));
     expect(auth.permissions).toEqual(expect.arrayContaining(['accounts:manage', 'groups:manage', 'devices:read']));
     expect(auth.allowedPages).toEqual([
+      'banners',
       'analytics',
       'fitness_exercises',
       'fitness_templates',
@@ -70,6 +71,26 @@ describe('后台身份与单组权限策略', () => {
     ]);
     expect(auth.permissions).toEqual(expect.arrayContaining(['analytics:read', 'fitness:read', 'fitness:write']));
     expect(auth.permissions).not.toContain('fitness:publish');
+  });
+  it('普通组的 Banner 页面和写入权限均要求 Banner 读取权限', () => {
+    try {
+      expect(() => validateGroupAuthorization([], ['banners'])).toThrow('必要的读取权限');
+      expect(() => validateGroupAuthorization(['banners:write'], [])).toThrow('相关读取权限');
+      expect(() => validateGroupAuthorization(['fitness:read', 'fitness:write'], ['banners'])).toThrow();
+      const reader = resolveAdminAuthorization(account('standard_user', ['banners:read'], ['banners']));
+      expect(reader.allowedPages).toEqual(['banners']);
+      expect(reader.permissions).toContain('banners:read');
+      expect(reader.permissions).not.toContain('banners:write');
+      const writer = resolveAdminAuthorization(
+        account('standard_user', ['banners:read', 'banners:write'], ['banners']),
+      );
+      expect(writer.allowedPages).toEqual(['banners']);
+      expect(writer.permissions).toContain('banners:write');
+      expect(writer.permissions).not.toContain('fitness:write');
+      expect(writer.permissions).not.toContain('accounts:manage');
+    } catch (cause) {
+      throw new Error('Banner 普通组权限依赖验证失败', { cause });
+    }
   });
   it('普通身份可按组获得统计与健身页面，不获得后台账号控制能力', () => {
     const auth = resolveAdminAuthorization(
