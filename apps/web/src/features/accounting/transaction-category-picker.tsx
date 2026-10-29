@@ -30,7 +30,7 @@ export function TransactionCategoryPicker({
   const pickerRef = useRef<HTMLFieldSetElement>(null);
   const [selectionError, setSelectionError] = useState('');
   const available = categories.filter((category) => category.deleted_at === null);
-  const parents = available.filter((category) => category.level === 1 && category.parent_id === null);
+  const parents = available.filter((category) => category.parent_id === null);
   const parentIds = new Set(parents.map((category) => category.id));
   // 历史分类的父项缺失时仍提供入口，避免有效子分类从选择器中消失。
   const roots = available.filter((category) => parentIds.has(category.id) || !parentIds.has(category.parent_id ?? ''));

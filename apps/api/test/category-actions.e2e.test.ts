@@ -131,7 +131,7 @@ describe('分类批量命令', () => {
     },
   );
 
-  it('批量查重与落库使用相同名称规范，U0085空白不能绕过同名检查', async () => {
+  it('批量创建规范化同名分类，保留已有身份及默认目录', async () => {
     const user = await account();
     const defaults = await prisma.category.findMany({ where: { ownerId: user.user.user_id }, orderBy: { id: 'asc' } });
     expect(defaults).toHaveLength(61);
@@ -146,12 +146,17 @@ describe('分类批量命令', () => {
       { items: [{ id: randomUUID(), name: '\u0085已存在餐饮\u0085', kind: 'expense', level: 1 }] },
       randomUUID(),
     );
-    expect(response.statusCode, response.body).toBe(409);
-    expect(response.json()).toMatchObject({ code: 'CATEGORY_NAME_CONFLICT' });
-    expect(await prisma.category.findMany({ where: { ownerId: user.user.user_id }, orderBy: { id: 'asc' } })).toEqual(
-      before,
-    );
-    expect(await prisma.syncChange.count({ where: { userId: user.user.user_id } })).toBe(count);
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject([{ name: '已存在餐饮' }]);
+    const createdId = response.json<Array<{ id: string }>>()[0]!.id;
+    expect(createdId).not.toBe(custom.id);
+    expect(
+      await prisma.category.findMany({
+        where: { ownerId: user.user.user_id, id: { not: createdId } },
+        orderBy: { id: 'asc' },
+      }),
+    ).toEqual(before);
+    expect(await prisma.syncChange.count({ where: { userId: user.user.user_id } })).toBe(count + 1);
   });
 
   it.each([
@@ -432,12 +437,12 @@ describe('分类批量命令', () => {
     expect((await prisma.transaction.findUniqueOrThrow({ where: { id: childTransaction.id } })).deletedAt).toBeNull();
   });
 
-  it('跨账号预览与写入拒绝，提升同名冲突在任何数据写入前回滚', async () => {
+  it('跨账号预览拒绝，提升同名子分类保留双方独立身份', async () => {
     const user = await account();
     const stranger = await account();
     const root = await user.category('冲突源');
-    await user.category('同名', root.id);
-    await user.category('同名');
+    const promoted = await user.category('同名', root.id);
+    const existing = await user.category('同名');
     const scope = await user.preview([root.id]);
     const denied = await stranger.call('POST', `/ledgers/${user.ledger.id}/categories/removal-preview`, {
       category_ids: [root.id],
@@ -449,10 +454,15 @@ describe('分类批量命令', () => {
       { category_ids: [root.id], mode: 'promote', preview_token: scope.preview_token },
       randomUUID(),
     );
-    expect(response.statusCode, response.body).toBe(409);
+    expect(response.statusCode, response.body).toBe(200);
     expect(
       (await prisma.category.findUniqueOrThrow({ where: { id_ownerId: { id: root.id, ownerId: user.user.user_id } } }))
         .deletedAt,
-    ).toBeNull();
+    ).not.toBeNull();
+    const remaining = await prisma.category.findMany({
+      where: { ownerId: user.user.user_id, id: { in: [promoted.id, existing.id] } },
+    });
+    expect(remaining).toHaveLength(2);
+    expect(remaining.every((row) => row.level === 1 && row.parentId === null && row.deletedAt === null)).toBe(true);
   });
 });

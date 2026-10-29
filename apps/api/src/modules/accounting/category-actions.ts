@@ -20,7 +20,6 @@ import { authenticate, requireAuth, requireScopes, currentSessionAccess } from '
 import { createChange } from '../sync-events/index.js';
 import { getLedgerReadAccess, getLedgerWriteAccess } from './domain/ledger-access.js';
 import { CategoryInput, categoryData, validateParentCategory } from './domain/categories.js';
-import { assertCategoryNameIdentity } from './domain/category-identity.js';
 import { ensureDefaultCategories } from './default-categories.js';
 import { categoryPayload, ledgerPayload, mapCategory } from './mappers.js';
 import { deleteTransactionMutation, updateTransactionMutation } from './transaction-mutations.js';
@@ -195,12 +194,6 @@ export function registerCategoryActionRoutes(app: FastifyInstance, prisma: Prism
               ? await tx.category.findFirst({ where: { ownerId: ledger.ownerId, id: item.id } })
               : null;
             if (existing) throw new ApiError(409, 'CATEGORY_ALREADY_EXISTS', '分类身份已存在，请刷新后重试');
-            await assertCategoryNameIdentity(
-              tx,
-              ledger.ownerId,
-              { ...item, parent_id: item.parent_id ?? null },
-              { categoryId: item.id },
-            );
             const row = await tx.category.create({ data: categoryData(ledger.ownerId, auth.deviceId, item, now) });
             await createChange(tx, auth, null, 'category', row.id, 'upsert', categoryPayload(row), now);
             created.push(mapCategory(row));
@@ -387,12 +380,6 @@ export function registerCategoryActionRoutes(app: FastifyInstance, prisma: Prism
             if (order + promoted.length > 2147483647)
               throw new ApiError(400, 'CATEGORY_SORT_OVERFLOW', '请先调整分类排序后再提升');
             for (const row of promoted) {
-              await assertCategoryNameIdentity(
-                tx,
-                ledger.ownerId,
-                { name: row.name, kind: row.kind, level: 1, parent_id: null },
-                { categoryId: row.id, current: row, removingIds: removed },
-              );
               const updated = await tx.category.update({
                 where: { id_ownerId: { id: row.id, ownerId: ledger.ownerId } },
                 data: {

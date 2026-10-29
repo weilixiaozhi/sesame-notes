@@ -19,7 +19,6 @@ import { authenticate, requireAuth, requireScopes, currentSessionAccess } from '
 import { createChange } from '../sync-events/index.js';
 import { mapCategoryConflict, nextCategoryTimestamp, normalizeCategoryDraft } from './category-conflict-service.js';
 import { validateParentCategory, assertCategoryCanDelete } from './domain/categories.js';
-import { assertCategoryNameIdentity } from './domain/category-identity.js';
 import { updateCategoryTransactionSnapshots } from './category-snapshot.js';
 
 const ResolveInput = Type.Object(
@@ -156,7 +155,6 @@ export function registerCategoryConflictRoutes(app: FastifyInstance, prisma: Pri
                 throw new ApiError(409, 'CATEGORY_VERSION_CHANGED', '该分类当前未删除，请刷新确认');
               const draft = normalizeCategoryDraft(candidate.localPayload as Record<string, unknown>, current.id);
               await validateParentCategory(tx, auth.userId, draft.parent_id, draft.level, current.id);
-              await assertCategoryNameIdentity(tx, auth.userId, draft, { categoryId: current.id, current });
               current = await tx.category.update({
                 where: { id_ownerId: { id: current.id, ownerId: auth.userId } },
                 data: {

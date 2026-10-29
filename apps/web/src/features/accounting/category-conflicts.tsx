@@ -38,8 +38,6 @@ function CategoryComparison({
           <dd>{values.name}</dd>
           <dt>类型</dt>
           <dd>支出</dd>
-          <dt>层级</dt>
-          <dd>{values.level === 1 ? '一级分类' : '二级分类'}</dd>
           <dt>所属分类</dt>
           <dd>
             {values.parent_id

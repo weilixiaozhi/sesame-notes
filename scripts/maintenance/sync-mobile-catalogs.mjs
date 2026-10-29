@@ -57,7 +57,7 @@ export async function syncCatalogs({
       })),
     );
     if (source !== undefined)
-      outputs.unshift({ file: 'data/catalogs/mobile-catalogs.v1.json', content: `${JSON.stringify(data, null, 2)}\n` });
+      outputs.unshift({ file: 'data/catalogs/mobile-catalogs.v2.json', content: `${JSON.stringify(data, null, 2)}\n` });
     // 快照与消费者资产使用同一批暂存和恢复机制，避免只更新来源记录而留下旧资产。
     const result = await writeCatalogOutputs(outputs, { outputRoot, check, replace });
     return { ...result, sourceRevision: source === undefined ? undefined : data.source.revision };
@@ -71,7 +71,7 @@ export async function main(args = process.argv.slice(2)) {
   try {
     if (args.includes('--help')) {
       console.log(
-        '用法：node scripts/maintenance/sync-mobile-catalogs.mjs [all|categories|currencies|fitness] [--check] [--input <共同目录JSON>]\n更新来源：pnpm sync:catalogs --source <本地客户端路径> [--revision <40位commit SHA>] [--check]\n默认只读取本仓 data/catalogs/mobile-catalogs.v1.json；指定 --source 时一次更新来源快照及全部资产。省略 --revision 使用本地 HEAD，不联网、不读取未提交内容；不能与 --input 或单项目标组合。',
+        '用法：node scripts/maintenance/sync-mobile-catalogs.mjs [all|categories|currencies|fitness] [--check] [--input <共同目录JSON>]\n更新来源：pnpm sync:catalogs --source <本地客户端路径> [--revision <40位commit SHA>] [--check]\n默认只读取本仓 data/catalogs/mobile-catalogs.v2.json；指定 --source 时一次更新来源快照及全部资产。省略 --revision 使用本地 HEAD，不联网、不读取未提交内容；不能与 --input 或单项目标组合。',
       );
       return;
     }

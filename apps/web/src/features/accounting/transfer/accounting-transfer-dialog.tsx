@@ -8,14 +8,18 @@ import { api, captureSessionOperation, useSession } from '../../../lib/session';
 import { useDraftClose } from '../../../components/use-draft-close';
 import { downloadText, exportFileName } from '../../../lib/transfer/download';
 import { readTransferFile, selectTable, type TransferTable, type SelectedTable } from '../../../lib/transfer/table';
+import { CategoryIcon } from '../category-icons';
+import type { CategoryImportChoices } from './category-transfer';
 import {
   accountingCsv,
   buildImportPlan,
   detectTransferMapping,
   previewDate,
   transferFields,
+  validateImportTargets,
   type ImportPlan,
   type Ledger,
+  type Snapshot,
   type TransferMapping,
 } from './transfer-model';
 
@@ -31,6 +35,9 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
   const [table, setTable] = useState<SelectedTable | null>(null);
   const [mapping, setMapping] = useState<TransferMapping>(() => detectTransferMapping([]));
   const [plan, setPlan] = useState<ImportPlan | null>(null);
+  const [categoryChoices, setCategoryChoices] = useState<CategoryImportChoices>({});
+  const [categoryOptions, setCategoryOptions] = useState<Snapshot['categories']>([]);
+  const [categoryPage, setCategoryPage] = useState(0);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState<'reading' | 'preview' | 'import' | null>(null);
   const [progress, setProgress] = useState({
@@ -82,6 +89,7 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
     setSheet(index);
     setHasHeader(header);
     setPlan(null);
+    setCategoryChoices({});
     setError(null);
     setProgress({ transactions: 0, categories: 0, batches: 0, complete: false, cancelled: false });
     try {
@@ -138,15 +146,19 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
       operation.assertCurrent();
       if (current.ledger.archived_at) throw new Error('归档账本不能导入');
       if (current.ledger.currency !== ledger.currency) throw new Error('账本币种已变化，请重新打开导入');
-      const next = await buildImportPlan(table, mapping, ledger, current, controller.signal);
+      const next = await buildImportPlan(table, mapping, ledger, current, controller.signal, categoryChoices);
       operation.assertCurrent();
       if (active.current) {
         setPlan(next);
+        setCategoryPage(0);
+        setCategoryOptions(
+          current.categories.filter((item) => !item.owner_id || item.owner_id === current.ledger.owner_id),
+        );
         setProgress({
           transactions: 0,
           categories: 0,
           batches: 0,
-          complete: next.count === 0 && next.errors.length === 0,
+          complete: next.count === 0 && next.errors.length === 0 && next.categoryRequests.length === 0,
           cancelled: false,
         });
       }
@@ -158,7 +170,7 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
   }
   /** 批次有固定实体身份和幂等键；取消只停止后续批次，已提交数据明确显示。 */
   async function commit() {
-    if (!plan || plan.errors.length || busy || ledger.archived_at) return;
+    if (!plan || plan.errors.length || plan.categoryRequests.length || busy || ledger.archived_at) return;
     setBusy('import');
     setLocked(true);
     setError(null);
@@ -175,6 +187,14 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
       operation.assertCurrent();
       if (current.ledger.archived_at || current.ledger.currency !== ledger.currency)
         throw new Error('账本状态或币种已变化，请重新打开导入');
+      try {
+        validateImportTargets(plan, current);
+      } catch (caught) {
+        // 确认目标失效时允许重新映射；没有发出写入请求，不属于结果未知的重试。
+        setLocked(false);
+        setPlan(null);
+        throw caught;
+      }
       for (const batch of plan.batches) {
         if (!active.current || stopAfterBatch.current) break;
         if (batch.done) continue;
@@ -353,6 +373,7 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
                         disabled={!!busy || locked}
                         onChange={(event) => {
                           setMapping({ ...mapping, [key]: event.target.value });
+                          setCategoryChoices({});
                           setPlan(null);
                         }}
                       >
@@ -409,6 +430,88 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
                 <p>
                   待导入 {plan.count} 条明细，新增 {plan.categories} 个分类，跳过已导入 {plan.skipped} 条。
                 </p>
+                {plan.categoryRequests.length > 0 && (
+                  <div className="stack">
+                    <strong>请确认分类对应关系</strong>
+                    <p className="muted">
+                      名称相同的分类也可能不同。请逐项选择已有分类，或明确新建；只有身份与所属目录一致时才会自动对应。
+                    </p>
+                    {plan.categoryRequests.slice(categoryPage * 25, (categoryPage + 1) * 25).map((source) => {
+                      const choice = categoryChoices[source.key];
+                      const selected =
+                        choice?.kind === 'existing' ? categoryOptions.find((item) => item.id === choice.id) : null;
+                      return (
+                        <Field
+                          key={source.key}
+                          label={`第 ${source.rows.slice(0, 4).join('、')}${source.rows.length > 4 ? ` 等 ${source.rows.length}` : ''} 行：${source.label}`}
+                        >
+                          <div className="toolbar">
+                            <CategoryIcon name={source.icon} />
+                            <span>{source.label}</span>
+                          </div>
+                          <select
+                            value={choice?.kind === 'new' ? 'new' : (choice?.id ?? '')}
+                            disabled={!!busy || locked}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              setCategoryChoices((current) => {
+                                const next = { ...current };
+                                if (!value) delete next[source.key];
+                                else
+                                  next[source.key] =
+                                    value === 'new' ? { kind: 'new' } : { kind: 'existing', id: value };
+                                return next;
+                              });
+                            }}
+                          >
+                            <option value="">请选择目标分类</option>
+                            {ledger.role === 'owner' && <option value="new">新建独立分类：{source.label}</option>}
+                            {categoryOptions.map((item, index) => {
+                              const parent = categoryOptions.find((row) => row.id === item.parent_id);
+                              return (
+                                <option value={item.id} key={item.id}>
+                                  {parent ? `${parent.name} / ` : ''}
+                                  {item.name} · 分类 {index + 1}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          {selected && (
+                            <div className="toolbar">
+                              <CategoryIcon name={selected.icon ?? null} />
+                              <span>所选分类：{selected.name}</span>
+                            </div>
+                          )}
+                        </Field>
+                      );
+                    })}
+                    {plan.categoryRequests.length > 25 && (
+                      <div className="toolbar">
+                        <Button
+                          variant="secondary"
+                          disabled={!!busy || categoryPage === 0}
+                          onClick={() => setCategoryPage((page) => page - 1)}
+                        >
+                          上一组
+                        </Button>
+                        <span>
+                          {categoryPage + 1} / {Math.ceil(plan.categoryRequests.length / 25)}，共{' '}
+                          {plan.categoryRequests.length} 项待确认
+                        </span>
+                        <Button
+                          variant="secondary"
+                          disabled={!!busy || (categoryPage + 1) * 25 >= plan.categoryRequests.length}
+                          onClick={() => setCategoryPage((page) => page + 1)}
+                        >
+                          下一组
+                        </Button>
+                      </div>
+                    )}
+                    <p className="muted">
+                      确认选择后，点击上方“校验并预览”重新检查。新建子分类时，也需要明确它的所属分类。
+                    </p>
+                  </div>
+                )}
                 {plan.errors.length ? (
                   <div role="alert" className="stack" ref={validationSummary} tabIndex={-1}>
                     <strong>{plan.errors.length} 行校验失败，未开始写入。</strong>
@@ -421,7 +524,7 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
                     </ul>
                     {plan.errors.length > 50 && <p>其余错误请修正源文件后重新校验。</p>}
                   </div>
-                ) : (
+                ) : plan.categoryRequests.length === 0 ? (
                   <>
                     <div className="table-scroll">
                       <table className="table">
@@ -464,7 +567,7 @@ export function AccountingTransferDialog({ ledger: currentLedger, onClose }: { l
                     )}
                     {plan.count === 0 && <EmptyState title="没有需要导入的新记录" />}
                   </>
-                )}
+                ) : null}
                 {(progress.batches > 0 || progress.complete || progress.cancelled) && (
                   <p role="status">
                     {progress.complete && !busy ? '导入完成' : progress.cancelled ? '已停止后续批次' : '已提交'}：

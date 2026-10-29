@@ -31,6 +31,11 @@ export type CategoryCreate = {
   parent_id?: string | null;
 };
 
+/** 所属关系是分类结构的唯一来源；持久化与协议层级字段由关系派生。 */
+export function categoryLevel(parentId: string | null | undefined): 1 | 2 {
+  return parentId == null ? 1 : 2;
+}
+
 /** 分类存储字段共用数据库边界：排序为有符号 32 位整数，图标只接受可存储文本并按 Unicode 字符数计长。 */
 export function validateCategoryFields(body: {
   sort_order?: unknown;
@@ -75,10 +80,18 @@ export async function validateParentCategory(
       throw new ApiError(400, 'INVALID_CATEGORY_PARENT', '父分类身份无效');
     // 自引用本身已经构成环，先报告明确的关系错误，再检查层级和远端父节点。
     if (parentId && parentId === selfId) throw new ApiError(400, 'CATEGORY_CYCLE', '分类不能以自身为父分类');
-    if (level === 1 && parentId) throw new ApiError(400, 'CATEGORY_PARENT_FORBIDDEN', '一级分类不能设置父分类');
-    if (level === 2 && !parentId) throw new ApiError(400, 'CATEGORY_PARENT_REQUIRED', '二级分类必须选择父分类');
+    if (level !== 1 && level !== 2) throw new ApiError(400, 'INVALID_CATEGORY_LEVEL', '分类关系格式无效');
+    if (level !== categoryLevel(parentId)) {
+      throw new ApiError(
+        400,
+        parentId ? 'CATEGORY_PARENT_FORBIDDEN' : 'CATEGORY_PARENT_REQUIRED',
+        '分类关系无效，请重新选择所属分类',
+      );
+    }
     if (!parentId) return;
-    const parent = await prisma.category.findFirst({ where: { id: parentId, ownerId, deletedAt: null, level: 1 } });
+    const parent = await prisma.category.findFirst({
+      where: { id: parentId, ownerId, deletedAt: null, parentId: null },
+    });
     if (!parent) throw new ApiError(400, 'CATEGORY_PARENT_UNAVAILABLE', '父分类不存在或不可用');
     if (selfId) {
       // 分类 ID 可在不同账号复用，只有当前所有者的有效子节点会形成第三级。
@@ -86,7 +99,7 @@ export async function validateParentCategory(
         where: { parentId: selfId, ownerId, deletedAt: null },
         select: { id: true },
       });
-      if (child) throw new ApiError(400, 'CATEGORY_HAS_CHILDREN', '分类包含子分类，不能改为二级分类');
+      if (child) throw new ApiError(400, 'CATEGORY_HAS_CHILDREN', '分类包含子分类，不能再放入其他分类');
     }
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -126,7 +139,7 @@ export function categoryData(
     ownerId,
     name: normalizeName(body.name),
     kind: body.kind,
-    level: body.level,
+    level: categoryLevel(body.parent_id),
     sortOrder: body.sort_order ?? 0,
     icon: body.icon ?? null,
     parentId: body.parent_id ?? null,

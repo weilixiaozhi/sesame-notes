@@ -76,9 +76,9 @@ export function CategoryReorder({
               setOrder([]);
             }}
           >
-            <option value="">一级分类</option>
+            <option value="">无所属分类</option>
             {categories
-              .filter((row) => row.level === 1)
+              .filter((row) => row.parent_id === null)
               .map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.name} 的子分类

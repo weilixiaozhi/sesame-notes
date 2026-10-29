@@ -25,7 +25,6 @@ export {
   assertCategoryCanDelete,
   type CategoryCreate,
 } from './domain/categories.js';
-export { assertCategoryNameIdentity } from './domain/category-identity.js';
 export { accessibleLedgerWhere, getLedgerReadAccess, getLedgerWriteAccess } from './domain/ledger-access.js';
 export {
   resolveCategory,

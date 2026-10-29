@@ -10,7 +10,6 @@ import {
   getLedgerWriteAccess,
   validateParentCategory,
   assertCategoryCanDelete,
-  assertCategoryNameIdentity,
   importRecurringInitialState,
   validateRecurringTimeZone,
   recurringDate,
@@ -91,10 +90,6 @@ export async function applyCategory(
   }
   if (!draft) throw new ApiError(400, 'INVALID_CATEGORY_PAYLOAD', '分类内容无效');
   await validateParentCategory(tx, auth.userId, draft.parent_id, draft.level, change.entity_id);
-  await assertCategoryNameIdentity(tx, auth.userId, draft, {
-    categoryId: change.entity_id,
-    current: current ?? undefined,
-  });
   const data = {
     name: draft.name,
     kind: draft.kind,

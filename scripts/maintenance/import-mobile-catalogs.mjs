@@ -49,7 +49,7 @@ export async function readSourceCatalogs({ source, revision, readSource = readGi
     const fitnessSource = validateFitnessCatalog(JSON.parse(contents.get('assets/fitness/exercises.json')));
     return validateCatalogInput({
       format: 'sesame-notes.shared-catalogs',
-      version: 1,
+      version: 2,
       source: {
         repository: 'sesame-notes-mobile',
         revision: actualRevision,
@@ -74,7 +74,7 @@ export async function importCatalogs({ source, revision, outputRoot = catalogRoo
     if (!revision) throw new Error('独立导入必须提供 --revision 完整的 40 位 commit SHA。');
     const data = await readSourceCatalogs({ source, revision, readSource });
     return await writeCatalogOutputs(
-      [{ file: 'data/catalogs/mobile-catalogs.v1.json', content: `${JSON.stringify(data, null, 2)}\n` }],
+      [{ file: 'data/catalogs/mobile-catalogs.v2.json', content: `${JSON.stringify(data, null, 2)}\n` }],
       { outputRoot },
     );
   } catch (error) {

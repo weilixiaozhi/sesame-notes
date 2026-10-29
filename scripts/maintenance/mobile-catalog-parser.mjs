@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { buildCategoryAssets, categoryId } from '../lib/catalog-data.mjs';
+import { buildCategoryAssets } from '../lib/catalog-data.mjs';
 export const sourceFiles = {
   categories: [
     'lib/utils/default_category_keys.dart',
@@ -90,9 +90,8 @@ export function buildCategoryCatalogs(keys, seed, arb, identitySource) {
   try {
     const contents = [keys, seed, arb, identitySource];
     const translations = JSON.parse(arb);
-    const flatKeys = strings(keys.match(/kFlatExpenseCategoryKeys = \[([\s\S]*?)\];/)?.[1] ?? '');
-    const groupText = keys.match(/kHierarchicalExpenseCategories = \{([\s\S]*?)\};/)?.[1] ?? '';
-    const groups = [...groupText.matchAll(/'([^']+)':\s*\[([\s\S]*?)\]/g)].map((match) => ({
+    const groupText = keys.match(/kExpenseCategoryTemplates = \{([\s\S]*?)\};/)?.[1] ?? '';
+    const definitions = [...groupText.matchAll(/'([^']+)':\s*\[([\s\S]*?)\]/g)].map((match) => ({
       key: match[1],
       children: strings(match[2]),
     }));
@@ -105,60 +104,28 @@ export function buildCategoryCatalogs(keys, seed, arb, identitySource) {
     const namespace = identitySource.match(/const _namespace = '([0-9a-f-]+)'/)?.[1]?.replaceAll('-', '');
     if (!namespace || namespace.length !== 32 || !identitySource.includes("'cat:expense:$level:$key'"))
       throw new Error('手机官方分类身份算法发生变化，请检查生成器');
-    /** 用手机同一命名空间和 UUID v5 算法生成官方分类身份。 */
-    const id = (level, key) => categoryId(namespace, level, key);
-    const flatNames = translations.categoryExpenseList.split('-');
-    if (flatKeys.length !== flatNames.length || !groups.length || !Object.keys(icons).length)
-      throw new Error('手机模板源结构发生变化，请检查生成器');
-    /** 保留模板身份、名称、图标和父分类，生成页面可直接使用的条目。 */
-    const item = (key, level, name, parentKey = null) => ({
-      key,
-      level,
-      name: name.trim(),
-      icon: icons[key] ?? 'category',
-      seed_id: id(level, key),
-      parent_key: parentKey,
-    });
-    const flat = flatKeys.map((key, index) => item(key, 1, flatNames[index]));
-    const hierarchical = groups.flatMap((group) => {
-      const translationKey = `categoryExpense${group.key
+    if (!definitions.length || !Object.keys(icons).length) throw new Error('手机模板源结构发生变化，请检查生成器');
+    /** 每个资源键独立读取翻译；名称中的连字符属于内容，不参与拆分结构。 */
+    const item = (key) => {
+      const translationKey = `categoryName${key
         .split('_')
         .map((part) => part[0].toUpperCase() + part.slice(1))
         .join('')}`;
-      const names = translations[translationKey]?.split('-');
-      if (!names || names.length !== group.children.length + 1) throw new Error(`分类翻译数量不匹配：${group.key}`);
-      return [
-        item(group.key, 1, names[0]),
-        ...group.children.map((key, index) => item(key, 2, names[index + 1], group.key)),
-      ];
-    });
-    const hybridSource = seed.match(/hybridCategoryTemplate = \[([\s\S]*?)\r?\n\s*\];/)?.[1] ?? '';
-    const hybridGroups = [
-      ...hybridSource.matchAll(/\(\s*key:\s*'([^']+)',\s*children:\s*(null|\[[\s\S]*?\]),?\s*\)/g),
+      const name = translations[translationKey];
+      if (typeof name !== 'string' || !name.trim()) throw new Error(`分类缺少独立翻译：${key}`);
+      return { key, name: name.trim(), icon: icons[key] ?? 'category' };
+    };
+    const groups = definitions.map((group) => ({ ...item(group.key), children: group.children.map(item) }));
+    const selectionSource = seed.match(/hybridCategoryTemplate = \[([\s\S]*?)\r?\n\s*\];/)?.[1] ?? '';
+    const initialSelection = [
+      ...selectionSource.matchAll(/\(\s*key:\s*'([^']+)',\s*children:\s*(null|\[[\s\S]*?\]),?\s*\)/g),
     ].map((match) => ({
       key: match[1],
-      children: match[2] === 'null' ? null : strings(match[2]),
+      children: match[2] === 'null' ? [] : strings(match[2]),
     }));
-    if (!hybridGroups.length) throw new Error('手机默认混合分类源结构发生变化，请检查生成器');
-    // 首次默认目录只取手机欢迎流程的混合模板，保持一级全局顺序与二级父内顺序。
-    const hybrid = hybridGroups.flatMap((group, parentOrder) => {
-      const parent = (group.children === null ? flat : hierarchical).find(
-        (entry) => entry.key === group.key && entry.level === 1,
-      );
-      if (!parent) throw new Error(`默认分类缺少对应模板：${group.key}`);
-      return [
-        { ...parent, sort_order: parentOrder },
-        ...(group.children ?? []).map((key, childOrder) => {
-          const child = hierarchical.find((entry) => entry.key === key && entry.parent_key === group.key);
-          if (!child) throw new Error(`默认子分类缺少对应模板：${key}`);
-          return { ...child, sort_order: childOrder };
-        }),
-      ];
-    });
-    if (new Set(hybrid.map((entry) => entry.seed_id)).size !== hybrid.length)
-      throw new Error('手机默认混合分类包含重复身份');
+    if (!initialSelection.length) throw new Error('手机默认分类选择结构发生变化，请检查生成器');
     const sources = sourceHashes(sourceFiles.categories, contents);
-    const input = { namespace, sources, flat, hierarchical, hybrid };
+    const input = { namespace, sources, groups, initialSelection };
     return { ...buildCategoryAssets(input), input };
   } catch (error) {
     throw new Error('生成分类目录失败，请检查手机分类源文件与中文翻译。', { cause: error });

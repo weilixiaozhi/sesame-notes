@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildCategoryCatalogs, buildCurrencyCatalog } from '../maintenance/mobile-catalog-parser.mjs';
+import { buildCategoryAssets, validateCatalogInput, validateCategoryContent } from '../lib/catalog-data.mjs';
 
 const definitions = String.raw`
 const List<_Cur> _kCurrencyDefs = [
@@ -17,8 +18,7 @@ const Map<String, List<String>> _kCommonCurrencyPriority = {
 const mappings = "'USD': l10n.currencyUSD, 'CNY': l10n.currencyCNY, 'JPY': l10n.currencyJPY";
 const arb = JSON.stringify({ currencyUSD: '美元', currencyCNY: '人民币 (CNY)', currencyJPY: '日元' });
 const categoryKeys = `
-const List<String> kFlatExpenseCategoryKeys = ['dining', 'transport'];
-const Map<String, List<String>> kHierarchicalExpenseCategories = {'dining': ['dining_breakfast']};`;
+const Map<String, List<String>> kExpenseCategoryTemplates = {'dining': ['dining_breakfast'], 'transport': []};`;
 const categorySeed = `
 const expenseIcons = {'dining': 'utensils', 'dining_breakfast': 'coffee', 'transport': 'bus'};
 hybridCategoryTemplate = [
@@ -29,8 +29,9 @@ const categoryIdentity = String.raw`const _namespace = 'b3e7c0de-0000-4000-8000-
 String defaultCategoryId({required int level, required String key}) => 'cat:expense:$level:$key';`;
 const combinedArb = JSON.stringify({
   ...JSON.parse(arb),
-  categoryExpenseList: '餐饮-交通',
-  categoryExpenseDining: '餐饮-早餐',
+  categoryNameDining: '餐饮',
+  categoryNameDiningBreakfast: '早餐',
+  categoryNameTransport: '交通',
 });
 test('币种源数据解析保留全部ISO身份', () => {
   const catalog = buildCurrencyCatalog(definitions, mappings, arb);
@@ -60,7 +61,7 @@ test('分类生成保留已发布的官方身份与二级父关系', () => {
   assert.equal(catalog.identities.items.length, 3);
 });
 
-test('分类身份算法或翻译数量不兼容时拒绝生成资产', () => {
+test('分类身份算法或独立翻译不兼容时拒绝生成资产', () => {
   assert.throws(
     () =>
       buildCategoryCatalogs(
@@ -74,9 +75,94 @@ test('分类身份算法或翻译数量不兼容时拒绝生成资产', () => {
     },
   );
   assert.throws(
-    () => buildCategoryCatalogs(categoryKeys, categorySeed, combinedArb.replace('餐饮-早餐', '餐饮'), categoryIdentity),
+    () =>
+      buildCategoryCatalogs(
+        categoryKeys,
+        categorySeed,
+        combinedArb.replace('categoryNameDiningBreakfast', 'missingKey'),
+        categoryIdentity,
+      ),
     {
-      cause: new Error('分类翻译数量不匹配：dining'),
+      cause: new Error('分类缺少独立翻译：dining_breakfast'),
     },
   );
+});
+
+test('统一模板只有内容树，独立父项和带连字符的名称均完整保留', () => {
+  const catalog = buildCategoryCatalogs(
+    categoryKeys,
+    categorySeed,
+    combinedArb.replace('早餐', '早-餐'),
+    categoryIdentity,
+  );
+  assert.deepEqual(catalog.templates.groups, [
+    {
+      key: 'dining',
+      name: '餐饮',
+      icon: 'utensils',
+      children: [{ key: 'dining_breakfast', name: '早-餐', icon: 'coffee' }],
+    },
+    { key: 'transport', name: '交通', icon: 'bus', children: [] },
+  ]);
+  assert.deepEqual(Object.keys(catalog.templates), ['sources', 'groups']);
+  assert.deepEqual(catalog.input.initialSelection, [
+    { key: 'transport', children: [] },
+    { key: 'dining', children: ['dining_breakfast'] },
+  ]);
+  assert.ok(!JSON.stringify(catalog.templates).includes('seed_id'));
+  assert.ok(!JSON.stringify(catalog.templates).includes('level'));
+});
+
+test('统一资源允许重名，但拒绝重复资源键、额外层级及错误默认选择', () => {
+  const input = buildCategoryCatalogs(categoryKeys, categorySeed, combinedArb, categoryIdentity).input;
+  const named = structuredClone(input);
+  named.groups[1].name = named.groups[0].name;
+  assert.doesNotThrow(() => validateCategoryContent(named));
+  for (const mutate of [
+    (value) => {
+      value.groups[1].key = value.groups[0].key;
+    },
+    (value) => {
+      value.groups[0].children[0].children = [];
+    },
+    (value) => {
+      value.groups[0].seed_id = 'fixed-user-id';
+    },
+    (value) => {
+      value.initialSelection[0].children = ['dining_breakfast'];
+    },
+    (value) => {
+      value.initialSelection.push(value.initialSelection[0]);
+    },
+  ]) {
+    const invalid = structuredClone(input);
+    mutate(invalid);
+    assert.throws(() => buildCategoryAssets(invalid));
+  }
+});
+
+test('共同输入只接受v2内容树，来源摘要、币种和健身版本保持独立校验', () => {
+  const categories = buildCategoryCatalogs(categoryKeys, categorySeed, combinedArb, categoryIdentity).input;
+  const currencies = buildCurrencyCatalog(definitions, mappings, combinedArb);
+  const files = [
+    ...new Map([...categories.sources, ...currencies.sources].map((source) => [source.file, source])).values(),
+    { file: 'assets/fitness/exercises.json', sha256: 'c'.repeat(64) },
+  ];
+  const input = {
+    format: 'sesame-notes.shared-catalogs',
+    version: 2,
+    source: { repository: 'sesame-notes-mobile', revision: 'a'.repeat(40), files: files.map((file) => ({ ...file })) },
+    categories,
+    currencies,
+    fitness: {
+      source: 'https://example.test/fitness',
+      source_commit: 'b'.repeat(40),
+      exercises: [{ id: 'exercise', body_part: 'chest' }],
+    },
+  };
+  assert.equal(validateCatalogInput(input), input);
+  assert.throws(() => validateCatalogInput({ ...input, version: 1 }));
+  const changed = structuredClone(input);
+  changed.categories.sources[0].sha256 = 'd'.repeat(64);
+  assert.throws(() => validateCatalogInput(changed));
 });

@@ -110,7 +110,7 @@ async function secondDevice(user: Owner): Promise<Session> {
   }
 }
 
-it('两个设备跨REST与同步并发创建同语义不同UUID，只提交一个分类', async () => {
+it('两个设备跨REST与同步并发创建同名不同UUID，保留两份独立分类', async () => {
   try {
     const user = await owner();
     const second = await secondDevice(user);
@@ -123,15 +123,13 @@ it('两个设备跨REST与同步并发创建同语义不同UUID，只提交一�
     ]);
     expect(sync.statusCode, sync.body).toBe(200);
     const outcome = sync.json().outcomes[0];
-    expect([rest.statusCode === 201, outcome.status === 'accepted'].filter(Boolean)).toHaveLength(1);
-    if (rest.statusCode !== 201) expect(rest.json()).toMatchObject({ code: 'CATEGORY_NAME_CONFLICT' });
-    if (outcome.status !== 'accepted')
-      expect(outcome).toMatchObject({ status: 'invalid', code: 'CATEGORY_NAME_CONFLICT' });
+    expect(rest.statusCode, rest.body).toBe(201);
+    expect(outcome).toMatchObject({ status: 'accepted' });
     expect(await prisma.category.count({ where: { ownerId: user.session.user.user_id, name, deletedAt: null } })).toBe(
-      1,
+      2,
     );
   } catch (cause) {
-    throw new Error('分类语义并发唯一性验证失败', { cause });
+    throw new Error('同名分类并发创建与身份独立验证失败', { cause });
   }
 });
 
@@ -249,7 +247,7 @@ it('不同父分类和不同Owner的同名内容不被误合并', async () => {
   }
 });
 
-it.each(['REST', 'import', 'batch'] as const)('%s 使用相同规范名称拒绝不同UUID，保留既有分类', async (transport) => {
+it.each(['REST', 'import', 'batch'] as const)('%s 允许相同规范名称的不同UUID，保留既有分类', async (transport) => {
   try {
     const user = await owner();
     const original = category(`规范名称${randomUUID()}`);
@@ -265,31 +263,32 @@ it.each(['REST', 'import', 'batch'] as const)('%s 使用相同规范名称拒绝
       transport === 'import' ? { categories: [duplicate] } : transport === 'batch' ? { items: [duplicate] } : duplicate,
       transport === 'batch' ? randomUUID() : undefined,
     );
-    expect(response.statusCode, response.body).toBe(409);
-    expect(response.json()).toMatchObject({ code: 'CATEGORY_NAME_CONFLICT' });
+    expect(response.statusCode, response.body).toBe(transport === 'batch' ? 200 : 201);
     expect(
       await prisma.category.count({
         where: { ownerId: user.session.user.user_id, name: original.name, deletedAt: null },
       }),
-    ).toBe(1);
-    expect(await prisma.category.count({ where: { ownerId: user.session.user.user_id, id: duplicate.id } })).toBe(0);
+    ).toBe(2);
+    expect(await prisma.category.count({ where: { ownerId: user.session.user.user_id, id: duplicate.id } })).toBe(1);
   } catch (cause) {
     throw new Error(`${transport} 分类同语义入口验证失败`, { cause });
   }
 });
 
-it('改名冲突拒绝而唯一新名允许，原实体身份保持不变', async () => {
+it('改成另一分类的同名仍保留双方实体身份', async () => {
   try {
     const user = await owner();
     const first = category(`原名称${randomUUID()}`);
     const other = category(`目标名称${randomUUID()}`);
     for (const data of [first, other])
       expect((await request(user.session, 'POST', `/ledgers/${user.ledgerId}/categories`, data)).statusCode).toBe(201);
-    const conflict = await request(user.session, 'PATCH', `/ledgers/${user.ledgerId}/categories/${first.id}`, {
+    const renamed = await request(user.session, 'PATCH', `/ledgers/${user.ledgerId}/categories/${first.id}`, {
       name: other.name,
     });
-    expect(conflict.statusCode).toBe(409);
-    expect(conflict.json()).toMatchObject({ code: 'CATEGORY_NAME_CONFLICT' });
+    expect(renamed.statusCode, renamed.body).toBe(200);
+    expect(
+      await prisma.category.findMany({ where: { ownerId: user.session.user.user_id, name: other.name } }),
+    ).toHaveLength(2);
     const name = `唯一新名称${randomUUID()}`;
     const updated = await request(user.session, 'PATCH', `/ledgers/${user.ledgerId}/categories/${first.id}`, { name });
     expect(updated.statusCode, updated.body).toBe(200);
@@ -299,7 +298,7 @@ it('改名冲突拒绝而唯一新名允许，原实体身份保持不变', asyn
       }),
     ).toMatchObject({ name, deletedAt: null });
   } catch (cause) {
-    throw new Error('分类改名唯一性验证失败', { cause });
+    throw new Error('同名分类改名与身份保留验证失败', { cause });
   }
 });
 
@@ -361,7 +360,7 @@ it('历史不同UUID同语义保留，编辑原分类图标不合并也不改挂
   }
 });
 
-it('恢复旧UUID不能与现存同语义新UUID并存，保留双方既有状态', async () => {
+it('恢复旧UUID可以与现存同名新UUID并存，双方身份保持独立', async () => {
   try {
     const user = await owner();
     const old = category(`恢复语义${randomUUID()}`);
@@ -378,12 +377,12 @@ it('恢复旧UUID不能与现存同语义新UUID并存，保留双方既有状�
       changes: [mutation(old, new Date(Date.now() + 1000).toISOString())],
     });
     expect(response.statusCode, response.body).toBe(200);
-    expect(response.json().outcomes[0]).toMatchObject({ status: 'invalid', code: 'CATEGORY_NAME_CONFLICT' });
+    expect(response.json().outcomes[0]).toMatchObject({ status: 'accepted' });
     expect(
       await prisma.category.findUniqueOrThrow({
         where: { id_ownerId: { id: old.id, ownerId: user.session.user.user_id } },
       }),
-    ).toMatchObject({ deletedAt });
+    ).toMatchObject({ deletedAt: null });
     expect(
       await prisma.category.findUniqueOrThrow({
         where: { id_ownerId: { id: active.id, ownerId: user.session.user.user_id } },
@@ -391,9 +390,9 @@ it('恢复旧UUID不能与现存同语义新UUID并存，保留双方既有状�
     ).toMatchObject({ deletedAt: null });
     expect(
       await prisma.category.count({ where: { ownerId: user.session.user.user_id, name: old.name, deletedAt: null } }),
-    ).toBe(1);
+    ).toBe(2);
   } catch (cause) {
-    throw new Error('分类恢复语义唯一性验证失败', { cause });
+    throw new Error('同名分类恢复与身份保留验证失败', { cause });
   }
 });
 
@@ -461,5 +460,120 @@ it('其他Owner相同UUID父级的活子级不会阻止当前Owner删除自己�
     ).toBe(2);
   } catch (cause) {
     throw new Error('跨所有者分类删除关系隔离验证失败', { cause });
+  }
+});
+
+it('同一批父子创建重试只写入一次，下一次明确添加创建独立同名树', async () => {
+  try {
+    const user = await owner();
+    const name = `模板父${randomUUID()}`;
+    const before = await prisma.category.findMany({
+      where: { ownerId: user.session.user.user_id },
+      orderBy: { id: 'asc' },
+    });
+    const createdIds: string[] = [];
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      // 每次用户确认固定整批身份；只有下一次明确添加才生成另一组父子 UUID。
+      const parent = category(name);
+      const children = [category('午餐', randomUUID(), parent.id), category('午餐', randomUUID(), parent.id)];
+      const body = { items: [parent, ...children] };
+      const key = randomUUID();
+      const path = `/ledgers/${user.ledgerId}/categories/add-batch`;
+      const [first, concurrent] = await Promise.all([
+        request(user.session, 'POST', path, body, key),
+        request(user.session, 'POST', path, body, key),
+      ]);
+      for (const response of [first, concurrent]) expect(response.statusCode, response.body).toBe(200);
+      expect(concurrent.json()).toEqual(first.json());
+      const replay = await request(user.session, 'POST', path, body, key);
+      expect(replay.statusCode, replay.body).toBe(200);
+      expect(replay.json()).toEqual(first.json());
+      createdIds.push(parent.id, ...children.map((row) => row.id));
+      expect(await prisma.category.count({ where: { ownerId: user.session.user.user_id, parentId: parent.id } })).toBe(
+        2,
+      );
+    }
+    expect(await prisma.category.count({ where: { ownerId: user.session.user.user_id, id: { in: createdIds } } })).toBe(
+      6,
+    );
+    expect(
+      await prisma.syncChange.count({
+        where: { userId: user.session.user.user_id, entityType: 'category', entityId: { in: createdIds } },
+      }),
+    ).toBe(6);
+    expect(
+      await prisma.category.findMany({
+        where: { ownerId: user.session.user.user_id, id: { notIn: createdIds } },
+        orderBy: { id: 'asc' },
+      }),
+    ).toEqual(before);
+  } catch (cause) {
+    throw new Error('父子分类批量创建与重试幂等验证失败', { cause });
+  }
+});
+
+it('为明确选择的既有父ID添加同名子项，不按父名称复用另一分类', async () => {
+  try {
+    const user = await owner();
+    const name = `同名父${randomUUID()}`;
+    const parents = [category(name), category(name)];
+    for (const parent of parents) {
+      expect((await request(user.session, 'POST', `/ledgers/${user.ledgerId}/categories`, parent)).statusCode).toBe(
+        201,
+      );
+    }
+    const selected = parents[1]!;
+    const firstChild = category('午餐', randomUUID(), selected.id);
+    expect((await request(user.session, 'POST', `/ledgers/${user.ledgerId}/categories`, firstChild)).statusCode).toBe(
+      201,
+    );
+    const secondChild = category('午餐', randomUUID(), selected.id);
+    const body = { items: [secondChild] };
+    const key = randomUUID();
+    const path = `/ledgers/${user.ledgerId}/categories/add-batch`;
+    for (let retry = 0; retry < 2; retry += 1) {
+      const response = await request(user.session, 'POST', path, body, key);
+      expect(response.statusCode, response.body).toBe(200);
+      expect(response.json()).toMatchObject([{ id: secondChild.id, parent_id: selected.id }]);
+    }
+    expect(await prisma.category.count({ where: { ownerId: user.session.user.user_id, name } })).toBe(2);
+    expect(await prisma.category.count({ where: { ownerId: user.session.user.user_id, parentId: selected.id } })).toBe(
+      2,
+    );
+    expect(
+      await prisma.category.count({ where: { ownerId: user.session.user.user_id, parentId: parents[0]!.id } }),
+    ).toBe(0);
+  } catch (cause) {
+    throw new Error('既有父分类显式身份与同名子项添加验证失败', { cause });
+  }
+});
+
+it('同名允许并存仍不能把其他Owner的父分类挂入本人目录', async () => {
+  try {
+    const user = await owner();
+    const other = await owner();
+    const foreignParent = category(`外部父${randomUUID()}`);
+    expect(
+      (await request(other.session, 'POST', `/ledgers/${other.ledgerId}/categories`, foreignParent)).statusCode,
+    ).toBe(201);
+    const child = category(foreignParent.name, randomUUID(), foreignParent.id);
+    const response = await request(
+      user.session,
+      'POST',
+      `/ledgers/${user.ledgerId}/categories/add-batch`,
+      { items: [child] },
+      randomUUID(),
+    );
+    expect(response.statusCode, response.body).toBe(400);
+    expect(
+      await prisma.category.count({
+        where: { ownerId: user.session.user.user_id, id: { in: [child.id, foreignParent.id] } },
+      }),
+    ).toBe(0);
+    expect(await prisma.category.count({ where: { ownerId: other.session.user.user_id, id: foreignParent.id } })).toBe(
+      1,
+    );
+  } catch (cause) {
+    throw new Error('同名分类的父身份跨账号隔离验证失败', { cause });
   }
 });

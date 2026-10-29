@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 export const catalogRoot = resolve(import.meta.dirname, '../..');
-export const catalogInput = resolve(catalogRoot, 'data/catalogs/mobile-catalogs.v1.json');
+export const catalogInput = resolve(catalogRoot, 'data/catalogs/mobile-catalogs.v2.json');
 const commitPattern = /^[0-9a-f]{40}$/;
 
 /** 将固定命名空间、层级与键转换为客户端相同的 UUID v5 身份。 */
@@ -26,7 +26,7 @@ export function categoryId(namespace, level, key) {
 /** 对机器生成的共同输入做完整校验，拒绝未知版本、重复身份和失效父关系。 */
 export function validateCatalogInput(input) {
   try {
-    if (input?.format !== 'sesame-notes.shared-catalogs' || input.version !== 1)
+    if (input?.format !== 'sesame-notes.shared-catalogs' || input.version !== 2)
       throw new Error('共同目录格式或版本不支持。');
     if (input.source?.repository !== 'sesame-notes-mobile' || !commitPattern.test(input.source.revision))
       throw new Error('共同目录必须记录客户端完整 commit SHA。');
@@ -56,48 +56,7 @@ export function validateCatalogInput(input) {
       )
         throw new Error('目录与源文件摘要不一致。');
     }
-    const { namespace, flat, hierarchical, hybrid } = input.categories;
-    if (!/^[0-9a-f]{32}$/.test(namespace)) throw new Error('分类命名空间无效。');
-    const templateItems = new Map();
-    for (const list of [flat, hierarchical, hybrid]) {
-      if (!Array.isArray(list) || !list.length) throw new Error('分类模板不能为空。');
-      const ids = new Set();
-      const parents = new Set();
-      let parentOrder = 0;
-      const childOrders = new Map();
-      for (const entry of list) {
-        if (
-          !/^[a-z][a-z0-9_]*$/.test(entry.key) ||
-          ![1, 2].includes(entry.level) ||
-          typeof entry.name !== 'string' ||
-          !entry.name.trim() ||
-          !/^[a-z][a-zA-Z0-9]*$/.test(entry.icon)
-        )
-          throw new Error('分类条目字段无效。');
-        if (
-          (entry.level === 1 && entry.parent_key !== null) ||
-          (entry.level === 2 && !parents.has(entry.parent_key)) ||
-          (list === flat && entry.level !== 1)
-        )
-          throw new Error('分类层级或父关系无效。');
-        if (entry.seed_id !== categoryId(namespace, entry.level, entry.key) || ids.has(entry.seed_id))
-          throw new Error('分类身份不匹配或重复。');
-        ids.add(entry.seed_id);
-        if (entry.level === 1) parents.add(entry.key);
-        if (list === hybrid) {
-          const { sort_order: sortOrder, ...template } = entry;
-          if (!templateItems.get(entry.seed_id)?.some((item) => JSON.stringify(item) === JSON.stringify(template)))
-            throw new Error('默认分类没有对应模板。');
-          const expected = entry.level === 1 ? parentOrder++ : (childOrders.get(entry.parent_key) ?? 0);
-          if (sortOrder !== expected) throw new Error('默认分类排序不连续。');
-          if (entry.level === 2) childOrders.set(entry.parent_key, expected + 1);
-        } else {
-          const previous = templateItems.get(entry.seed_id) ?? [];
-          if (previous.some((item) => item.parent_key !== entry.parent_key)) throw new Error('分类身份的父关系冲突。');
-          templateItems.set(entry.seed_id, [...previous, entry]);
-        }
-      }
-    }
+    validateCategoryContent(input.categories);
     const { version, currencies, commonCodes } = input.currencies;
     if (
       version !== 1 ||
@@ -125,6 +84,63 @@ export function validateCatalogInput(input) {
     return input;
   } catch (error) {
     throw new Error('共同目录输入校验失败，请使用显式导入命令重新生成并审查快照。', { cause: error });
+  }
+}
+
+/** 模板只有资源键与两级包含关系；默认初始化独立保存有序键选择。 */
+export function validateCategoryContent({ namespace, sources, groups, initialSelection, ...extra }) {
+  try {
+    if (Object.keys(extra).length || !/^[0-9a-f]{32}$/.test(namespace))
+      throw new Error('分类输入字段或兼容命名空间无效。');
+    if (
+      !Array.isArray(sources) ||
+      !Array.isArray(groups) ||
+      !groups.length ||
+      !Array.isArray(initialSelection) ||
+      !initialSelection.length
+    )
+      throw new Error('分类模板与默认选择不能为空。');
+    const keys = new Set();
+    const byKey = new Map();
+    for (const group of groups) {
+      if (!Array.isArray(group.children)) throw new Error('分类模板必须显式提供子项数组。');
+      for (const item of [group, ...group.children]) {
+        const fields = item === group ? ['key', 'name', 'icon', 'children'] : ['key', 'name', 'icon'];
+        if (
+          Object.keys(item).length !== fields.length ||
+          Object.keys(item).some((key) => !fields.includes(key)) ||
+          !/^[a-z][a-z0-9_]*$/.test(item.key) ||
+          keys.has(item.key) ||
+          typeof item.name !== 'string' ||
+          !item.name.trim() ||
+          !/^[a-z][a-zA-Z0-9]*$/.test(item.icon)
+        )
+          throw new Error('分类资源字段无效、键重复或包含额外层级。');
+        keys.add(item.key);
+      }
+      byKey.set(group.key, group);
+    }
+    const selected = new Set();
+    for (const selection of initialSelection) {
+      const group = byKey.get(selection.key);
+      if (
+        !group ||
+        selected.has(selection.key) ||
+        Object.keys(selection).length !== 2 ||
+        !Array.isArray(selection.children)
+      )
+        throw new Error('默认分类选择无效或重复。');
+      selected.add(selection.key);
+      const children = new Set();
+      for (const key of selection.children) {
+        if (children.has(key) || !group.children.some((item) => item.key === key))
+          throw new Error('默认子分类没有对应模板或存在重复选择。');
+        children.add(key);
+      }
+    }
+    return byKey;
+  } catch (cause) {
+    throw new Error('统一分类内容校验失败，请检查资源树与默认选择。', { cause });
   }
 }
 
@@ -169,26 +185,49 @@ export async function readCatalogInput(path = catalogInput) {
   }
 }
 
-/** 从规范化分类输入生成所有消费者资产，保持模板顺序和固定身份。 */
-export function buildCategoryAssets({ namespace, sources, flat, hierarchical, hybrid }) {
+/** 统一内容树生成模板资源；固定身份只用于初始化及历史同步兼容资产。 */
+export function buildCategoryAssets(input) {
   try {
-    // 所有官方模板共享稳定身份；保护范围按固定 ID 判断，不用名称推断用户分类来源。
-    const identityById = new Map();
-    for (const entry of [...flat, ...hierarchical, ...hybrid]) {
-      const identity = {
-        id: entry.seed_id,
-        key: entry.key,
-        level: entry.level,
-        parent_id: entry.parent_key === null ? null : categoryId(namespace, 1, entry.parent_key),
-      };
-      const previous = identityById.get(identity.id);
-      if (previous && JSON.stringify(previous) !== JSON.stringify(identity))
-        throw new Error(`官方分类固定身份冲突：${identity.id}`);
-      identityById.set(identity.id, identity);
-    }
-    const identities = [...identityById.values()].sort((left, right) => left.id.localeCompare(right.id));
-
-    const iconNames = [...new Set([...flat, ...hierarchical].map((entry) => entry.icon))].sort();
+    const byKey = validateCategoryContent(input);
+    const { namespace, sources, groups, initialSelection } = input;
+    /** 兼容身份从资源位置生成，永远不会写回模板资源。 */
+    const identity = (item, level, parentKey = null) => ({
+      id: categoryId(namespace, level, item.key),
+      key: item.key,
+      level,
+      parent_id: parentKey === null ? null : categoryId(namespace, 1, parentKey),
+    });
+    const identities = groups
+      .flatMap((group) => [identity(group, 1), ...group.children.map((child) => identity(child, 2, group.key))])
+      .sort((left, right) => left.id.localeCompare(right.id));
+    /** 默认选择仅决定首次初始化内容及显示排序，不限制用户使用模板的次数。 */
+    const initialItem = (item, level, sortOrder, parentKey = null) => ({
+      key: item.key,
+      id: categoryId(namespace, level, item.key),
+      name: item.name,
+      kind: 'expense',
+      level,
+      sort_order: sortOrder,
+      parent_id: parentKey === null ? null : categoryId(namespace, 1, parentKey),
+      icon: item.icon,
+    });
+    const defaults = initialSelection.flatMap((selection, order) => {
+      const group = byKey.get(selection.key);
+      return [
+        initialItem(group, 1, order),
+        ...selection.children.map((key, childOrder) =>
+          initialItem(
+            group.children.find((child) => child.key === key),
+            2,
+            childOrder,
+            group.key,
+          ),
+        ),
+      ];
+    });
+    const iconNames = [
+      ...new Set(groups.flatMap((group) => [group.icon, ...group.children.map((item) => item.icon)])),
+    ].sort();
     /** 将手机图标名转换为 Lucide 导出组件名。 */
     const named = (name) => name[0].toUpperCase() + name.slice(1);
     return {
@@ -196,18 +235,9 @@ export function buildCategoryAssets({ namespace, sources, flat, hierarchical, hy
       defaults: {
         version: 1,
         sources,
-        items: hybrid.map((entry) => ({
-          key: entry.key,
-          id: entry.seed_id,
-          name: entry.name,
-          kind: 'expense',
-          level: entry.level,
-          sort_order: entry.sort_order,
-          parent_id: entry.parent_key === null ? null : categoryId(namespace, 1, entry.parent_key),
-          icon: entry.icon,
-        })),
+        items: defaults,
       },
-      templates: { sources, flat, hierarchical },
+      templates: { sources, groups },
       icons: `// 从手机分类内容提取图标清单；通过 pnpm sync:web:categories 更新。\nimport { Shapes, ${iconNames.map(named).join(', ')} } from 'lucide-react';\n\nexport const categoryIcons = { ${iconNames.map((name) => `${name}: ${named(name)}`).join(', ')} };\n\n/** 未知历史图标仍保留原值，仅在 Web 展示中回落为通用分类图标。 */\nexport function CategoryIcon({ name, size = 18 }: { name: string | null; size?: number }) {\n const Icon = name && Object.hasOwn(categoryIcons, name) ? categoryIcons[name as keyof typeof categoryIcons] : Shapes;\n return <Icon size={size} aria-hidden />;\n}\n`,
     };
   } catch (error) {

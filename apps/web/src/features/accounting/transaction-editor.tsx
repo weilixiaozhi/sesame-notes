@@ -61,7 +61,7 @@ export function TransactionEditor({
         .sort((left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name)),
     [categories],
   );
-  const firstCategory = availableCategories.find((category) => category.level === 1 && category.parent_id === null);
+  const firstCategory = availableCategories.find((category) => category.parent_id === null);
   const categoriesReady = !categoriesLoading && !categoriesError;
   const initialCategoryId = existing?.category_id ?? (!existing && categoriesReady ? firstCategory?.id : '') ?? '';
   const categoryInitialized = useRef(!!existing || !!initialCategoryId);

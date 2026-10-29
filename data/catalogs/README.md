@@ -1,6 +1,6 @@
 # 共同目录输入
 
-`mobile-catalogs.v1.json` 是服务端保存的分类、币种及健身身份共同快照，普通生成读取这份输入。普通构建消费已生成资产；以下命令均是显式维护操作，不要求存在客户端兄弟目录，也不会下载依赖或访问数据库。
+`mobile-catalogs.v2.json` 是服务端保存的分类、币种及健身身份共同快照，普通生成读取这份输入。普通构建消费已生成资产；以下命令均是显式维护操作，不要求存在客户端兄弟目录，也不会下载依赖或访问数据库。
 
 ```powershell
 pnpm sync:catalogs
@@ -10,9 +10,10 @@ pnpm sync:web:currencies --check
 pnpm --filter @sesame-notes/api fitness:catalog --check
 ```
 
-格式名称为 `sesame-notes.shared-catalogs`，`version: 1`。`source.repository` 是逻辑来源标识，`source.revision` 是完整客户端 commit SHA，`source.files` 记录该提交中七个 UTF-8 Git 文件对象的 SHA-256；不会记录本机路径、远端凭据或工作区未提交内容。健身目录额外保留数据集本身的 `source` 与 `source_commit`，两种版本不能混为一谈。
+格式名称为 `sesame-notes.shared-catalogs`，`version: 2`。`source.repository` 是逻辑来源标识，`source.revision` 是完整客户端 commit SHA，`source.files` 记录该提交中七个 UTF-8 Git 文件对象的 SHA-256；不会记录本机路径、远端凭据或工作区未提交内容。健身目录额外保留数据集本身的 `source` 与 `source_commit`，两种版本不能混为一谈。
 
-- `categories` 保存 UUID v5 命名空间、扁平/分层/混合模板及来源摘要；保留模板顺序、图标、中文名称和父关系。官方身份输出按 UUID 稳定排序，默认混合目录保留一级全局和二级父内排序。
+- `categories.groups` 是唯一模板内容树。每个根节点保存 `key/name/icon/children`，子节点只有 `key/name/icon`，空 `children` 表示没有预置子分类；资源不包含用户分类 ID、层级字段或已添加状态。每个资源键使用独立翻译，名称中的连字符不会被当作分隔符。
+- `categories.initialSelection` 保存首次初始化的有序 `{ key, children: [子键] }` 选择。`namespace` 只用于生成默认初始化与旧固定身份的兼容资产；这些资产保持原分类 ID，不能用来认领用户每次新建的模板分类。官方身份输出按 UUID 稳定排序，默认目录保留父项和子项各自顺序。
 - `currencies` 保存定义顺序、中文名称、符号及中文常用币种顺序；币种代码与名称分别存储。
 - `fitness` 仅保留上游来源、版本及 `{ id, body_part }` 有序投影，不复制媒体或翻译文案。
 

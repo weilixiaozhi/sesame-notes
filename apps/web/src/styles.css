@@ -1017,10 +1017,6 @@ svg {
   color: var(--muted);
   font-size: 10px;
 }
-.category-template-option.is-disabled {
-  opacity: 0.6;
-  cursor: default;
-}
 .memo-grid,
 .days-grid {
   display: grid;

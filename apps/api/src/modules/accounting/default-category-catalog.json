@@ -3,16 +3,16 @@
   "sources": [
     {
       "file": "lib/utils/default_category_keys.dart",
-      "sha256": "fafbc6a82f169b6e8745096dfcc3e1d90fc66db7e9a0641eb4b52c4736d2960a"
+      "sha256": "8a58cfff03621dcded9146c370ed68e07031cd4251f6894b15c40a478c8240f5"
     },
     {
       "file": "lib/shared/services/seed_service.dart",
-      "sha256": "8afdf41260753a15a84365fbd8ec137d0b790b45ecd5e9dff22f9ef5a4fc9940"
+      "sha256": "e944dedbe3279009eb57def061301357199b7e03de1b6cfe1c2b0370a76b1e3c"
     },
-    { "file": "lib/l10n/app_zh.arb", "sha256": "f670162181660609740ebe2dafc155828802e54ebd1983835f60a32528cda611" },
+    { "file": "lib/l10n/app_zh.arb", "sha256": "6d8f09567712f21cc1616499e006a177174e834ea19281e6fd59e2162fc20c3a" },
     {
       "file": "lib/utils/default_category_ids.dart",
-      "sha256": "f8f6619b39f40602abe199cbd92d9ed4d96515e59bd72389b6ccf1f8d9a2578d"
+      "sha256": "08c2a1955360cf0f7f90e7df0463ae84c980d6c448fb761412b7320334891998"
     }
   ],
   "items": [

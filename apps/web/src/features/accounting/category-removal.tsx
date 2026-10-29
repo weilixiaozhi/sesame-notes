@@ -120,8 +120,8 @@ export function CategoryRemoval({
                 >
                   <option value="delete">删除分类、子分类及其交易</option>
                   <option value="migrate">迁移全部交易到其他分类，再移除源分类</option>
-                  {sources.every((row) => row.level === 1) && (
-                    <option value="promote">删除一级分类及直属交易，子分类提升并保留</option>
+                  {sources.every((row) => row.parent_id === null) && (
+                    <option value="promote">删除分类及直属交易，保留并移出其子分类</option>
                   )}
                 </select>
               </Field>
@@ -155,7 +155,7 @@ export function CategoryRemoval({
               )}
               {mode === 'promote' && (
                 <p role="note" className="field-error">
-                  直接记在所选一级分类下的交易会删除；子分类及其交易保留。同名提升冲突会整批拒绝。
+                  直接记在所选分类下的交易会删除；子分类改为无所属分类，其身份和交易保持不变。
                 </p>
               )}
               <Field label="输入完整分类名称确认" hint={label}>

@@ -191,7 +191,7 @@ describe('分类两级树与账号归属', () => {
 
         const response = await moveCategory(owner, transport, parentId, targetId);
 
-        expectRejected(response, transport, 'CATEGORY_HAS_CHILDREN', '分类包含子分类，不能改为二级分类');
+        expectRejected(response, transport, 'CATEGORY_HAS_CHILDREN', '分类包含子分类，不能再放入其他分类');
         expect(await captureState(owner)).toEqual(before);
       } catch (cause) {
         throw new Error(`${transport} 含子分类节点降级保护验证失败`, { cause });

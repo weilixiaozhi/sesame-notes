@@ -15,7 +15,6 @@ import {
   CategoryInput,
   TransactionInput,
   categoryData,
-  assertCategoryNameIdentity,
   categoryPayload,
   getLedgerWriteAccess,
   resolveCategory,
@@ -123,12 +122,6 @@ export function registerImportRoutes(app: FastifyInstance, prisma: PrismaClient,
             const item = body.categories![i]!;
             try {
               await validateParentCategory(tx, ledger.ownerId, item.parent_id ?? null, item.level);
-              await assertCategoryNameIdentity(
-                tx,
-                ledger.ownerId,
-                { ...item, parent_id: item.parent_id ?? null },
-                { categoryId: item.id },
-              );
               const category = await tx.category.create({
                 data: categoryData(ledger.ownerId, auth.deviceId, item, now),
               });

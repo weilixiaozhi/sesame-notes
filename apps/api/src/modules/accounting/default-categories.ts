@@ -2,7 +2,6 @@ import { Value } from '@sinclair/typebox/value';
 import type { SyncTransaction } from '../../shared/sync-transaction.js';
 import { createChanges } from '../sync-events/index.js';
 import { CategoryInput, categoryData } from './domain/categories.js';
-import { categorySemanticKey } from './domain/category-identity.js';
 import { categoryPayload } from './mappers.js';
 import catalog from './default-category-catalog.json' with { type: 'json' };
 
@@ -27,18 +26,6 @@ export async function ensureDefaultCategories(
     knownParents.add(item.id);
     return categoryData(auth.userId, auth.deviceId, { ...item, level: item.level }, now);
   });
-  const semanticKeys = new Set<string>();
-  for (const row of data) {
-    if (row.level !== 1 && row.level !== 2) throw new Error('默认分类落库内容缺少有效层级');
-    const key = categorySemanticKey({
-      name: row.name,
-      kind: row.kind,
-      level: row.level,
-      parent_id: row.parentId ?? null,
-    });
-    if (semanticKeys.has(key)) throw new Error('默认分类目录包含同父同名的重复身份');
-    semanticKeys.add(key);
-  }
   // 先父后子批量落库，减少全局同步锁持有期间的网络往返；任何失败仍回滚全部目录与事件。
   const parents = await tx.category.createManyAndReturn({ data: data.filter((item) => item.level === 1) });
   const children = await tx.category.createManyAndReturn({ data: data.filter((item) => item.level === 2) });

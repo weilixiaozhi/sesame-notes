@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { webcrypto } from 'node:crypto';
+import { createHash, webcrypto } from 'node:crypto';
 import { buildImportPlan, detectTransferMapping, accountingCsv, type Ledger, type Snapshot } from './transfer-model';
 import { importTimestamp } from '../../../lib/transfer/timestamp';
 import { parseDelimited } from '../../../lib/delimited-text';
 import { parseJsonTables, readTransferFile, selectTable } from '../../../lib/transfer/table';
+import { categoryImportSources, type CategoryImportChoices } from './category-transfer';
+import { createImportId } from '../../../lib/transfer/import-identity';
 
 const stamp = '2026-01-01T00:00:00.000Z';
 const ledger: Ledger = {
@@ -17,6 +19,7 @@ const ledger: Ledger = {
   archive_updated_at: null,
   archive_device_id: null,
   role: 'owner',
+  owner_id: '57827401-482a-4a82-9b92-f1cfb24bf5ee',
   member_count: 1,
   updated_at: stamp,
 };
@@ -32,6 +35,16 @@ const snapshot: Snapshot = {
 };
 const signal = () => new AbortController().signal;
 beforeEach(() => vi.stubGlobal('crypto', webcrypto));
+
+/** 模拟用户对每个来源明确选择新建，测试不能依赖名称自动认领。 */
+async function chooseNew(table: Parameters<typeof categoryImportSources>[0]): Promise<CategoryImportChoices> {
+  try {
+    const sources = await categoryImportSources(table, detectTransferMapping(table.headers));
+    return Object.fromEntries([...sources.sources.keys()].map((key) => [key, { kind: 'new' }]));
+  } catch (cause) {
+    throw new Error('导入分类选择测试初始化失败', { cause });
+  }
+}
 
 describe('记账文件解析与精确转换', () => {
   it('CSV/TSV保留引号换行，无表头提供虚拟列，拒绝损坏输入', () => {
@@ -84,6 +97,241 @@ describe('记账文件解析与精确转换', () => {
 });
 
 describe('记账导入计划与完整导出', () => {
+  it.each([false, true])('旧文件及空机器列文件重导保持已发布交易ID，含机器表头=%s', async (withEmptyHeaders) => {
+    try {
+      const table = {
+        headers: ['时间', '金额', ...(withEmptyHeaders ? ['category_scope', 'category_id', 'parent_category_id'] : [])],
+        rows: [['2026-09-30', '1', ...(withEmptyHeaders ? ['', '', ''] : [])]],
+      };
+      const oldMapping = {
+        date: '时间',
+        amount: '金额',
+        type: '',
+        currency: '',
+        category: '',
+        sub_category: '',
+        category_icon: '',
+        sub_category_icon: '',
+        note: '',
+        native_amount: '',
+        rate: '',
+      };
+      const oldFingerprint = createHash('sha256')
+        .update(JSON.stringify({ table, mapping: oldMapping, ledger: ledger.id }))
+        .digest('hex');
+      const oldId = await createImportId(ledger.id, oldFingerprint, '0');
+      const plan = await buildImportPlan(table, detectTransferMapping(table.headers), ledger, snapshot, signal());
+      expect(plan.batches[0]!.body.transactions![0]!.id).toBe(oldId);
+      const repeated = await buildImportPlan(
+        table,
+        detectTransferMapping(table.headers),
+        ledger,
+        { ...snapshot, transactions: [{ id: oldId }] as Snapshot['transactions'] },
+        signal(),
+      );
+      expect(repeated.skipped).toBe(1);
+      expect(repeated.batches).toEqual([]);
+    } catch (cause) {
+      throw new Error('历史交易导入身份兼容验证失败', { cause });
+    }
+  });
+  it('无ID的同名来源逐行确认，明确选择不同目标ID不会按名称合并', async () => {
+    try {
+      const table = {
+        headers: ['时间', '金额', '分类'],
+        rows: [
+          ['2026-09-30', '1', '旅行'],
+          ['2026-09-30', '2', '旅行'],
+        ],
+      };
+      const mapping = detectTransferMapping(table.headers);
+      const categories = ['c63266e7-7640-464c-ad22-bd9b5e1a4d1e', '8260fcb3-c519-49bc-909c-f44fb90d0850'].map(
+        (id, index) => ({
+          id,
+          name: '旅行',
+          level: 1,
+          parent_id: null,
+          icon: index ? 'car' : 'plane',
+          owner_id: ledger.owner_id,
+        }),
+      ) as Snapshot['categories'];
+      const state = { ...snapshot, categories };
+      const unresolved = await buildImportPlan(table, mapping, ledger, state, signal());
+      expect(unresolved.categoryRequests).toHaveLength(2);
+      expect(unresolved.batches).toEqual([]);
+      const choices: CategoryImportChoices = Object.fromEntries(
+        unresolved.categoryRequests.map((source, index) => [
+          source.key,
+          { kind: 'existing', id: categories[index]!.id },
+        ]),
+      );
+      const resolved = await buildImportPlan(table, mapping, ledger, state, signal(), choices);
+      expect(resolved.categoryRequests).toEqual([]);
+      expect(resolved.categories).toBe(0);
+      expect(
+        resolved.batches.flatMap((batch) => batch.body.transactions ?? []).map((item) => item.category_id),
+      ).toEqual(categories.map((item) => item.id));
+    } catch (cause) {
+      throw new Error('同名来源人工映射验证失败', { cause });
+    }
+  });
+
+  it('机器字段按owner与ID对应同名分类，名称和图标修改不影响身份', async () => {
+    try {
+      const ids = ['c63266e7-7640-464c-ad22-bd9b5e1a4d1e', '8260fcb3-c519-49bc-909c-f44fb90d0850'];
+      const table = {
+        headers: ['时间', '金额', '分类', 'category_scope', 'category_id'],
+        rows: ids.map((id, index) => ['2026-09-30', '1', index ? '' : '旅行', `account:${ledger.owner_id}`, id]),
+      };
+      const categories = ids.map((id) => ({
+        id,
+        name: '用户已改名',
+        level: 1,
+        parent_id: null,
+        icon: 'car',
+        owner_id: ledger.owner_id,
+      })) as Snapshot['categories'];
+      const plan = await buildImportPlan(
+        table,
+        detectTransferMapping(table.headers),
+        ledger,
+        { ...snapshot, categories },
+        signal(),
+      );
+      expect(plan.categoryRequests).toEqual([]);
+      expect(plan.categories).toBe(0);
+      expect(plan.batches.flatMap((batch) => batch.body.transactions ?? []).map((item) => item.category_id)).toEqual(
+        ids,
+      );
+    } catch (cause) {
+      throw new Error('分类机器身份映射验证失败', { cause });
+    }
+  });
+
+  it('跨owner相同裸ID不能自动认领，明确新建父子映射可重试且不复制其他分类', async () => {
+    try {
+      const sourceId = 'c63266e7-7640-464c-ad22-bd9b5e1a4d1e';
+      const parentId = '8260fcb3-c519-49bc-909c-f44fb90d0850';
+      const table = {
+        headers: ['时间', '金额', '分类', '二级分类', 'category_scope', 'category_id', 'parent_category_id'],
+        rows: [['2026-09-30', '1', '餐饮', '午餐', 'account:other-owner', sourceId, parentId]],
+      };
+      const mapping = detectTransferMapping(table.headers);
+      const privateCategory = {
+        id: sourceId,
+        name: '本人分类',
+        level: 1,
+        parent_id: null,
+        icon: 'car',
+        owner_id: ledger.owner_id,
+      } as Snapshot['categories'][number];
+      const state = { ...snapshot, categories: [privateCategory] };
+      const unresolved = await buildImportPlan(table, mapping, ledger, state, signal());
+      expect(unresolved.categoryRequests).toHaveLength(2);
+      const choices = await chooseNew(table);
+      const first = await buildImportPlan(table, mapping, ledger, state, signal(), choices);
+      expect(first.errors).toEqual([]);
+      const created = first.batches[0]!.body.categories!;
+      expect(created).toHaveLength(2);
+      expect(created[0]!.id).not.toBe(parentId);
+      expect(created[1]!.id).not.toBe(sourceId);
+      expect(created[1]!.parent_id).toBe(created[0]!.id);
+      expect((await buildImportPlan(table, mapping, ledger, state, signal(), choices)).batches).toEqual(first.batches);
+      // 分类批次已提交、交易批次尚未提交时，重试复用来源确定的目标ID。
+      const partial = {
+        ...state,
+        categories: [
+          ...state.categories,
+          ...created.map((row) => ({ ...row, owner_id: ledger.owner_id })),
+        ] as Snapshot['categories'],
+      };
+      const retry = await buildImportPlan(table, mapping, ledger, partial, signal(), choices);
+      expect(retry.categories).toBe(0);
+      expect(retry.batches[0]!.body.transactions![0]!.category_id).toBe(created[1]!.id);
+      expect(state.categories).toEqual([privateCategory]);
+    } catch (cause) {
+      throw new Error('跨所有者来源与重试身份验证失败', { cause });
+    }
+  });
+
+  it('共享账本成员只能映射已有owner分类，不能顺手创建个人分类', async () => {
+    try {
+      const table = { headers: ['时间', '金额', '分类'], rows: [['2026-09-30', '1', '旅行']] };
+      const editor = { ...ledger, role: 'editor' as const };
+      const plan = await buildImportPlan(
+        table,
+        detectTransferMapping(table.headers),
+        editor,
+        snapshot,
+        signal(),
+        await chooseNew(table),
+      );
+      expect(plan.errors[0]?.message).toContain('只有账本所有者');
+      expect(plan.categories).toBe(0);
+      expect(plan.count).toBe(0);
+    } catch (cause) {
+      throw new Error('共享成员分类导入权限验证失败', { cause });
+    }
+  });
+
+  it('导出再导入保留同名分类ID、图标与owner，来源相同不会重建分类', async () => {
+    try {
+      const ids = ['c63266e7-7640-464c-ad22-bd9b5e1a4d1e', '8260fcb3-c519-49bc-909c-f44fb90d0850'];
+      const categories = ids.map((id, index) => ({
+        id,
+        name: '旅行',
+        level: 1,
+        parent_id: null,
+        icon: index ? 'car' : 'plane',
+        owner_id: ledger.owner_id,
+      })) as Snapshot['categories'];
+      const transactions = ids.map((category_id, index) => ({
+        id: `transaction-${index}`,
+        category_id,
+        amount: '1',
+        native_amount: '1',
+        currency_code: 'CNY',
+        happened_at: stamp,
+        note: null,
+      })) as Snapshot['transactions'];
+      const output = accountingCsv({ ...snapshot, categories, transactions }, '', '');
+      const parsed = parseDelimited(output.text.replace(/^\uFEFF/, ''), ',');
+      const table = { headers: parsed[0]!, rows: parsed.slice(1) };
+      expect(table.rows.map((row) => row[table.headers.indexOf('category_id')])).toEqual(ids);
+      expect(table.rows.map((row) => row[table.headers.indexOf('category_scope')])).toEqual(
+        ids.map(() => `account:${ledger.owner_id}`),
+      );
+      const plan = await buildImportPlan(
+        table,
+        detectTransferMapping(table.headers),
+        ledger,
+        { ...snapshot, categories },
+        signal(),
+      );
+      expect(plan.categoryRequests).toEqual([]);
+      expect(plan.categories).toBe(0);
+      expect(plan.batches.flatMap((batch) => batch.body.transactions ?? []).map((row) => row.category_id)).toEqual(ids);
+    } catch (cause) {
+      throw new Error('同名分类导出往返身份验证失败', { cause });
+    }
+  });
+
+  it('所选目标失效时重新显示映射入口，不凭名称改挂到另一分类', async () => {
+    try {
+      const table = { headers: ['时间', '金额', '分类'], rows: [['2026-09-30', '1', '旅行']] };
+      const mapping = detectTransferMapping(table.headers);
+      const { sources } = await categoryImportSources(table, mapping);
+      const source = [...sources.values()][0]!;
+      const choices: CategoryImportChoices = { [source.key]: { kind: 'existing', id: 'deleted-target' } };
+      const plan = await buildImportPlan(table, mapping, ledger, snapshot, signal(), choices);
+      expect(plan.categoryRequests.map((item) => item.key)).toEqual([source.key]);
+      expect(plan.errors[0]?.message).toContain('已不可用');
+      expect(plan.count).toBe(0);
+      expect(plan.categories).toBe(0);
+    } catch (cause) {
+      throw new Error('导入目标失效保护验证失败', { cause });
+    }
+  });
   it('未映射的附加列不影响支出导入', async () => {
     const table = {
       headers: ['时间', '金额', '附加说明'],
@@ -128,7 +376,8 @@ describe('记账导入计划与完整导出', () => {
       rows: [['2026-09-30', '999999999999.1234567891', 'USD', '餐饮', '咖啡', '7000000000000.1234567891']],
     };
     const mapping = detectTransferMapping(table.headers);
-    const first = await buildImportPlan(table, mapping, ledger, snapshot, signal());
+    const choices = await chooseNew(table);
+    const first = await buildImportPlan(table, mapping, ledger, snapshot, signal(), choices);
     expect(first.errors).toEqual([]);
     expect(first.batches).toHaveLength(1);
     const body = first.batches[0]!.body;
@@ -144,7 +393,7 @@ describe('记账导入计划与完整导出', () => {
     expect(duplicate.skipped).toBe(1);
     expect(duplicate.count).toBe(0);
     expect(duplicate.batches).toEqual([]);
-    const repeat = await buildImportPlan(table, mapping, ledger, snapshot, signal());
+    const repeat = await buildImportPlan(table, mapping, ledger, snapshot, signal(), choices);
     expect(repeat.batches).toEqual(first.batches);
   });
   it('外币缺折算、收入、不存在日期、未知编辑者分类全部逐行报告', async () => {
@@ -164,7 +413,8 @@ describe('记账导入计划与完整导出', () => {
       snapshot,
       signal(),
     );
-    expect(plan.errors.map((error) => error.row)).toEqual([2, 3, 4, 5]);
+    expect(plan.errors.map((error) => error.row)).toEqual([2, 3, 4]);
+    expect(plan.categoryRequests.map((source) => source.rows)).toEqual([[5]]);
     expect(plan.count).toBe(0);
   });
   it('超过500条分批仍固定身份；取消不产生计划', async () => {
@@ -199,7 +449,21 @@ describe('记账导入计划与完整导出', () => {
     expect(output.text).toContain('"含,逗号\n换行"');
     expect(output.text).toContain('native_amount');
     const rows = parseDelimited(output.text.replace(/^\uFEFF/, ''), ',');
-    expect(rows[0]).toEqual(['类型', '分类', '二级分类', '金额', '币种', '备注', '时间', 'native_amount']);
-    expect(rows[1]).toHaveLength(8);
+    expect(rows[0]).toEqual([
+      '类型',
+      '分类',
+      '子分类',
+      '金额',
+      '币种',
+      '备注',
+      '时间',
+      'native_amount',
+      'category_icon',
+      'sub_category_icon',
+      'category_scope',
+      'category_id',
+      'parent_category_id',
+    ]);
+    expect(rows[1]).toHaveLength(13);
   });
 });

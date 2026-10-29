@@ -30,7 +30,6 @@ import {
   assertCategoryCanDelete,
   type CategoryCreate,
 } from './domain/categories.js';
-import { assertCategoryNameIdentity } from './domain/category-identity.js';
 import { getLedgerReadAccess, getLedgerWriteAccess } from './domain/ledger-access.js';
 import { categoryPayload, mapCategory } from './mappers.js';
 
@@ -84,12 +83,6 @@ export function registerCategoryRoutes(app: FastifyInstance, prisma: PrismaClien
           if (!(await currentSessionAccess(tx, auth))) throw new ApiError(401, 'UNAUTHORIZED', '登录状态已失效');
           const { ledger } = await getLedgerWriteAccess(tx, auth.userId, ledgerId, 'owner');
           await validateParentCategory(tx, ledger.ownerId, body.parent_id ?? null, body.level, body.id);
-          await assertCategoryNameIdentity(
-            tx,
-            ledger.ownerId,
-            { ...body, parent_id: body.parent_id ?? null },
-            { categoryId: body.id },
-          );
           const created = await tx.category.create({ data: categoryData(ledger.ownerId, auth.deviceId, body, now) });
           await createChange(tx, auth, null, 'category', created.id, 'upsert', categoryPayload(created), now);
           return created;
@@ -171,7 +164,6 @@ export function registerCategoryRoutes(app: FastifyInstance, prisma: PrismaClien
           }
           if (!result) {
             await validateParentCategory(tx, ledger.ownerId, draft.parent_id, draft.level, categoryId);
-            await assertCategoryNameIdentity(tx, ledger.ownerId, draft, { categoryId, current });
             const updated = await tx.category.update({
               where: { id_ownerId: { id: categoryId, ownerId: ledger.ownerId } },
               data: {

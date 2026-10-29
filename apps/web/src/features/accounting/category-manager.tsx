@@ -48,7 +48,7 @@ export function CategoryManager({
   const selectedCategories = categories.filter((row) => selected.has(row.id));
   const ordered = [...categories].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   const display = ordered
-    .filter((row) => row.level === 1)
+    .filter((row) => row.parent_id === null)
     .flatMap((parent) => [parent, ...ordered.filter((row) => row.parent_id === parent.id)]);
   return (
     <>
@@ -86,7 +86,7 @@ export function CategoryManager({
                   )}
                   <CategoryIcon name={category.icon} />
                   <span>
-                    {category.level === 2
+                    {category.parent_id !== null
                       ? `${categories.find((parent) => parent.id === category.parent_id)?.name ?? '其他'} / `
                       : ''}
                     {category.name}
@@ -181,7 +181,6 @@ export function CategoryManager({
           accountId={accountId}
           categories={categories}
           onClose={() => setTemplates(false)}
-          onConflicts={() => setConflicts(true)}
         />
       )}
       {reorder && (
@@ -286,12 +285,12 @@ function CategoryEditor({
           </Field>
           <Field
             label="所属分类"
-            hint={hasChildren ? '这个分类包含子分类，暂时不能改变层级。' : '选择一级分类可创建子分类。'}
+            hint={hasChildren ? '这个分类包含子分类，不能再放入其他分类。' : '选择所属分类后，将作为它的子分类。'}
           >
             <select {...form.register('parentId')}>
-              <option value="">无 · 作为一级分类</option>
+              <option value="">无所属分类</option>
               {categories
-                .filter((category) => !hasChildren && category.level === 1 && category.id !== existing?.id)
+                .filter((category) => !hasChildren && category.parent_id === null && category.id !== existing?.id)
                 .map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}

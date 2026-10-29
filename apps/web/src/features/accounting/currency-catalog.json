@@ -9,7 +9,7 @@
       "file": "lib/shared/presentation/currency_names.dart",
       "sha256": "fd4a590189daffb7507002fa52ce855b95a96c739d6525ce85e7afc7e8564b41"
     },
-    { "file": "lib/l10n/app_zh.arb", "sha256": "f670162181660609740ebe2dafc155828802e54ebd1983835f60a32528cda611" }
+    { "file": "lib/l10n/app_zh.arb", "sha256": "6d8f09567712f21cc1616499e006a177174e834ea19281e6fd59e2162fc20c3a" }
   ],
   "commonCodes": ["CNY", "HKD", "MOP", "TWD", "USD", "EUR", "JPY", "GBP", "KRW", "AUD", "CAD", "SGD", "THB"],
   "currencies": [

@@ -76,7 +76,7 @@ data/
 # 只公开共同目录的版本化输入和说明，其余运行时数据继续忽略。
 !/data/catalogs/
 /data/catalogs/*
-!/data/catalogs/mobile-catalogs.v1.json
+!/data/catalogs/mobile-catalogs.v2.json
 !/data/catalogs/README.md
 .e2e-storage/
 .openapi-storage/
