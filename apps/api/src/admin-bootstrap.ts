@@ -17,8 +17,6 @@ const prisma = new PrismaClient();
 async function main(): Promise<void> {
   if (process.env.SEED_CONFIRM !== 'CREATE_ADMIN')
     throw new Error('必须显式设置 SEED_CONFIRM=CREATE_ADMIN 才能创建后台用户');
-  if (process.env.SEED_ADMIN_COUNTRY_CODE !== undefined)
-    throw new Error('请将国际区号直接填写在 SEED_ADMIN_PHONE 中，并移除 SEED_ADMIN_COUNTRY_CODE');
   if (!process.env.SEED_ADMIN_USERNAME?.trim()) throw new Error('SEED_ADMIN_USERNAME 未配置');
   const username = normalizeAdminUsername(process.env.SEED_ADMIN_USERNAME);
   const email = normalizeAdminEmail(process.env.SEED_ADMIN_EMAIL);

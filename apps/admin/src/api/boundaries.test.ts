@@ -25,6 +25,7 @@ describe('授权和响应边界', () => {
     expect(routePage('/analytics/overview')).toBe('analytics');
     expect(routePage('/analytics/tracking')).toBe('analytics_tracking');
     expect(routePage('/analytics/events?behavior=click')).toBe('analytics_events');
+    expect(routePage('/analytics/usage')).toBeNull();
     expect(routePage('/analytics/behavior')).toBeNull();
     expect(routePage('/analytics/tracking/unknown')).toBeNull();
     expect(canAccess(ordinary, 'analytics')).toBe(false);

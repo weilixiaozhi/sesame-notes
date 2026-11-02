@@ -47,7 +47,7 @@ export class RealtimeHub {
     try {
       const checks = new Map<string, Promise<boolean>>();
       const valid = (claims: AccessClaims) => {
-        const key = `${claims.userId}:${claims.deviceId}:${claims.authGeneration}:${claims.credentialVersion ?? 0}`;
+        const key = `${claims.userId}:${claims.deviceId}:${claims.authGeneration}:${claims.credentialVersion}`;
         let check = checks.get(key);
         if (!check) {
           check = this.isAuthorized(claims);

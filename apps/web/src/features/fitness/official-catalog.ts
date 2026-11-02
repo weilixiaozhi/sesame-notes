@@ -41,11 +41,16 @@ export function isOfficialCatalog(value: unknown): value is Catalog {
   return isCatalogContent(value, true) && isTaxonomyDirectory(value.taxonomies);
 }
 
-/** 按动作目录业务字段构造网页数据，服务端额外字段不进入动作状态或缓存。 */
+/** 按目录元数据和动作业务字段构造网页数据，额外字段不进入动作状态或缓存。 */
 function cleanCatalog(catalog: Catalog): Catalog {
-  const { attribution: _attribution, ...metadata } = catalog as Catalog & { attribution?: unknown };
   return {
-    ...metadata,
+    ...(catalog.schema_version === undefined ? {} : { schema_version: catalog.schema_version }),
+    ...(catalog.content_version === undefined ? {} : { content_version: catalog.content_version }),
+    ...(catalog.taxonomies === undefined ? {} : { taxonomies: catalog.taxonomies }),
+    ...(catalog.source === undefined ? {} : { source: catalog.source }),
+    ...(catalog.source_commit === undefined ? {} : { source_commit: catalog.source_commit }),
+    ...(catalog.source_asset === undefined ? {} : { source_asset: catalog.source_asset }),
+    ...(catalog.source_asset_sha256 === undefined ? {} : { source_asset_sha256: catalog.source_asset_sha256 }),
     exercises: catalog.exercises.map((entry) => ({
       id: entry.id,
       name_zh: entry.name_zh,

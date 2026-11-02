@@ -23,7 +23,7 @@ import { canAccess, landingPath, pageInfo } from '../api/types';
 import type { PageId } from '../api/types';
 import { reportError } from '../api/client';
 import { LoginPage } from '../features/authentication';
-import { canonicalPath, routePage } from './routes';
+import { routePage } from './routes';
 import {
   PersonalCenter,
   UsersPage,
@@ -94,10 +94,7 @@ export function App() {
     ) {
       void navigate(landingPath(session.session.admin), { replace: true });
     }
-    if (session.phase === 'authenticated' && canonicalPath(location.pathname) !== location.pathname) {
-      void navigate(`${canonicalPath(location.pathname)}${location.search}`, { replace: true });
-    }
-  }, [session.phase, session.session, location.pathname, location.search, navigate]);
+  }, [session.phase, session.session, location.pathname, navigate]);
   if (session.phase === 'checking')
     return (
       <div className="session-screen">

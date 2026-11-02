@@ -121,28 +121,31 @@ describe('在线官方动作库', () => {
     expect(localStorage.getItem(cacheKey)).toBeNull();
   });
 
-  it('在线与缓存动作只使用业务字段，不保存素材来源及额外字段', async () => {
-    const catalog = publishedCatalog();
-    const legacy = {
-      ...catalog,
-      attribution: 'Legacy library credit',
-      exercises: catalog.exercises.map((entry) => ({
-        ...entry,
-        attribution: 'Legacy image credit — https://legacy.test/',
-        server_extra: 'Legacy extra metadata',
-      })),
-    };
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(legacy), { status: 200 })));
-    const online = await loadOfficialCatalog();
-    expect(online).not.toHaveProperty('attribution');
-    expect(online.exercises[0]).not.toHaveProperty('attribution');
-    expect(online.exercises[0]).not.toHaveProperty('server_extra');
-    expect(localStorage.getItem(cacheKey)).not.toContain('Legacy');
+  it('在线与缓存保留目录元数据和动作业务字段，额外字段不会进入缓存', async () => {
+    try {
+      const catalog = publishedCatalog();
+      const payload = {
+        ...catalog,
+        attribution: '目录额外素材字段',
+        server_extra: '目录额外元数据',
+        exercises: catalog.exercises.map((entry) => ({
+          ...entry,
+          attribution: '动作素材来源',
+          server_extra: '动作额外元数据',
+        })),
+      };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 })));
+      const online = await loadOfficialCatalog();
+      expect(online).toEqual(catalog);
+      expect(JSON.parse(localStorage.getItem(cacheKey)!)).toEqual(catalog);
 
-    localStorage.setItem(cacheKey, JSON.stringify(legacy));
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('网络不可用')));
-    expect(await loadOfficialCatalog()).toEqual(online);
-    expect(localStorage.getItem(cacheKey)).not.toContain('Legacy');
+      localStorage.setItem(cacheKey, JSON.stringify(payload));
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('网络不可用')));
+      expect(await loadOfficialCatalog()).toEqual(online);
+      expect(JSON.parse(localStorage.getItem(cacheKey)!)).toEqual(catalog);
+    } catch (cause) {
+      throw new Error('当前目录字段投影与离线缓存验证失败', { cause });
+    }
   });
 
   it('无网络且缓存损坏时使用内置文字资料', async () => {

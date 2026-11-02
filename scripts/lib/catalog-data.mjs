@@ -91,7 +91,7 @@ export function validateCatalogInput(input) {
 export function validateCategoryContent({ namespace, sources, groups, initialSelection, ...extra }) {
   try {
     if (Object.keys(extra).length || !/^[0-9a-f]{32}$/.test(namespace))
-      throw new Error('分类输入字段或兼容命名空间无效。');
+      throw new Error('分类输入字段或身份命名空间无效。');
     if (
       !Array.isArray(sources) ||
       !Array.isArray(groups) ||
@@ -185,12 +185,12 @@ export async function readCatalogInput(path = catalogInput) {
   }
 }
 
-/** 统一内容树生成模板资源；固定身份只用于初始化及历史同步兼容资产。 */
+/** 统一内容树生成模板资源，固定身份用于默认初始化及官方分类识别。 */
 export function buildCategoryAssets(input) {
   try {
     const byKey = validateCategoryContent(input);
     const { namespace, sources, groups, initialSelection } = input;
-    /** 兼容身份从资源位置生成，永远不会写回模板资源。 */
+    /** 分类身份由固定命名空间、层级与资源键派生，模板资源仅保留内容。 */
     const identity = (item, level, parentKey = null) => ({
       id: categoryId(namespace, level, item.key),
       key: item.key,

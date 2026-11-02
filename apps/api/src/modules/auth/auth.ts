@@ -127,7 +127,7 @@ function registerAuthClientRoutes(
   const prefix = browser ? '/api/v1/auth/browser' : '/api/v1/auth';
   const cookieName = 'browser_refresh_token';
   const responseSchema = browser ? Type.Omit(SessionSchema, ['refresh_token']) : SessionSchema;
-  // 设备资料沿用额外正文内容的兼容边界，只有处理器识别出的受控字段会进入设备记录。
+  // 刷新仅更新可用的受控设备资料，缺失或无法读取的非唯一信息不阻断会话续期。
   const refreshBodySchema = browser
     ? Type.Optional(Type.Object({ device: Type.Optional(Type.Unknown()) }, { additionalProperties: false }))
     : Type.Object({ refresh_token: Type.String({ minLength: 32 }), device: Type.Optional(Type.Unknown()) });
@@ -589,7 +589,7 @@ function deviceUpdateData(input: DeviceInput, ip: string) {
   };
 }
 
-/** 缺失和空白资料保留已知值，旧客户端或读取失败不会清空设备资料。 */
+/** 缺失和空白资料保留已知值，设备资料读取失败不会清空服务端记录。 */
 function deviceMetadataUpdateData(input?: DeviceMetadataInput) {
   return {
     platform: normalizeDeviceMetadataValue(input?.platform)?.toLowerCase(),

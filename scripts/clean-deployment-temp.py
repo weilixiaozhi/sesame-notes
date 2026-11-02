@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""清理历史过程日志和有完成记录的部署临时产物；默认只读计划，维护窗口内加 --apply 执行。"""
+"""清理有完成记录的部署临时产物；默认只读计划，维护窗口内加 --apply 执行。"""
 
 import argparse
 import datetime
@@ -26,21 +26,9 @@ TASKS = (
     (r"init-production-[a-f0-9]{24}\.jsonl", None, "initialization_completed"),
     (r"cleanup-[a-f0-9]{24}", "cleanup.jsonl", "cleanup_completed"),
 )
-TEXT_TASKS = (
-    ("frontend-build", "build.log", "旧式网页构建"),
-    ("prod-build", "build.log", "旧式整套应用构建"),
-    ("frontend-publish", "publish.log", "旧式网页发布"),
-    ("site-paths", "migrate.log", "网页入口调整"),
-    ("prod-pull", None, "代码更新"),
-    ("prod-check", None, "服务与入口检查"),
-    ("prod-update", None, "旧式整套应用发布"),
-    ("prod-config", None, "生产配置创建"),
-    ("prod-start", None, "首次启动命令"),
-    ("api-config", None, "API 配置重建"),
-)
 MAX_LOG_BYTES = 16 * 1024 * 1024
 SCRIPTS = {"release.py", "release-api.py", "release-frontend.py", "init-production.py",
-           "prepare-frontend-release.py", "bump-version.mjs", "clean-deployment-temp.py"}
+           "bump-version.mjs", "clean-deployment-temp.py"}
 
 
 class CleanupError(Exception):
@@ -141,7 +129,7 @@ def activity(temp, *, proc=pathlib.Path("/proc"), runner=subprocess.run):
 
 
 class Cleanup:
-    """区分历史日志和需完成证据的任务，保留未知任务与无法确认的操作锁。"""
+    """仅认领具备完成证据的当前部署任务，保留未知任务与无法确认的操作锁。"""
 
     def __init__(self, repo, *, detector=activity, mount_reader=mount_points):
         """固定源码目录和检查器，构造过程不创建文件。"""
@@ -206,37 +194,8 @@ class Cleanup:
         except (OSError, ValueError, UnicodeError) as error:
             raise CleanupError("完成日志缺失、无法读取或已损坏。") from error
 
-    def text_candidate(self, path, log, kind, mounts):
-        """纯历史日志按文件边界核验；含产物的目录另外要求模板中的完整完成区段。"""
-        try:
-            content = read_log(log)
-            tree = self.snapshot(path, mounts)
-            only_publish_log = kind == "frontend-publish" and {name for name, _ in tree} == {
-                path.name, str(log.relative_to(self.temp))}
-            if path == log or only_publish_log:
-                return {"tree": tree, "log_sha256": hashlib.sha256(content).hexdigest()}
-            text = content.decode("utf-8").replace("\r\n", "\n")
-            own_log, own_directory = re.escape(str(log)), re.escape(str(path))
-            release = r"[A-Za-z0-9][A-Za-z0-9_.-]{0,100}"
-            published = [r"当前网页版本：releases/" + release + "\n发布日志：" + own_log,
-                         r"两个网页已使用版本 " + release + "，无需切换。\n发布日志：" + own_log]
-            endings = {
-                "frontend-build": [r"网页产物已准备：/srv/sesame-notes/releases/" + release + "\n构建日志：" + own_log],
-                "prod-build": [r"API 镜像与网页产物已准备：/srv/sesame-notes/releases/" + release + "\n构建日志：" + own_log],
-                "frontend-publish": published,
-                "site-paths": [r"两个独立入口已启用。日志：" + own_log,
-                               r"两个独立入口已启用，当前网页保持原内容。配置备份和日志：" + own_directory],
-            }
-            ending = next((match for pattern in endings[kind]
-                           if (match := re.search(r"(?:\A|\n)" + pattern + r"\n*\Z", text))), None)
-            if ending is None:
-                raise CleanupError("缺少与本日志路径吻合的完整末尾成功区段，保留未完成或无法确认的任务。")
-            return {"tree": tree, "log_sha256": hashlib.sha256(content).hexdigest()}
-        except (ValueError, UnicodeError) as error:
-            raise CleanupError("纯文本完成日志无法按部署模板读取。") from error
-
     def scan(self):
-        """识别历史日志、已完成任务与关联锁，候选仅限 Temp 的直接子项。"""
+        """读取当前任务的 JSONL 完成日志与关联锁，候选仅限 Temp 的直接子项。"""
         self.check_path()
         tasks, kept, locks, linked = {}, {}, {}, {}
         if not self.temp.exists():
@@ -244,19 +203,15 @@ class Cleanup:
         mounts = self.mount_reader()
         for path in sorted(self.temp.iterdir()):
             rule = next((item for item in TASKS if re.fullmatch(item[0], path.name)), None)
-            text_rule = next((item for item in TEXT_TASKS if re.fullmatch(
-                re.escape(item[0]) + r"\.[A-Za-z0-9]{6}" + (r"\.log" if item[1] is None else ""), path.name)), None)
-            if rule or text_rule:
+            if rule:
                 try:
-                    selected = rule or text_rule
-                    expected = stat.S_ISDIR(path.lstat().st_mode) if selected[1] else stat.S_ISREG(path.lstat().st_mode)
+                    expected = stat.S_ISDIR(path.lstat().st_mode) if rule[1] else stat.S_ISREG(path.lstat().st_mode)
                     if not expected:
                         raise CleanupError("任务入口不是预期的普通文件或目录。")
-                    log = path / selected[1] if selected[1] else path
-                    tasks[path.name] = (self.completed(path, log, rule[2], mounts) if rule
-                                        else self.text_candidate(path, log, text_rule[0], mounts))
+                    log = path / rule[1] if rule[1] else path
+                    tasks[path.name] = self.completed(path, log, rule[2], mounts)
                 except CleanupError as error:
-                    kept[path.name] = (text_rule[2] + "：" if text_rule else "") + str(error)
+                    kept[path.name] = str(error)
             elif not path.name.endswith(".lock"):
                 kept[path.name] = "未知或清理诊断条目，保留。"
         blocked = set()

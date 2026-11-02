@@ -48,7 +48,6 @@ beforeEach(() => {
   for (const key of [
     'SEED_ADMIN_EMAIL',
     'SEED_ADMIN_PHONE',
-    'SEED_ADMIN_COUNTRY_CODE',
     'ADMIN_RECOVERY_CONFIRM',
     'ADMIN_USERNAME',
     'ADMIN_PASSWORD',
@@ -105,7 +104,6 @@ describe('独立管理员引导入口', () => {
     ['SEED_ADMIN_USERNAME', 'root administrator'],
     ['SEED_ADMIN_EMAIL', 'not-an-email'],
     ['SEED_ADMIN_PHONE', 'not-a-phone'],
-    ['SEED_ADMIN_COUNTRY_CODE', '+86'],
     ['SEED_ADMIN_PASSWORD', undefined],
     ['SEED_ADMIN_PASSWORD', ''],
   ])('拒绝 %s=%s 且不读写数据库', async (key, value) => {
