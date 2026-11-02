@@ -13,7 +13,7 @@ export async function readSyncCutover(prisma: CutoverSource): Promise<SyncCutove
   return row ?? null;
 }
 
-/** 存量库完成一次性切换后才允许进入当前同步协议。 */
+/** 当前同步协议要求数据库具有完整的持久切点。 */
 export async function requireSyncCutover(prisma: CutoverSource): Promise<bigint> {
   return requireCompletedCutover(await readSyncCutover(prisma)).cursor;
 }
@@ -21,7 +21,11 @@ export async function requireSyncCutover(prisma: CutoverSource): Promise<bigint>
 /** 切点完成状态与持久下界一起读取，所有调用方共用相同的迁移拒绝条件。 */
 function requireCompletedCutover(row: SyncCutover | null): SyncCutover & { cursor: bigint } {
   if (row === null || row.cursor === null) {
-    throw new ApiError(503, 'SYNC_PROTOCOL_MIGRATION_REQUIRED', '数据库自动升级尚未完成，请联系管理员检查初始化日志');
+    throw new ApiError(
+      503,
+      'SYNC_PROTOCOL_MIGRATION_REQUIRED',
+      '数据库同步状态未就绪，请联系管理员检查建库基线与部署日志',
+    );
   }
   return { ...row, cursor: row.cursor };
 }

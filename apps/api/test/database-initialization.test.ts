@@ -1,9 +1,10 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { cp, mkdir, writeFile } from 'node:fs/promises';
 import { readFileSync, readdirSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
-
-import { PrismaClient } from '@prisma/client';
+import { dirname, join } from 'node:path';
+import type { PrismaClient } from '@prisma/client';
+import { expect, it } from 'vitest';
+import { BASELINE_MIGRATION, CURRENT_HISTORY } from '../prisma/current-baseline.mjs';
 import {
   assertLifecycleSuite,
   createLifecycleDatabase,
@@ -11,8 +12,8 @@ import {
   haltLifecycleRun,
 } from './lifecycle-test-database.js';
 import { runLifecycleSetup } from './lifecycle-setup.js';
-import { expect, it } from 'vitest';
-import { fitnessPreferences, fitnessTemplate, fitnessTime, fitnessWorkout } from './fitness-fixtures.js';
+import { fitnessPreferences } from './fitness-fixtures.js';
+import { registeredMemberId } from '../src/modules/accounting/index.js';
 import { createOwnedFixture, linkOwnedFixtureDependencies, removeOwnedFixture } from './owned-fixture-directory.js';
 
 const dayConstraintDefinitions = JSON.parse(
@@ -39,16 +40,10 @@ const officialFitnessConstraintDefinitions = JSON.parse(
 const apiDirectory = join(import.meta.dirname, '..');
 assertLifecycleSuite('database-initialization.test.ts', process.env);
 
-const INIT_MIGRATION = '20260916000000_init';
-const CATEGORY_IDENTITY_INDEX_MIGRATION = '20260919000000_category_identity_index';
-const FITNESS_WARMUP_REST_SECONDS_MIGRATION = '20260927000000_fitness_warmup_rest_seconds';
-const FITNESS_REFERENCE_PREVIOUS_MIGRATION = '20261013000000_analytics_event_sequence';
-const SYNC_CUTOVER_PREVIOUS_MIGRATION = '20261019000000_remove_transaction_stats_exclusion';
-const SYNC_CURSOR_FLOOR_PREVIOUS_MIGRATION = '20261020000000_sync_protocol_cutover';
-const PROBE_MIGRATION = '20990101000000_upgrade_probe';
+const PROBE_MIGRATION = '20990101000000_current_probe';
 const BROKEN_MIGRATION = '20990102000000_broken_probe';
 
-/** 从正式迁移目录列出完整部署清单，结构内容仍由独立约束夹具验证。 */
+/** 读取正式迁移目录，验证新库只执行当前基线与后续显式增量。 */
 function expectedAppliedMigrations() {
   try {
     return readdirSync(join(apiDirectory, 'prisma/migrations'), { withFileTypes: true })
@@ -57,11 +52,11 @@ function expectedAppliedMigrations() {
       .sort()
       .map((migration_name) => ({ migration_name, applied: true }));
   } catch (cause) {
-    throw new Error('读取正式迁移清单失败', { cause });
+    throw new Error('当前迁移清单读取失败', { cause });
   }
 }
 
-/** 释放夹具连接后执行真实部署入口，避免测试进程占用升级所需的独占窗口。 */
+/** 释放夹具连接后执行正式部署入口，维护事务独占当前租约库。 */
 async function initialize(
   url: string,
   database: PrismaClient,
@@ -71,75 +66,17 @@ async function initialize(
     await database.$disconnect();
     await runLifecycleSetup(url, setup, apiDirectory);
   } catch (cause) {
-    throw new Error('数据库迁移失败，请查看 Prisma 命令错误与输出', { cause });
+    throw new Error('当前数据库初始化失败，请查看完整部署输出', { cause });
   }
 }
 
-/** 使用版本间共有的物理列创建旧库账号，夹具不依赖当前 Prisma 新增字段。 */
-async function createHistoricalUser(
-  database: PrismaClient,
-  phone: string,
-  sesameNumber: string,
-): Promise<{ id: string }> {
-  try {
-    const [user] = await database.$queryRaw<Array<{ id: string }>>`
-      INSERT INTO users (id, phone_e164, sesame_number, password_hash)
-      VALUES (${randomUUID()}::uuid, ${phone}, ${sesameNumber}, 'historical-upgrade-test')
-      RETURNING id
-    `;
-    if (!user) throw new Error('旧库账号写入未返回身份');
-    return user;
-  } catch (cause) {
-    throw new Error('旧版本数据库账号夹具创建失败', { cause });
-  }
-}
-
-/** 写入迁移前后格式相同的同步事实，用独立事件验证持久切点与最新事件水位的区别。 */
-async function createHistoricalSyncChange(database: PrismaClient, userId: string) {
-  try {
-    return await database.syncChange.create({
-      data: {
-        userId,
-        scope: 'user',
-        entityType: 'category',
-        entityId: randomUUID(),
-        action: 'upsert',
-        mutationId: randomUUID(),
-        deviceId: randomUUID(),
-        payload: { name: '同步升级验收分类' },
-        updatedAt: new Date('2026-10-19T12:00:00.000Z'),
-      },
-    });
-  } catch (cause) {
-    throw new Error('同步升级历史事件夹具创建失败', { cause });
-  }
-}
-
-/**
- * 复制真实迁移历史到临时目录并追加探针迁移。
- *
- * 临时目录位于仓库 Temp，通过专属 node_modules 链接复用已安装的 Prisma CLI，
- * 增量升级验证走真实部署入口，且不改动仓库内的迁移历史。
- */
-async function createUpgradeProject(migrations: Record<string, string>, throughMigration?: string): Promise<string> {
+/** 复制当前基线到根目录 Temp，在专属项目内验证文件完整性和后续增量事务。 */
+async function createProject(migrations: Record<string, string> = {}): Promise<string> {
   let project: string | undefined;
   try {
-    project = await createOwnedFixture('prisma-upgrade');
+    project = await createOwnedFixture('prisma-current-baseline');
     const directory = join(project, 'prisma');
-    const migrationDirectory = join(apiDirectory, 'prisma/migrations');
-    await cp(join(apiDirectory, 'prisma'), directory, {
-      recursive: true,
-      // 旧版本只包含截止点及之前的迁移，后续新增迁移不会进入升级前的基线。
-      filter: (source) => {
-        const name = basename(source);
-        return (
-          throughMigration === undefined ||
-          dirname(source) !== migrationDirectory ||
-          !/^\d{14}_/.test(name) ||
-          name <= throughMigration
-        );
-      },
-    });
+    await cp(join(apiDirectory, 'prisma'), directory, { recursive: true });
     await linkOwnedFixtureDependencies(project);
     for (const [name, sql] of Object.entries(migrations)) {
       await mkdir(join(directory, 'migrations', name), { recursive: true });
@@ -147,37 +84,147 @@ async function createUpgradeProject(migrations: Record<string, string>, throughM
     }
     return join(directory, 'setup.mjs');
   } catch (cause) {
-    if (project) {
-      try {
-        await removeOwnedFixture(project);
-      } catch (cleanup) {
-        throw new AggregateError([cause, cleanup], 'Owned upgrade fixture setup and cleanup failed.');
-      }
-    }
-    throw new Error('临时迁移验收项目创建失败', { cause });
+    if (project) await removeOwnedFixture(project);
+    throw new Error('当前基线验收项目创建失败', { cause });
   }
 }
 
-/** 派生随机测试库并只清理本次创建的数据库，避免影响开发库。 */
+/** 只创建和清理本轮登记的数据库，异常时停止继续派生夹具。 */
 async function withIsolatedDatabase(run: (url: string, database: PrismaClient) => Promise<void>): Promise<void> {
   const lease = await createLifecycleDatabase(lifecycleDatabaseSpec('migration', process.env), process.env);
   const failures: unknown[] = [];
   try {
     await run(lease.url, lease.prisma);
-  } catch (error) {
-    failures.push(error);
+  } catch (cause) {
+    failures.push(cause);
     try {
-      haltLifecycleRun(process.env, 'Migration case or owned fixture cleanup failed.');
-    } catch (haltError) {
-      failures.push(haltError);
+      haltLifecycleRun(process.env, '当前基线验收或夹具清理失败。');
+    } catch (error) {
+      failures.push(error);
     }
   }
   try {
     await lease.close();
-  } catch (error) {
-    failures.push(error);
+  } catch (cause) {
+    failures.push(cause);
   }
-  if (failures.length) throw new AggregateError(failures, 'Isolated migration case failed.');
+  if (failures.length) throw new AggregateError(failures, '当前基线隔离验收失败');
+}
+
+/** 按表计算业务内容摘要，断言中只显示摘要，覆盖账号、种子、审计和同步事实。 */
+async function contentSnapshot(database: PrismaClient): Promise<Record<string, string>> {
+  try {
+    const tables = await database.$queryRaw<Array<{ name: string }>>`
+      SELECT tablename AS name FROM pg_tables
+      WHERE schemaname='public' AND tablename<>'_prisma_migrations' ORDER BY tablename
+    `;
+    const snapshot: Record<string, string> = {};
+    for (const { name } of tables) {
+      if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error('业务表名无效');
+      const [row] = await database.$queryRawUnsafe<Array<{ content: string }>>(
+        `SELECT COALESCE(jsonb_agg(to_jsonb(item) ORDER BY to_jsonb(item)::text),'[]'::jsonb)::text AS content FROM public."${name}" item`,
+      );
+      snapshot[name] = createHash('sha256').update(row!.content).digest('hex');
+    }
+    const counters = await database.$queryRaw<Array<{ name: string; value: string | null }>>`
+      SELECT sequencename AS name,last_value::text AS value FROM pg_sequences
+      WHERE schemaname='public' ORDER BY sequencename
+    `;
+    snapshot['@sequences'] = createHash('sha256').update(JSON.stringify(counters)).digest('hex');
+    return snapshot;
+  } catch (cause) {
+    throw new Error('当前库业务内容摘要读取失败', { cause });
+  }
+}
+
+/** 写入当前合法数据及管理员编辑，迁移记录收敛不得重写这些业务事实。 */
+async function seedCurrentData(database: PrismaClient): Promise<string> {
+  try {
+    const user = await database.user.create({
+      data: {
+        phoneE164: '+8613900000000',
+        sesameNumber: '100000001',
+        passwordHash: 'current-baseline-fixture',
+        createdAt: new Date('2026-10-30T01:02:03.456Z'),
+      },
+    });
+    await database.$transaction(async (tx) => {
+      const ledger = await tx.ledger.create({
+        data: { ownerId: user.id, syncId: randomUUID(), name: '保留的现有账本', currency: 'CNY' },
+      });
+      // 账本与所有者成员共同提交，满足当前数据库的一等所有者约束。
+      await tx.ledgerMember.create({
+        data: {
+          id: registeredMemberId(ledger.id, user.id),
+          ledgerId: ledger.id,
+          linkedAccountId: user.id,
+          displayName: '保留的所有者成员',
+          memberType: 'REGISTERED',
+          status: 'ACTIVE',
+          role: 'owner',
+        },
+      });
+    });
+    await database.category.create({
+      data: { id: randomUUID(), ownerId: user.id, name: '保留的自定义分类', kind: 'expense', level: 1 },
+    });
+    await database.syncChange.create({
+      data: {
+        userId: user.id,
+        scope: 'user',
+        entityType: 'category',
+        entityId: randomUUID(),
+        action: 'upsert',
+        mutationId: randomUUID(),
+        deviceId: randomUUID(),
+        payload: { name: '保留的同步原文', extra: null },
+        updatedAt: new Date('2026-10-30T01:02:04.789Z'),
+      },
+    });
+    await database.officialFitnessTaxon.update({
+      where: { kind_id: { kind: 'equipment', id: 'dumbbell' } },
+      data: { nameZh: '保留的管理员器械名', version: { increment: 1 }, updatedBy: 'current-admin' },
+    });
+    await database.serverEpoch.update({
+      where: { id: 0 },
+      data: {
+        syncCutoverCursor: 1001n,
+        syncCutoverAt: new Date('2026-10-30T01:02:05.123Z'),
+        syncCursorFloor: 1009n,
+      },
+    });
+    // 已删除事件可能留下较高水位，序列仍须继续分配高于已发布水位的新事件身份。
+    await database.$queryRaw`SELECT setval('public.sync_changes_change_id_seq',1013,true)`;
+    return user.id;
+  } catch (cause) {
+    throw new Error('当前业务数据夹具创建失败', { cause });
+  }
+}
+
+/** 在结构已是当前版本的租约库中模拟既有部署记录，不执行任何历史 SQL。 */
+async function restoreCurrentHistory(database: PrismaClient): Promise<void> {
+  try {
+    await database.$transaction(async (tx) => {
+      await tx.$executeRaw`DELETE FROM _prisma_migrations`;
+      for (const entry of CURRENT_HISTORY) {
+        await tx.$executeRaw`
+          INSERT INTO _prisma_migrations (id,checksum,finished_at,migration_name,started_at,applied_steps_count)
+          VALUES (${randomUUID()},${entry.checksums[0]},CURRENT_TIMESTAMP,${entry.name},CURRENT_TIMESTAMP,1)
+        `;
+      }
+    });
+  } catch (cause) {
+    throw new Error('当前部署记录夹具创建失败', { cause });
+  }
+}
+
+/** 读取迁移记录的完整内容，验证拒绝路径不会偷偷修改部署状态。 */
+async function migrationSnapshot(database: PrismaClient) {
+  try {
+    return await database.$queryRaw`SELECT * FROM _prisma_migrations ORDER BY migration_name`;
+  } catch (cause) {
+    throw new Error('迁移记录读取失败', { cause });
+  }
 }
 
 /** 独立列出当前业务约束的最终定义，核对完整 CHECK 集合及单 Owner 部分唯一索引。 */
@@ -350,140 +397,6 @@ async function expectFitnessReferenceIndex(database: PrismaClient): Promise<void
   }
 }
 
-/** 构造永久来源的三条旧写入路径，并保留跨账号同设备请求标识的独立占用。 */
-async function prepareMutationReservationUpgrade(database: PrismaClient, ownerId: string) {
-  try {
-    const deviceId = randomUUID();
-    const pendingMutation = randomUUID();
-    const resolvedMutation = randomUUID();
-    const resolutionMutation = randomUUID();
-    const noChangeMutation = randomUUID();
-    const category = await database.category.create({ data: { ownerId, name: '升级分类', kind: 'expense' } });
-    const pending = await database.categoryConflict.create({
-      data: {
-        ownerId,
-        categoryId: category.id,
-        templateKey: 'upgrade-pending',
-        sourceDeviceId: deviceId,
-        sourceMutationId: pendingMutation,
-        requestHash: 'a'.repeat(64),
-        action: 'upsert',
-        localPayload: {},
-        localUpdatedAt: new Date(fitnessTime),
-      },
-    });
-    const resolved = await database.categoryConflict.create({
-      data: {
-        ownerId,
-        categoryId: category.id,
-        templateKey: 'upgrade-resolved',
-        sourceDeviceId: deviceId,
-        sourceMutationId: resolvedMutation,
-        requestHash: 'b'.repeat(64),
-        action: 'upsert',
-        localPayload: {},
-        localUpdatedAt: new Date(fitnessTime),
-        status: 'resolved',
-        resolution: 'cloud',
-        resolutionMutationId: resolutionMutation,
-        resolutionHash: 'c'.repeat(64),
-        resolutionResult: { accepted: true },
-        resolvedAt: new Date(fitnessTime),
-      },
-    });
-    const secondOwner = await database.user.create({
-      data: { phoneE164: '+8613900000009', sesameNumber: '100000009', passwordHash: 'reservation-upgrade-test' },
-    });
-    const receipts = [];
-    for (const [userId, requestHash] of [
-      [ownerId, 'd'.repeat(64)],
-      [secondOwner.id, 'e'.repeat(64)],
-    ] as const) {
-      receipts.push(
-        await database.idempotencyKey.create({
-          data: {
-            userId,
-            key: `category-source:${deviceId}:${noChangeMutation}`,
-            requestHash,
-            response: { accepted: true },
-            expiresAt: new Date('9999-01-01T00:00:00.000Z'),
-          },
-        }),
-      );
-    }
-    // 普通 HTTP 回执继续留在原表，不得随专用来源前缀一起清理。
-    const httpReceipt = await database.idempotencyKey.create({
-      data: {
-        userId: ownerId,
-        key: 'ordinary-http-receipt',
-        requestHash: 'f'.repeat(64),
-        response: {},
-        expiresAt: new Date(fitnessTime),
-      },
-    });
-    return {
-      candidates: [pending, resolved],
-      httpReceipt,
-      reservations: [
-        {
-          scope: 'device',
-          userId: ownerId,
-          scopeId: deviceId,
-          mutationId: pendingMutation,
-          requestHash: pending.requestHash,
-          createdAt: pending.createdAt,
-        },
-        {
-          scope: 'device',
-          userId: ownerId,
-          scopeId: deviceId,
-          mutationId: resolvedMutation,
-          requestHash: resolved.requestHash,
-          createdAt: resolved.createdAt,
-        },
-        {
-          scope: 'account',
-          userId: ownerId,
-          scopeId: ownerId,
-          mutationId: resolutionMutation,
-          requestHash: resolved.resolutionHash,
-          createdAt: resolved.resolvedAt,
-        },
-        ...receipts.map((receipt) => ({
-          scope: 'device',
-          userId: receipt.userId,
-          scopeId: deviceId,
-          mutationId: noChangeMutation,
-          requestHash: receipt.requestHash,
-          createdAt: receipt.createdAt,
-        })),
-      ],
-    };
-  } catch (cause) {
-    throw new Error('永久请求占用升级夹具创建失败', { cause });
-  }
-}
-
-/** 验证迁移保存来源、解决命令及跨账号边界，同时仅清理原有专用回执。 */
-async function expectMutationReservationUpgrade(
-  database: PrismaClient,
-  before: Awaited<ReturnType<typeof prepareMutationReservationUpgrade>>,
-): Promise<void> {
-  try {
-    expect(await database.mutationReservation.findMany()).toEqual(expect.arrayContaining(before.reservations));
-    expect(await database.mutationReservation.count()).toBe(before.reservations.length);
-    for (const candidate of before.candidates) {
-      expect(await database.categoryConflict.findUniqueOrThrow({ where: { id: candidate.id } })).toEqual(candidate);
-    }
-    expect(await database.idempotencyKey.count({ where: { key: { startsWith: 'category-source:' } } })).toBe(0);
-    expect(await database.idempotencyKey.findUniqueOrThrow({ where: { id: before.httpReceipt.id } })).toEqual(
-      before.httpReceipt,
-    );
-  } catch (cause) {
-    throw new Error('永久请求占用迁移未保留指纹、账号边界或回执范围', { cause });
-  }
-}
-
 /** 验证数据库函数支持可选默认热身休息，并继续拒绝非法数值及未声明字段。 */
 async function expectFitnessWarmupRestSeconds(database: PrismaClient): Promise<void> {
   try {
@@ -512,545 +425,174 @@ async function expectFitnessWarmupRestSeconds(database: PrismaClient): Promise<v
   }
 }
 
-it('已应用迁移被修改后拒绝部署，数据库数据保持原样', async () => {
-  await withIsolatedDatabase(async (url, database) => {
-    let setup: string | undefined;
-    try {
-      await initialize(url, database);
-      const appliedBefore = await database.$queryRaw`
-        SELECT migration_name, checksum, finished_at FROM _prisma_migrations ORDER BY migration_name
-      `;
-      setup = await createUpgradeProject({});
-      const migration = join(dirname(setup), 'migrations', INIT_MIGRATION, 'migration.sql');
-      await writeFile(migration, `${readFileSync(migration, 'utf8')}\n-- tampered history\n`);
-      await expect(initialize(url, database, setup)).rejects.toThrow('数据库迁移失败');
-      // 拒绝篡改后，逐条核对迁移身份、校验和与完成时间，确保历史没有被重写。
-      expect(
-        await database.$queryRaw`
-          SELECT migration_name, checksum, finished_at FROM _prisma_migrations ORDER BY migration_name
-        `,
-      ).toEqual(appliedBefore);
-    } finally {
-      if (setup) await removeOwnedFixture(dirname(dirname(setup)));
-    }
-  });
-}, 180_000);
-
-it('空库应用全部迁移，重复执行不重写已应用结构', async () => {
+it('空库直接建立当前业务约束与种子，重复部署保持对象和数据不变', async () => {
   await withIsolatedDatabase(async (url, database) => {
     try {
       await initialize(url, database);
       await expectCurrentDefinitions(database);
       await expectFitnessWarmupRestSeconds(database);
       await expectFitnessReferenceIndex(database);
-      // 结构对象的 xmin 不变，证明重复执行不会重建函数、约束或索引。
-      const objects = () => database.$queryRaw`
-        SELECT oid, xmin::text FROM pg_class WHERE relnamespace = 'public'::regnamespace ORDER BY oid
-      `;
-      const before = await objects();
-      const functions = () => database.$queryRaw`
-        SELECT oid, xmin::text FROM pg_proc
-        WHERE pronamespace = 'public'::regnamespace AND proname = 'fitness_payload_valid'
-      `;
-      const functionsBefore = await functions();
-      const cutoverBefore = await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } });
-      expect(cutoverBefore).toMatchObject({
-        syncCutoverCursor: 0n,
-        syncCutoverAt: expect.any(Date),
-        syncCursorFloor: 0n,
-      });
-      expect(await database.auditLog.count({ where: { action: 'sync.protocol_cutover' } })).toBe(1);
-      await initialize(url, database);
-      expect(await objects()).toEqual(before);
-      expect(await functions()).toEqual(functionsBefore);
-      expect(await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } })).toEqual(cutoverBefore);
-      expect(await database.auditLog.count({ where: { action: 'sync.protocol_cutover' } })).toBe(1);
-      await expectCurrentDefinitions(database);
+      expect(expectedAppliedMigrations()).toEqual([{ migration_name: BASELINE_MIGRATION, applied: true }]);
+      expect(await database.officialFitnessContent.count()).toBeGreaterThan(100);
+      expect(await database.officialFitnessTaxon.count()).toBe(38);
       expect(
-        await database.$queryRawUnsafe(
-          'SELECT migration_name, finished_at IS NOT NULL AS applied FROM _prisma_migrations ORDER BY migration_name',
-        ),
-      ).toEqual(expectedAppliedMigrations());
-    } catch (cause) {
-      throw new Error('空库迁移验收失败，请查看原始错误', { cause });
-    }
-  });
-}, 180_000);
-
-it('存量库部署自动固定同步切点，新增事件后重复部署仍保留原切点及审计', async () => {
-  await withIsolatedDatabase(async (url, database) => {
-    let previousSetup: string | undefined;
-    try {
-      previousSetup = await createUpgradeProject({}, SYNC_CUTOVER_PREVIOUS_MIGRATION);
-      await initialize(url, database, previousSetup);
-      const user = await createHistoricalUser(database, '+8613900000061', '100000061');
-      const first = await createHistoricalSyncChange(database, user.id);
-      const latest = await createHistoricalSyncChange(database, user.id);
-      const accountBefore = await database.user.findUniqueOrThrow({ where: { id: user.id } });
-      const epochsBefore = await database.$queryRaw`
-        SELECT auth_generation, idempotency_generation FROM server_epochs WHERE id = 0
-      `;
-
-      await initialize(url, database);
-
-      const cutover = await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } });
-      expect(cutover).toMatchObject({
-        syncCutoverCursor: latest.changeId,
-        syncCutoverAt: expect.any(Date),
-        syncCursorFloor: latest.changeId,
-      });
-      expect(await database.user.findUniqueOrThrow({ where: { id: user.id } })).toEqual(accountBefore);
-      expect(await database.syncChange.findMany({ orderBy: { changeId: 'asc' } })).toEqual([first, latest]);
-      expect(
-        await database.$queryRaw`SELECT auth_generation, idempotency_generation FROM server_epochs WHERE id = 0`,
-      ).toEqual(epochsBefore);
-      const audit = await database.auditLog.findMany({ where: { action: 'sync.protocol_cutover' } });
-      expect(audit).toHaveLength(1);
-
-      // 发布后的事件水位可以增长，重跑部署只能读取第一次切换留下的持久事实。
-      const later = await createHistoricalSyncChange(database, user.id);
-      expect(later.changeId).toBeGreaterThan(latest.changeId);
-      await initialize(url, database);
-      expect(await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } })).toEqual(cutover);
-      expect(await database.auditLog.findMany({ where: { action: 'sync.protocol_cutover' } })).toEqual(audit);
-      expect(await database.syncChange.findMany({ orderBy: { changeId: 'asc' } })).toEqual([first, latest, later]);
-    } catch (cause) {
-      throw new Error('存量库同步切点自动升级或幂等验收失败', { cause });
-    } finally {
-      if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
-    }
-  });
-}, 180_000);
-
-it('新增持久水位迁移使用较大的协议切点初始化，不推进协议切点', async () => {
-  await withIsolatedDatabase(async (url, database) => {
-    let previousSetup: string | undefined;
-    try {
-      previousSetup = await createUpgradeProject({}, SYNC_CURSOR_FLOOR_PREVIOUS_MIGRATION);
-      await initialize(url, database, previousSetup);
-      const user = await createHistoricalUser(database, '+8613900000063', '100000063');
-      const event = await createHistoricalSyncChange(database, user.id);
-      const cutover = event.changeId + 10n;
-      await database.$executeRaw`UPDATE server_epochs SET sync_cutover_cursor = ${cutover} WHERE id = 0`;
-      const [before] = await database.$queryRaw<Array<{ cursor: bigint; completedAt: Date }>>`
-          SELECT sync_cutover_cursor AS cursor, sync_cutover_at AS "completedAt" FROM server_epochs WHERE id = 0
-        `;
-
-      await initialize(url, database);
-
+        await database.adminGroup.count({
+          where: { id: 'a0000000-0000-4000-8000-000000000000', isEnabled: true, deletedAt: null },
+        }),
+      ).toBe(1);
       const epoch = await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } });
-      expect(epoch.syncCursorFloor).toBe(cutover);
-      expect(epoch.syncCutoverCursor).toBe(before!.cursor);
-      expect(epoch.syncCutoverAt).toEqual(before!.completedAt);
-      expect(await database.syncChange.findMany()).toEqual([event]);
+      expect(epoch).toMatchObject({ syncCutoverCursor: 0n, syncCutoverAt: expect.any(Date), syncCursorFloor: 0n });
+      const before = await contentSnapshot(database);
+      const history = await migrationSnapshot(database);
+      const objects =
+        await database.$queryRaw`SELECT oid,xmin::text FROM pg_class WHERE relnamespace='public'::regnamespace ORDER BY oid`;
       await initialize(url, database);
+      expect(await contentSnapshot(database)).toEqual(before);
+      expect(await migrationSnapshot(database)).toEqual(history);
+      expect(
+        await database.$queryRaw`SELECT oid,xmin::text FROM pg_class WHERE relnamespace='public'::regnamespace ORDER BY oid`,
+      ).toEqual(objects);
+    } catch (cause) {
+      throw new Error('当前空库建库与幂等验收失败', { cause });
+    }
+  });
+}, 180_000);
+
+it('当前存量库仅收敛迁移记录，全部业务数据和同步代际逐字保留', async () => {
+  await withIsolatedDatabase(async (url, database) => {
+    try {
+      await initialize(url, database);
+      await seedCurrentData(database);
+      await restoreCurrentHistory(database);
+      const before = await contentSnapshot(database);
+      const epoch = await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } });
+      await initialize(url, database);
+      expect(await contentSnapshot(database)).toEqual(before);
       expect(await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } })).toEqual(epoch);
-    } catch (cause) {
-      throw new Error('持久同步水位迁移初始化验收失败', { cause });
-    } finally {
-      if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
-    }
-  });
-}, 180_000);
-
-it.each(['其他连接', '审计失败'] as const)(
-  '同步自动升级遇到%s时不写切点，解除阻碍后可以安全重试',
-  async (scenario) => {
-    await withIsolatedDatabase(async (url, database) => {
-      let previousSetup: string | undefined;
-      const otherConnection = new PrismaClient({ datasourceUrl: url });
-      let auditTriggerCreated = false;
-      try {
-        previousSetup = await createUpgradeProject({}, SYNC_CUTOVER_PREVIOUS_MIGRATION);
-        await initialize(url, database, previousSetup);
-        const user = await createHistoricalUser(database, '+8613900000062', '100000062');
-        const event = await createHistoricalSyncChange(database, user.id);
-        const accountBefore = await database.user.findUniqueOrThrow({ where: { id: user.id } });
-        if (scenario === '其他连接') {
-          // 保留第二个数据库客户端，模拟尚未退出的服务；部署入口只能关闭自己的夹具连接。
-          await otherConnection.$queryRaw`SELECT 1`;
-        } else {
-          await database.$executeRawUnsafe(`
-            CREATE FUNCTION sync_upgrade_reject_audit() RETURNS trigger LANGUAGE plpgsql AS $$
-            BEGIN
-              IF NEW.action = 'sync.protocol_cutover' THEN RAISE EXCEPTION '同步升级审计拒绝'; END IF;
-              RETURN NEW;
-            END $$
-          `);
-          await database.$executeRawUnsafe(`
-            CREATE TRIGGER sync_upgrade_reject_audit BEFORE INSERT ON audit_logs
-            FOR EACH ROW EXECUTE FUNCTION sync_upgrade_reject_audit()
-          `);
-          auditTriggerCreated = true;
-        }
-
-        await expect(initialize(url, database)).rejects.toThrow('数据库迁移失败');
-
-        expect(await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } })).toMatchObject({
-          syncCutoverCursor: null,
-          syncCutoverAt: null,
-        });
-        expect(await database.auditLog.count({ where: { action: 'sync.protocol_cutover' } })).toBe(0);
-        expect(await database.user.findUniqueOrThrow({ where: { id: user.id } })).toEqual(accountBefore);
-        expect(await database.syncChange.findMany()).toEqual([event]);
-
-        await otherConnection.$disconnect();
-        if (auditTriggerCreated) {
-          await database.$executeRawUnsafe('DROP TRIGGER sync_upgrade_reject_audit ON audit_logs');
-          await database.$executeRawUnsafe('DROP FUNCTION sync_upgrade_reject_audit()');
-          auditTriggerCreated = false;
-        }
-        await initialize(url, database);
-        expect(await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } })).toMatchObject({
-          syncCutoverCursor: event.changeId,
-          syncCutoverAt: expect.any(Date),
-        });
-        expect(await database.auditLog.count({ where: { action: 'sync.protocol_cutover' } })).toBe(1);
-      } catch (cause) {
-        throw new Error(`同步自动升级${scenario}保护验收失败`, { cause });
-      } finally {
-        await otherConnection.$disconnect();
-        if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
-      }
-    });
-  },
-  180_000,
-);
-
-it('来源索引和永久请求占用升级回填历史数据，保留实体与账号身份', async () => {
-  await withIsolatedDatabase(async (url, database) => {
-    let previousSetup: string | undefined;
-    try {
-      previousSetup = await createUpgradeProject({}, FITNESS_REFERENCE_PREVIOUS_MIGRATION);
-      await initialize(url, database, previousSetup);
-      const user = await database.user.create({
-        data: { phoneE164: '+8613900000008', sesameNumber: '100000008', passwordHash: 'reference-upgrade-test' },
-      });
-      const space = await database.fitnessSpace.create({
-        data: {
-          id: randomUUID(),
-          ownerId: user.id,
-          name: '来源索引升级空间',
-          createdAt: new Date(fitnessTime),
-          updatedAt: new Date(fitnessTime),
-        },
-      });
-      const targetId = randomUUID();
-      const sourceId = randomUUID();
-      const before = await database.fitnessEntity.create({
-        data: {
-          id: sourceId,
-          fitnessSpaceId: space.id,
-          entityType: 'fitness_workout',
-          status: 'scheduled',
-          payload: { ...fitnessWorkout(), source_kind: 'template', source_template_id: targetId },
-          createdAt: new Date(fitnessTime),
-          updatedAt: new Date(fitnessTime),
-        },
-      });
-      const reservations = await prepareMutationReservationUpgrade(database, user.id);
-      const history = await database.$queryRaw`
-        SELECT migration_name, checksum, finished_at FROM _prisma_migrations ORDER BY migration_name
-      `;
+      expect(
+        await database.$queryRaw`SELECT migration_name,finished_at IS NOT NULL AS applied FROM _prisma_migrations`,
+      ).toEqual([{ migration_name: BASELINE_MIGRATION, applied: true }]);
+      const history = await migrationSnapshot(database);
       await initialize(url, database);
-      expect(await database.fitnessEntity.findUniqueOrThrow({ where: { id: sourceId } })).toEqual(before);
-      expect(
-        await database.$queryRaw`SELECT entity_id, target_id FROM fitness_entity_references WHERE entity_id = ${sourceId}::uuid`,
-      ).toEqual([{ entity_id: sourceId, target_id: targetId }]);
-      await database.fitnessEntity.create({
-        data: {
-          id: targetId,
-          fitnessSpaceId: space.id,
-          entityType: 'fitness_template',
-          payload: fitnessTemplate(),
-          createdAt: new Date(fitnessTime),
-          updatedAt: new Date(fitnessTime),
-        },
-      });
-      expect(
-        await database.$queryRaw`
-          SELECT migration_name, checksum, finished_at FROM _prisma_migrations
-          WHERE migration_name <= ${FITNESS_REFERENCE_PREVIOUS_MIGRATION} ORDER BY migration_name
-        `,
-      ).toEqual(history);
-      await expectFitnessReferenceIndex(database);
-      await expectCurrentDefinitions(database);
-      await expectMutationReservationUpgrade(database, reservations);
+      expect(await contentSnapshot(database)).toEqual(before);
+      expect(await migrationSnapshot(database)).toEqual(history);
     } catch (cause) {
-      throw new Error('健身来源关系增量迁移验收失败', { cause });
-    } finally {
-      if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
+      throw new Error('当前存量数据保留验收失败', { cause });
     }
   });
 }, 180_000);
 
-it.each(['额外分段', '大小写折叠指纹冲突'] as const)(
-  '永久来源迁移拒绝%s并保留原回执',
-  async (scenario) => {
-    await withIsolatedDatabase(async (url, database) => {
-      let previousSetup: string | undefined;
-      try {
-        previousSetup = await createUpgradeProject({}, '20261013001000_fitness_reference_index');
-        await initialize(url, database, previousSetup);
-        const user = await createHistoricalUser(database, '+8613900000007', '100000007');
-        const device = 'aaaaaaaa-1111-4111-8111-111111111111';
-        const mutation = 'bbbbbbbb-2222-4222-8222-222222222222';
-        const entries =
-          scenario === '额外分段'
-            ? [{ key: `category-source:${device}:${mutation}:extra`, requestHash: 'a'.repeat(64) }]
-            : [
-                { key: `category-source:${device}:${mutation}`, requestHash: 'a'.repeat(64) },
-                {
-                  key: `category-source:${device.toUpperCase()}:${mutation.toUpperCase()}`,
-                  requestHash: 'b'.repeat(64),
-                },
-              ];
-        for (const entry of entries)
-          await database.idempotencyKey.create({
-            data: {
-              ...entry,
-              userId: user.id,
-              response: { accepted: true },
-              expiresAt: new Date('9999-01-01T00:00:00.000Z'),
-            },
-          });
-        const before = await database.idempotencyKey.findMany({ orderBy: { id: 'asc' } });
-        await expect(initialize(url, database)).rejects.toThrow();
-        expect(await database.idempotencyKey.findMany({ orderBy: { id: 'asc' } })).toEqual(before);
-        expect(await database.$queryRaw`SELECT to_regclass('public.mutation_reservations')::text AS name`).toEqual([
-          { name: null },
-        ]);
-        expect(
-          await database.$queryRaw`
-        SELECT finished_at IS NULL AS rejected FROM _prisma_migrations
-        WHERE migration_name = '20261013002000_mutation_reservations'
-      `,
-        ).toEqual([{ rejected: true }]);
-      } catch (cause) {
-        throw new Error('非法永久来源升级拒绝验收失败', { cause });
-      } finally {
-        if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
-      }
-    });
-  },
-  180_000,
-);
-
-it('已有健身偏好的上一版本升级后保留数据，并允许保存默认热身休息时间', async () => {
+it('非当前结构、损坏部署记录和未完成同步状态均拒绝收敛，不改业务或记录', async () => {
   await withIsolatedDatabase(async (url, database) => {
-    let previousSetup: string | undefined;
     try {
-      previousSetup = await createUpgradeProject({}, CATEGORY_IDENTITY_INDEX_MIGRATION);
-      await initialize(url, database, previousSetup);
-      const user = await createHistoricalUser(database, '+8613900000001', '100000001');
-      const space = await database.fitnessSpace.create({
-        data: {
-          id: randomUUID(),
-          ownerId: user.id,
-          name: '升级健身空间',
-          createdAt: new Date(fitnessTime),
-          updatedAt: new Date(fitnessTime),
-        },
-      });
-      const payload = fitnessPreferences();
-      const before = await database.fitnessEntity.create({
-        data: {
-          id: space.id,
-          fitnessSpaceId: space.id,
-          entityType: 'fitness_preferences',
-          payload,
-          createdAt: new Date(fitnessTime),
-          updatedAt: new Date(fitnessTime),
-        },
-      });
-      const withWarmup = { ...payload, default_warmup_rest_seconds: 30 };
-      expect(
-        await database.$queryRaw`SELECT fitness_payload_valid('fitness_preferences', ${JSON.stringify(withWarmup)}::jsonb) AS valid`,
-      ).toEqual([{ valid: false }]);
-      const existingHistory = await database.$queryRaw`
-        SELECT migration_name, checksum, finished_at FROM _prisma_migrations ORDER BY migration_name
-      `;
-
       await initialize(url, database);
-
-      expect(await database.fitnessEntity.findUniqueOrThrow({ where: { id: space.id } })).toEqual(before);
-      expect(
-        await database.$queryRaw`
-          SELECT migration_name, checksum, finished_at FROM _prisma_migrations
-          WHERE migration_name <= ${CATEGORY_IDENTITY_INDEX_MIGRATION} ORDER BY migration_name
-        `,
-      ).toEqual(existingHistory);
-      await expectCurrentDefinitions(database);
-      await expectFitnessWarmupRestSeconds(database);
-      const updated = await database.fitnessEntity.update({
-        where: { id: space.id },
-        data: { payload: withWarmup, updatedAt: new Date(fitnessTime), revision: { increment: 1 } },
-      });
-      expect(updated.payload).toEqual(withWarmup);
-      expect(updated.createdAt).toEqual(before.createdAt);
-      expect(updated.revision).toBe(before.revision + 1);
+      await seedCurrentData(database);
+      await restoreCurrentHistory(database);
+      const before = await contentSnapshot(database);
+      await database.$executeRaw`UPDATE _prisma_migrations SET checksum=${'0'.repeat(64)} WHERE migration_name=${CURRENT_HISTORY[0]!.name}`;
+      const damaged = await migrationSnapshot(database);
+      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      expect(await migrationSnapshot(database)).toEqual(damaged);
+      expect(await contentSnapshot(database)).toEqual(before);
+      await restoreCurrentHistory(database);
+      await database.$executeRawUnsafe('ALTER TABLE users ADD COLUMN unsupported_probe TEXT');
+      const drifted = await migrationSnapshot(database);
+      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      expect(await migrationSnapshot(database)).toEqual(drifted);
+      await database.$executeRawUnsafe('ALTER TABLE users DROP COLUMN unsupported_probe');
+      expect(await contentSnapshot(database)).toEqual(before);
+      await database.serverEpoch.update({ where: { id: 0 }, data: { syncCutoverCursor: null, syncCutoverAt: null } });
+      const incomplete = await contentSnapshot(database);
+      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      expect(await migrationSnapshot(database)).toEqual(drifted);
+      expect(await contentSnapshot(database)).toEqual(incomplete);
     } catch (cause) {
-      throw new Error('健身默认热身休息增量升级验收失败', { cause });
-    } finally {
-      if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
+      throw new Error('当前基线拒绝边界验收失败', { cause });
     }
   });
 }, 180_000);
 
-it('旧 TEXT 标题升级为 JSON 字符串时逐字保留标题、正文、版本和时间', async () => {
+it('基线登记写入失败时回滚整组迁移记录，业务内容与同步水位保持原值', async () => {
   await withIsolatedDatabase(async (url, database) => {
-    let previousSetup: string | undefined;
     try {
-      previousSetup = await createUpgradeProject({}, FITNESS_WARMUP_REST_SECONDS_MIGRATION);
-      await initialize(url, database, previousSetup);
-      const user = await createHistoricalUser(database, '+8613900000002', '100000001');
-      const createdAt = '2020-01-02T03:04:05.006Z';
-      const updatedAt = '2021-02-03T04:05:06.789Z';
-      const titles = ['', '  引号"与字面\\u0000、\\n é😀  ', '\t多行\n标题\r'];
-      const entryIds: string[] = [];
-      for (const type of ['normal', 'credentials']) {
-        const book = await database.memoBook.create({
-          data: {
-            id: randomUUID(),
-            ownerId: user.id,
-            name: '旧标题升级',
-            type,
-            createdAt: new Date(createdAt),
-            updatedAt: new Date(updatedAt),
-          },
-        });
-        for (const [index, title] of titles.entries()) {
-          const id = randomUUID();
-          const body =
-            type === 'normal'
-              ? { ops: [{ insert: '原始正文\u0000与字面\\u0000\n' }] }
-              : { fields: [{ label: '密码', value: '原始\u0000与字面\\u0000' }] };
-          // 旧列是 TEXT，直接绑定原始标题，避免新 Prisma JSON 类型预先给标题加引号。
-          await database.$executeRaw`
-            INSERT INTO memo_entries
-              (id, memo_book_id, book_type, title, body_format, body, order_key, revision, created_at, updated_at)
-            VALUES (${id}::uuid, ${book.id}::uuid, ${type}, ${title}, ${type === 'normal' ? 'delta_v1' : 'fields_v1'},
-              ${JSON.stringify(body)}::json, ${type === 'normal' ? null : BigInt(index)}::bigint,
-              7, ${createdAt}::timestamptz, ${updatedAt}::timestamptz)
-          `;
-          entryIds.push(id);
-        }
-      }
-      const before = await database.$queryRaw`
-        SELECT id, memo_book_id, book_type, title, body_format, body, order_key, revision, created_at, updated_at, deleted_at
-        FROM memo_entries ORDER BY id
-      `;
-      const history = await database.$queryRaw`
-        SELECT migration_name, checksum, finished_at FROM _prisma_migrations ORDER BY migration_name
-      `;
-
       await initialize(url, database);
-
-      expect(
-        await database.$queryRaw`
-          SELECT id, memo_book_id, book_type, title, body_format, body, order_key, revision, created_at, updated_at, deleted_at
-          FROM memo_entries ORDER BY id
-        `,
-      ).toEqual(before);
-      expect(
-        await database.$queryRaw`
-          SELECT migration_name, checksum, finished_at FROM _prisma_migrations
-          WHERE migration_name <= ${FITNESS_WARMUP_REST_SECONDS_MIGRATION} ORDER BY migration_name
-        `,
-      ).toEqual(history);
-      await expectCurrentDefinitions(database);
-      for (const invalid of [null, true, 30, [], {}]) {
-        await expect(database.$executeRaw`
-          UPDATE memo_entries SET title = ${JSON.stringify(invalid)}::json WHERE id = ${entryIds[0]}::uuid
-        `).rejects.toMatchObject({ code: 'P2010', meta: { code: '23514' } });
-      }
-      expect(
-        await database.$queryRaw`
-          SELECT id, memo_book_id, book_type, title, body_format, body, order_key, revision, created_at, updated_at, deleted_at
-          FROM memo_entries ORDER BY id
-        `,
-      ).toEqual(before);
+      await seedCurrentData(database);
+      await restoreCurrentHistory(database);
+      const before = await contentSnapshot(database);
+      const history = await migrationSnapshot(database);
+      // 故障只作用于本轮元数据新登记，用独立测试命名空间保持业务结构完整。
+      await database.$executeRawUnsafe('CREATE SCHEMA baseline_failure');
+      await database.$executeRawUnsafe(`
+        CREATE FUNCTION baseline_failure.reject_baseline() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+          RAISE EXCEPTION '模拟当前基线登记写入失败';
+        END
+        $$
+      `);
+      await database.$executeRawUnsafe(`
+        CREATE TRIGGER reject_baseline_insert BEFORE INSERT ON public._prisma_migrations
+        FOR EACH ROW WHEN (NEW.migration_name='${BASELINE_MIGRATION}')
+        EXECUTE FUNCTION baseline_failure.reject_baseline()
+      `);
+      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      expect(await migrationSnapshot(database)).toEqual(history);
+      expect(await contentSnapshot(database)).toEqual(before);
     } catch (cause) {
-      throw new Error('备忘录标题无损迁移验收失败', { cause });
-    } finally {
-      if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
+      throw new Error('当前基线登记事务回滚验收失败', { cause });
     }
   });
 }, 180_000);
 
-it('已有数据的库增量升级保留数据，失败迁移不丢数据且不记为已应用', async () => {
+it('已登记基线文件被篡改时拒绝部署，保留全部数据与迁移记录', async () => {
   await withIsolatedDatabase(async (url, database) => {
     let project: string | undefined;
-    let previousSetup: string | undefined;
     try {
-      previousSetup = await createUpgradeProject({}, '20261029002000_banner_analytics');
-      await initialize(url, database, previousSetup);
-      const imageId = 'a'.repeat(64);
-      const oldTime = new Date('2026-10-29T01:00:00Z');
-      await database.$executeRaw`
-        INSERT INTO app_banner_media (id,file_name,byte_size,width,height)
-        VALUES (${imageId},'previous-banner.webp',100,600,200)
-      `;
-      await database.$executeRaw`
-        INSERT INTO app_banners (slot,image_id,target,is_enabled,version,updated_at)
-        VALUES ('fitness-plan-library',${imageId},'fitness-plan-library',true,7,${oldTime}),
-          ('fitness-template-library',NULL,'fitness-template-library',false,3,${oldTime})
-      `;
-      const previousEventId = randomUUID();
-      await database.$executeRaw`
-        INSERT INTO product_analytics_events
-          (actor_key,event_id,kind,occurred_at,platform,page_id,event_name,banner_slot,banner_source,banner_version)
-        VALUES (${'b'.repeat(64)},${previousEventId}::uuid,'action',${oldTime},'app','fitness.plans',
-          'banner_impression','fitness-plan-library','remote',7)
-      `;
       await initialize(url, database);
-      const migrated = await database.appBanner.findMany({ orderBy: { slot: 'asc' } });
-      expect(migrated).toHaveLength(2);
-      expect(migrated[0]).toMatchObject({
-        slot: 'fitness-plan-library',
-        imageId,
-        target: 'fitness-plan-library',
-        targetId: null,
-        version: 7,
-        sortOrder: 0,
-        isEnabled: true,
-        deletedAt: null,
-        updatedAt: oldTime,
-      });
-      expect(migrated[0]!.id).toMatch(/^[a-f0-9-]{36}$/);
-      expect(migrated[1]).toMatchObject({ version: 3, isEnabled: false, deletedAt: oldTime });
-      expect(
-        (await database.productAnalyticsEvent.findFirstOrThrow({ where: { eventId: previousEventId } })).bannerId,
-      ).toBeNull();
+      await seedCurrentData(database);
+      const before = await contentSnapshot(database);
+      const history = await migrationSnapshot(database);
+      project = await createProject();
+      const file = join(dirname(project), 'migrations', BASELINE_MIGRATION, 'migration.sql');
+      await writeFile(file, `${readFileSync(file, 'utf8')}\n-- integrity probe\n`);
+      await expect(initialize(url, database, project)).rejects.toThrow('当前数据库初始化失败');
+      expect(await contentSnapshot(database)).toEqual(before);
+      expect(await migrationSnapshot(database)).toEqual(history);
+    } catch (cause) {
+      throw new Error('基线文件完整性验收失败', { cause });
+    } finally {
+      if (project) await removeOwnedFixture(dirname(dirname(project)));
+    }
+  });
+}, 180_000);
+
+it('当前基线支持后续显式增量，失败事务保留业务数据且不记为已完成', async () => {
+  await withIsolatedDatabase(async (url, database) => {
+    let project: string | undefined;
+    try {
       await initialize(url, database);
-      expect(await database.appBanner.findMany({ orderBy: { slot: 'asc' } })).toEqual(migrated);
-      await database.$executeRawUnsafe(
-        `INSERT INTO users (id, phone_e164, sesame_number, password_hash, created_at)
-         VALUES (gen_random_uuid(), '+8613900000000', '100000001', 'probe-hash', now())`,
-      );
-      project = await createUpgradeProject({
-        [PROBE_MIGRATION]: 'ALTER TABLE "users" ADD COLUMN "upgrade_probe" TEXT;\n',
-        [BROKEN_MIGRATION]: 'ALTER TABLE "users" DROP COLUMN "phone_e164";\nSELECT 1 / 0;\n',
+      const userId = await seedCurrentData(database);
+      const before = await contentSnapshot(database);
+      project = await createProject({
+        [PROBE_MIGRATION]: 'ALTER TABLE users ADD COLUMN current_probe TEXT;\n',
+        [BROKEN_MIGRATION]: 'BEGIN;\nALTER TABLE users DROP COLUMN phone_e164;\nSELECT 1/0;\nCOMMIT;\n',
       });
-      // 探针迁移通过后失败迁移中断部署：命令必须以失败结束。
-      await expect(initialize(url, database, project)).rejects.toThrow();
-      expect(await database.$queryRawUnsafe('SELECT phone_e164, upgrade_probe FROM users')).toEqual([
-        { phone_e164: '+8613900000000', upgrade_probe: null },
+      await expect(initialize(url, database, project)).rejects.toThrow('当前数据库初始化失败');
+      expect(await database.$queryRaw`SELECT phone_e164,current_probe FROM users WHERE id=${userId}::uuid`).toEqual([
+        { phone_e164: '+8613900000000', current_probe: null },
       ]);
+      await database.$executeRawUnsafe('ALTER TABLE users DROP COLUMN current_probe');
+      expect(await contentSnapshot(database)).toEqual(before);
       expect(
-        await database.$queryRawUnsafe(
-          'SELECT migration_name, finished_at IS NOT NULL AS applied FROM _prisma_migrations ORDER BY migration_name',
-        ),
+        await database.$queryRaw`SELECT migration_name,finished_at IS NOT NULL AS applied FROM _prisma_migrations ORDER BY migration_name`,
       ).toEqual([
         ...expectedAppliedMigrations(),
         { migration_name: PROBE_MIGRATION, applied: true },
         { migration_name: BROKEN_MIGRATION, applied: false },
       ]);
     } catch (cause) {
-      throw new Error('增量迁移验收失败，请查看原始错误', { cause });
+      throw new Error('当前基线增量与事务回滚验收失败', { cause });
     } finally {
       if (project) await removeOwnedFixture(dirname(dirname(project)));
-      if (previousSetup) await removeOwnedFixture(dirname(dirname(previousSetup)));
     }
   });
 }, 180_000);

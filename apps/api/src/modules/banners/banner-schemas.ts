@@ -1,13 +1,14 @@
 import { Type, type Static } from '@sinclair/typebox';
 
 export const BANNER_SLOTS = ['fitness-plan-library', 'fitness-template-library'] as const;
-export const LEGACY_BANNER_TARGETS = [
+export const BANNER_TARGETS = [
   ...BANNER_SLOTS,
   'fitness-exercises',
   'fitness-plans',
   'fitness-templates',
+  'official-plan',
+  'official-template',
 ] as const;
-export const BANNER_TARGETS = [...LEGACY_BANNER_TARGETS, 'official-plan', 'official-template'] as const;
 export const MAX_BANNER_SLIDES_PER_SLOT = 20;
 export const BannerSlotSchema = Type.Union(BANNER_SLOTS.map((value) => Type.Literal(value)));
 export const BannerTargetSchema = Type.Union(BANNER_TARGETS.map((value) => Type.Literal(value)));
@@ -16,17 +17,6 @@ export const BannerIdSchema = Type.String({ format: 'uuid' });
 export const BannerVersionSchema = Type.Integer({ minimum: 1, maximum: 2_147_483_646 });
 const nullableImage = Type.Union([Type.String({ pattern: '^/api/v1/banners/media/[a-f0-9]{64}$' }), Type.Null()]);
 const nullableDate = Type.Union([Type.String({ format: 'date-time' }), Type.Null()]);
-export const BannerEntrySchema = Type.Object({
-  slot: BannerSlotSchema,
-  image_path: nullableImage,
-  target: Type.Union(LEGACY_BANNER_TARGETS.map((value) => Type.Literal(value))),
-  is_enabled: Type.Boolean(),
-  version: Type.Integer({ minimum: 0 }),
-  updated_at: nullableDate,
-});
-export const BannerListSchema = Type.Object({
-  items: Type.Array(BannerEntrySchema, { maxItems: BANNER_SLOTS.length }),
-});
 export const BannerSlideSchema = Type.Object({
   id: BannerIdSchema,
   slot: BannerSlotSchema,

@@ -24,11 +24,6 @@ export default defineConfig({
     maxWorkers: 1,
     setupFiles: ['./test/setup.ts'],
     // 创建或删除数据库的用例只允许通过专用租约配置执行。
-    exclude: [
-      ...configDefaults.exclude,
-      'test/database-initialization.test.ts',
-      'test/server-generations.test.ts',
-      'test/admin-migration.e2e.test.ts',
-    ],
+    exclude: [...configDefaults.exclude, 'test/database-initialization.test.ts', 'test/server-generations.test.ts'],
   },
 });

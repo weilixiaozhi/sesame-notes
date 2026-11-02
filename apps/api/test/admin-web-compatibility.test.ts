@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { adminMigrationTestDatabaseUrl } from './admin-migration-test-database.js';
 
 const sharedWebPaths = [
   '/api/v1/auth/browser/register',
@@ -69,30 +68,5 @@ describe('共享API同时保留Web业务与独立Admin', () => {
     } finally {
       await app.close();
     }
-  });
-
-  it('Admin迁移验收不能隐式回退共享库或用确认标识绕过共享端口', () => {
-    const isolated = {
-      SESAME_ENV: 'test',
-      NODE_ENV: 'test',
-      E2E_DATABASE_URL: 'postgresql://unused:unused@127.0.0.1:55439/sesame_test_admin_clone',
-      E2E_ADMIN_MIGRATION_SUITE: 'isolated-clone-only-v1',
-    };
-    expect(adminMigrationTestDatabaseUrl(isolated)).toBe(isolated.E2E_DATABASE_URL);
-    expect(() => adminMigrationTestDatabaseUrl({ ...isolated, E2E_ADMIN_MIGRATION_SUITE: undefined })).toThrow(
-      '独立副本',
-    );
-    expect(() =>
-      adminMigrationTestDatabaseUrl({
-        ...isolated,
-        E2E_DATABASE_URL: isolated.E2E_DATABASE_URL.replace('55439', '55432'),
-      }),
-    ).toThrow('独立副本');
-    expect(() =>
-      adminMigrationTestDatabaseUrl({
-        ...isolated,
-        E2E_DATABASE_URL: 'postgresql://unused:unused@localhost:55432/sesame_notes_test',
-      }),
-    ).toThrow('独立副本');
   });
 });

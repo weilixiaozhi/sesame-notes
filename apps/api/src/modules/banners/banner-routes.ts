@@ -19,14 +19,12 @@ import {
   validateBannerContent,
 } from './banner-management.js';
 import {
-  BANNER_SLOTS,
   AdminBannerEntrySchema,
   AdminBannerListSchema,
   BannerCarouselSchema,
   BannerCreateSchema,
   BannerDeleteSchema,
   BannerIdSchema,
-  BannerListSchema,
   BannerMediaIdSchema,
   BannerTargetOptionsSchema,
   BannerUpdateSchema,
@@ -38,7 +36,7 @@ import {
 const idParams = Type.Object({ banner_id: BannerIdSchema });
 const okSchema = Type.Object({ ok: Type.Literal(true) });
 
-/** 公开配置按显式格式返回；旧客户端每个位置只得到首张及其可识别的库入口。 */
+/** 公开配置返回完整轮播及每张独立的跳转目标。 */
 export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient, config: ApiConfig): void {
   app.get(
     '/api/v1/banners',
@@ -47,12 +45,11 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
         tags: ['banners'],
         operationId: 'getAppBanners',
         querystring: Type.Object({ format: Type.Optional(Type.Literal('carousel')) }, { additionalProperties: false }),
-        response: { 200: Type.Union([BannerListSchema, BannerCarouselSchema]) },
+        response: { 200: BannerCarouselSchema },
       },
     },
     async (request, reply) =>
       execute(request, '读取应用 Banner', async () => {
-        const carousel = (request.query as { format?: string }).format === 'carousel';
         const items = await prisma.$transaction(
           async (tx) => {
             const rows = await tx.appBanner.findMany({ where: activeBannerWhere, orderBy: [...bannerOrder] });
@@ -60,26 +57,7 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
             const available = rows.filter(
               (row) => row.imageId && (!row.targetId || names.has(`${row.target}:${row.targetId}`)),
             );
-            if (carousel) return available.map((row) => bannerSlideResponse(row, names));
-            return BANNER_SLOTS.flatMap((slot) => {
-              const row = available.find((item) => item.slot === slot);
-              if (!row) return [];
-              return [
-                {
-                  slot,
-                  image_path: `/api/v1/banners/media/${row.imageId}`,
-                  target:
-                    row.target === 'official-plan'
-                      ? 'fitness-plan-library'
-                      : row.target === 'official-template'
-                        ? 'fitness-template-library'
-                        : row.target,
-                  is_enabled: true,
-                  version: row.version,
-                  updated_at: row.updatedAt.toISOString(),
-                },
-              ];
-            });
+            return available.map((row) => bannerSlideResponse(row, names));
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
         );

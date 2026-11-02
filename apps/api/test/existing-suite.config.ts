@@ -10,11 +10,7 @@ export default defineConfig({
   test: {
     env: { E2E_EXISTING_SUITE: 'existing-exclusive-v1' },
     include: ['test/*.test.ts'],
-    exclude: [
-      'test/database-initialization.test.ts',
-      'test/server-generations.test.ts',
-      'test/admin-migration.e2e.test.ts',
-    ],
+    exclude: ['test/database-initialization.test.ts', 'test/server-generations.test.ts'],
     setupFiles: ['./test/setup.ts', './test/existing-database.setup.ts'],
     fileParallelism: false,
     maxWorkers: 1,

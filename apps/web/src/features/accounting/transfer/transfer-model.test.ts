@@ -98,13 +98,13 @@ describe('记账文件解析与精确转换', () => {
 });
 
 describe('记账导入计划与完整导出', () => {
-  it.each([false, true])('旧文件及空机器列文件重导保持已发布交易ID，含机器表头=%s', async (withEmptyHeaders) => {
+  it.each([false, true])('无分类身份的文件重导保持交易ID，含空身份表头=%s', async (withEmptyHeaders) => {
     try {
       const table = {
         headers: ['时间', '金额', ...(withEmptyHeaders ? ['category_scope', 'category_id', 'parent_category_id'] : [])],
         rows: [['2026-09-30', '1', ...(withEmptyHeaders ? ['', '', ''] : [])]],
       };
-      const oldMapping = {
+      const normalizedMapping = {
         date: '时间',
         amount: '金额',
         type: '',
@@ -117,23 +117,23 @@ describe('记账导入计划与完整导出', () => {
         native_amount: '',
         rate: '',
       };
-      const oldFingerprint = createHash('sha256')
-        .update(JSON.stringify({ table, mapping: oldMapping, ledger: ledger.id }))
+      const normalizedFingerprint = createHash('sha256')
+        .update(JSON.stringify({ table, mapping: normalizedMapping, ledger: ledger.id }))
         .digest('hex');
-      const oldId = await createImportId(ledger.id, oldFingerprint, '0');
+      const stableId = await createImportId(ledger.id, normalizedFingerprint, '0');
       const plan = await buildImportPlan(table, detectTransferMapping(table.headers), ledger, snapshot, signal());
-      expect(plan.batches[0]!.body.transactions![0]!.id).toBe(oldId);
+      expect(plan.batches[0]!.body.transactions![0]!.id).toBe(stableId);
       const repeated = await buildImportPlan(
         table,
         detectTransferMapping(table.headers),
         ledger,
-        { ...snapshot, transactions: [{ id: oldId }] as Snapshot['transactions'] },
+        { ...snapshot, transactions: [{ id: stableId }] as Snapshot['transactions'] },
         signal(),
       );
       expect(repeated.skipped).toBe(1);
       expect(repeated.batches).toEqual([]);
     } catch (cause) {
-      throw new Error('历史交易导入身份兼容验证失败', { cause });
+      throw new Error('无分类身份交易的重复导入验证失败', { cause });
     }
   });
   it('无ID的同名来源逐行确认，明确选择不同目标ID不会按名称合并', async () => {

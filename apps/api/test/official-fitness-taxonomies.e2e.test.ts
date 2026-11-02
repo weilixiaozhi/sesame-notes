@@ -1,8 +1,7 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import { PrismaClient, type Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildApp } from '../src/app.js';
@@ -79,57 +78,6 @@ const traditionalNames: ReadonlyArray<readonly [Kind, string, string]> = [
   ['equipment', 'wheel roller', '健腹輪'],
 ];
 
-/** 迁移只在当前连接的临时同名表执行，真实种子、管理员编辑和缓存版本均不受测试影响。 */
-async function withTraditionalNameFixture(
-  run: (tx: Prisma.TransactionClient, apply: () => Promise<void>) => Promise<void>,
-): Promise<void> {
-  try {
-    const source = await readFile(
-      resolve(import.meta.dirname, '../prisma/migrations/20261010008000_official_fitness_taxonomies/migration.sql'),
-      'utf8',
-    );
-    const seed = source.match(
-      /INSERT INTO "official_fitness_taxonomies"[\s\S]*?AS defaults\(kind, id, name, position\);/,
-    )?.[0];
-    if (!seed) throw new Error('分类种子 SQL 未找到');
-    const migration = await readFile(
-      resolve(
-        import.meta.dirname,
-        '../prisma/migrations/20261010009000_fitness_taxonomy_traditional_names/migration.sql',
-      ),
-      'utf8',
-    );
-    const statements = migration
-      .replace(/--[^\r\n]*/g, '')
-      .split(';')
-      .map((statement) => statement.trim())
-      .filter(Boolean);
-    expect(statements[0]).toBe('BEGIN');
-    expect(statements.at(-1)).toBe('COMMIT');
-    await prisma.$transaction(
-      async (tx) => {
-        await tx.$executeRawUnsafe(
-          'CREATE TEMP TABLE official_fitness_taxonomies (LIKE public.official_fitness_taxonomies INCLUDING ALL) ON COMMIT DROP',
-        );
-        await tx.$executeRawUnsafe(
-          'CREATE TEMP TABLE official_fitness_state (LIKE public.official_fitness_state INCLUDING ALL) ON COMMIT DROP',
-        );
-        await tx.$executeRawUnsafe(seed);
-        await tx.$executeRaw`INSERT INTO official_fitness_state (id, content_version) VALUES (1, 40)`;
-        /** Prisma 已建立事务，只执行迁移正文；事务中的数据修正与缓存推进仍完整使用实际 SQL。 */
-        async function apply(): Promise<void> {
-          for (const statement of statements.slice(1, -1)) await tx.$executeRawUnsafe(statement);
-        }
-        await run(tx, apply);
-      },
-      { timeout: 15_000 },
-    );
-  } catch (cause) {
-    throw new Error('健身分类繁体名称迁移验收失败', { cause });
-  }
-}
-
-/** 后台写请求通过真实 Cookie、来源和动作权限校验。 */
 function headers(cookie = writer) {
   return { cookie, origin: ORIGIN, 'x-admin-request': '1' };
 }
@@ -365,72 +313,16 @@ afterAll(async () => {
 });
 
 describe('官方部位与器械字典', () => {
-  it('繁体数据迁移覆盖全部 38 个内置分类，仅在名称变化时推进分类与目录版本', async () => {
-    await withTraditionalNameFixture(async (tx, apply) => {
-      const before = await tx.$queryRaw<Array<{ kind: Kind; id: string; name_zh: string; version: number }>>`
-        SELECT kind, id, name_zh, version FROM official_fitness_taxonomies`;
-      expect(before).toHaveLength(38);
+  it('当前字典内置分类具有完整繁体名称', async () => {
+    try {
+      const rows = await prisma.officialFitnessTaxon.findMany();
       expect(traditionalNames).toHaveLength(38);
-      await apply();
-      const after = await tx.$queryRaw<
-        Array<{ kind: Kind; id: string; name_zh: string; name_hant: string; version: number }>
-      >`
-        SELECT kind, id, name_zh, name_hant, version FROM official_fitness_taxonomies`;
       for (const [kind, id, translated] of traditionalNames) {
-        const original = before.find((row) => row.kind === kind && row.id === id)!;
-        expect(after.find((row) => row.kind === kind && row.id === id)).toEqual({
-          kind,
-          id,
-          name_zh: original.name_zh,
-          name_hant: translated,
-          version: original.version + Number(original.name_zh !== translated),
-        });
+        expect(rows.find((row) => row.kind === kind && row.id === id)?.nameHant, `${kind}:${id}`).toBe(translated);
       }
-      expect(await tx.$queryRaw`SELECT content_version FROM official_fitness_state WHERE id = 1`).toEqual([
-        { content_version: 41 },
-      ]);
-      await apply();
-      expect(await tx.$queryRaw`SELECT content_version FROM official_fitness_state WHERE id = 1`).toEqual([
-        { content_version: 41 },
-      ]);
-    });
-  });
-
-  it('繁体数据迁移保留管理员编辑、软删记录及自定义分类', async () => {
-    await withTraditionalNameFixture(async (tx, apply) => {
-      await tx.$executeRaw`UPDATE official_fitness_taxonomies SET version = 2 WHERE kind = 'equipment' AND id = 'barbell'`;
-      await tx.$executeRaw`UPDATE official_fitness_taxonomies SET updated_by = 'operator' WHERE kind = 'equipment' AND id = 'dumbbell'`;
-      await tx.$executeRaw`UPDATE official_fitness_taxonomies SET name_hant = '管理員自訂壺鈴' WHERE kind = 'equipment' AND id = 'kettlebell'`;
-      await tx.$executeRaw`UPDATE official_fitness_taxonomies SET deleted_at = CURRENT_TIMESTAMP WHERE kind = 'equipment' AND id = 'cable'`;
-      await tx.$executeRaw`UPDATE official_fitness_taxonomies SET name_zh = '用户自定义名称' WHERE kind = 'equipment' AND id = 'band'`;
-      await tx.$executeRaw`UPDATE official_fitness_taxonomies SET name_en = 'Custom English name' WHERE kind = 'equipment' AND id = 'ez barbell'`;
-      await tx.$executeRaw`INSERT INTO official_fitness_taxonomies (kind, id, name_zh, name_hant, name_en, updated_at)
-        VALUES ('equipment', 'custom-item', '自定义器械', '自定义器械', 'custom-item', CURRENT_TIMESTAMP)`;
-      const before = await tx.$queryRaw`SELECT * FROM official_fitness_taxonomies
-        WHERE kind = 'equipment' AND id IN ('barbell', 'dumbbell', 'kettlebell', 'cable', 'band', 'ez barbell', 'custom-item') ORDER BY id`;
-      await apply();
-      expect(
-        await tx.$queryRaw`SELECT * FROM official_fitness_taxonomies
-        WHERE kind = 'equipment' AND id IN ('barbell', 'dumbbell', 'kettlebell', 'cable', 'band', 'ez barbell', 'custom-item') ORDER BY id`,
-      ).toEqual(before);
-      expect(
-        await tx.$queryRaw`SELECT name_hant FROM official_fitness_taxonomies WHERE kind = 'equipment' AND id = 'weighted'`,
-      ).toEqual([{ name_hant: '負重器材' }]);
-    });
-  });
-
-  it('目录版本写入失败时繁体名称修正一同回滚', async () => {
-    await withTraditionalNameFixture(async (tx, apply) => {
-      const before = await tx.$queryRaw`SELECT * FROM official_fitness_taxonomies ORDER BY kind, id`;
-      await tx.$executeRaw`ALTER TABLE official_fitness_state ADD CONSTRAINT reject_cache_advance CHECK (content_version = 40)`;
-      await tx.$executeRawUnsafe('SAVEPOINT traditional_migration');
-      await expect(apply()).rejects.toThrow();
-      await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT traditional_migration');
-      expect(await tx.$queryRaw`SELECT * FROM official_fitness_taxonomies ORDER BY kind, id`).toEqual(before);
-      expect(await tx.$queryRaw`SELECT content_version FROM official_fitness_state WHERE id = 1`).toEqual([
-        { content_version: 40 },
-      ]);
-    });
+    } catch (cause) {
+      throw new Error('当前内置分类繁体名称验收失败', { cause });
+    }
   });
 
   it('内置身份保持有效，只读权限可读取但不能修改分类', async () => {

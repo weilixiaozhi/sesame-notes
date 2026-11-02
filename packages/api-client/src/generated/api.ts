@@ -7503,15 +7503,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         items: {
-                            slot: "fitness-plan-library" | "fitness-template-library";
-                            image_path: string | null;
-                            target: "fitness-plan-library" | "fitness-template-library" | "fitness-exercises" | "fitness-plans" | "fitness-templates";
-                            is_enabled: boolean;
-                            version: number;
-                            updated_at: string | null;
-                        }[];
-                    } | {
-                        items: {
                             /** Format: uuid */
                             id: string;
                             slot: "fitness-plan-library" | "fitness-template-library";

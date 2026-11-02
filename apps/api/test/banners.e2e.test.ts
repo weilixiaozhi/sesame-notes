@@ -94,8 +94,8 @@ afterAll(async () => {
   }
 });
 
-describe('Banner 轮播管理与客户端兼容', () => {
-  it('每张独立跳转和排序，旧客户端只取首张，逐张删除后由客户端使用默认入口', async () => {
+describe('Banner 轮播管理与公开配置', () => {
+  it('每张独立跳转和排序，公开配置统一返回完整轮播，逐张删除后由客户端使用默认入口', async () => {
     try {
       const initial = await app!.inject({ method: 'GET', url: '/api/v1/admin/banners', headers: headers() });
       expect(initial.statusCode, initial.body).toBe(200);
@@ -231,13 +231,8 @@ describe('Banner 轮播管理与客户端兼容', () => {
       expect(carousel.map((entry: { id: string }) => entry.id)).toEqual([secondId, firstId, thirdId]);
       expect(carousel[0]).toMatchObject({ target: 'official-plan', target_id: planId, version: 1, sort_order: 10 });
       expect(carousel[0]).not.toHaveProperty('updated_by');
-      const legacy = (await app!.inject({ method: 'GET', url: '/api/v1/banners' })).json().items;
-      expect(legacy).toHaveLength(2);
-      expect(legacy.map((entry: { target: string }) => entry.target)).toEqual([
-        'fitness-plan-library',
-        'fitness-template-library',
-      ]);
-      expect(new Set(legacy.map((entry: { slot: string }) => entry.slot)).size).toBe(2);
+      const publicItems = (await app!.inject({ method: 'GET', url: '/api/v1/banners' })).json().items;
+      expect(publicItems).toEqual(carousel);
       expect((await app!.inject({ method: 'GET', url: imagePath })).statusCode).toBe(200);
 
       const races = await Promise.all(

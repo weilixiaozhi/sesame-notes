@@ -1,0 +1,303 @@
+[
+  {
+    "name": "20260916000000_init",
+    "checksums": [
+      "4dbfcda72655941b99d5eaf3d5811dd1e971822dd09e5db2a79e12a71ee052ff",
+      "2c344bf4c7f5e638cf95eac447aaa615ba169a5f3795998a352607e69e65a607"
+    ]
+  },
+  {
+    "name": "20260917000000_category_owner_pk",
+    "checksums": [
+      "aba4cc7c7bb864f6ead7d540db1a1e437f83c4bd64ded90d31e1210b6eacbe96",
+      "ce88896e5a4748128cfee3f7496cd4f8989823a3651fec1b607bce668342c07c"
+    ]
+  },
+  {
+    "name": "20260918000000_memo_credentials_fields",
+    "checksums": [
+      "d55c685fb905f24ddba936175498b7cd8b03b1b021e692822544827f0291b092",
+      "bda5ffa841edb3b6d7238a9bfc15fa790fb8e58e00e6892a8a53a4409015e513"
+    ]
+  },
+  {
+    "name": "20260919000000_category_identity_index",
+    "checksums": [
+      "dc5a852c5f897cfdc609bd52d75e1282df0366731996a9a50f00b10837f44dd0",
+      "35ccbca86c5cc2536e024ca7295936b226c801e2b5eb45b8b808630df2798997"
+    ]
+  },
+  {
+    "name": "20260927000000_fitness_warmup_rest_seconds",
+    "checksums": [
+      "6fb57ba7073f8889fee4121ee7bd9b72f46074ff05cc508c164e9340016c368d",
+      "81242c60d422645fb8989f6672b56d20b241d9e085f534f00010b982b4e3b241"
+    ]
+  },
+  {
+    "name": "20260927010000_memo_title_json",
+    "checksums": [
+      "634310e30d66047a33187ac1df6eba3a408f0240a71900dc9ac3c50108e084f4",
+      "e0c3d8bebb1c6f942e460d933f929eb3233d8fc01e11a9fcf408101f931f5676"
+    ]
+  },
+  {
+    "name": "20261002000000_category_conflict_candidates",
+    "checksums": [
+      "db716b6bd207b50d9ff9f06cf188bcf5357b9d8fdfa82d788f19be4ff78511f7",
+      "feb483f31c7267763bd923f599c0afd32f26e9d31c7cad40201edb62d71fe9db"
+    ]
+  },
+  {
+    "name": "20261005000000_allow_short_phone_numbers",
+    "checksums": [
+      "ed3092465c7eade224c9de4f0bf18bfde43bbc23468f6f70e38137ee9b7f89de",
+      "52b3e8b3ef1def5e0a00921134c90f0104edef1cd47a92d4b70cec2dc9f50181"
+    ]
+  },
+  {
+    "name": "20261008000000_independent_admin_accounts",
+    "checksums": [
+      "a19668ea0975a4db7146f9274610b5121f2db3cab07cd931a75e390db6050eee",
+      "a2fe77a4c3dfccc65b2ec403a07de4f592b12bd9cd3c5f31b638a39e910afbed"
+    ]
+  },
+  {
+    "name": "20261009000000_admin_identity_groups",
+    "checksums": [
+      "785d313ff65b5bb5dbbc076aca13f424e3a1e91ca62ab05a2f6ebe3eeae44cee",
+      "804ab431193f3758b759e536f9affc6885e0af52a08a35983c1e79e3e91680e3"
+    ]
+  },
+  {
+    "name": "20261009010000_optional_admin_group",
+    "checksums": [
+      "9a3f2e2968d09245fb78b01408967a2c3375418babd09dbd96b00851eafb3350",
+      "439263bb24d2344527bc1ec80bb863b289affe95e940954f55e688622d6add15"
+    ]
+  },
+  {
+    "name": "20261009020000_default_admin_group",
+    "checksums": [
+      "8f87f1ba8af4755ef96f364a9e946bafe7a85445472ac7e03b16478bbdcaea77",
+      "8f7775eab5ac770b9fcc074bad6cf2f024c55e0e1330e29aae6ca61026455bfc"
+    ]
+  },
+  {
+    "name": "20261009030000_admin_login_contacts",
+    "checksums": [
+      "0bb9c47ec785b0b11d8f4c7fa379a84c5dbe9bc1611847769ccaaef6560ab316",
+      "bbd263683b85d3a449d61db851aaec64fcc78f1275dfacbf3a213fef2c840b8d"
+    ]
+  },
+  {
+    "name": "20261010000000_product_analytics",
+    "checksums": [
+      "00ba7d6be51323cebe956de35725bc0daac099810d5a8813c67ada87c78e685b",
+      "8100052d3c30aaad8e848f6b988564f826f518234c2d72086ef2910c3e9ed4a0"
+    ]
+  },
+  {
+    "name": "20261010001000_official_fitness_management",
+    "checksums": [
+      "a3b206b511850f8ac10f3b3b74e3bde8734aebe7360f14d84a5a0de35022ce50",
+      "309d577a1975872b06d881eea766228cd70010afcd7cebcf6c5aa92eb8e7a79f"
+    ]
+  },
+  {
+    "name": "20261010002000_analytics_platform_filter",
+    "checksums": [
+      "7b9dde40f35ef929980a914176fa421876e08d536d343322e4e9ea7a8956dd93",
+      "f8169e4cb80469a3f09b1807fbe66c7fd5cc71c8852333562bc8a97c8945e6d3"
+    ]
+  },
+  {
+    "name": "20261010003000_fitness_direct_save",
+    "checksums": [
+      "87bd777762be2d375c839058b561786bd5c35e341c171f9459dec66e7c2af815",
+      "b895b12608e4168326e8ba9942b0752d2b564992249f0c503fba2aafa29e7da5"
+    ]
+  },
+  {
+    "name": "20261010004000_remove_exercise_aliases",
+    "checksums": [
+      "0377e7af59018735c65010cfc40cf47351c90e37567a2a254d913d455093dd35",
+      "50420a06a924d5c407740d5bc25a5b6691586dfad06d9da25b90083ddca7cf7d"
+    ]
+  },
+  {
+    "name": "20261010005000_recurring_protocol",
+    "checksums": [
+      "69f773ae879bf42baf8b30c2cef28a7936de6da64c032d10063be8dcd3d81d99",
+      "7d60e7e763f089274f6e0ffdb3a0f2e6b546b4ba421982a2ba41e744a6203285"
+    ]
+  },
+  {
+    "name": "20261010006000_recurring_cursor_ownership",
+    "checksums": [
+      "6531b15b86dcba12df85c9d852a513b8ce03446ec96291fab782cf00a16207cc",
+      "22da8e7791118ae5ff06b360dfa06b9dc81b20656d75664c59e8d4d5ff0bc8ba"
+    ]
+  },
+  {
+    "name": "20261010007000_user_credential_version",
+    "checksums": [
+      "c4d60ae3aa0bb400c3b65dbd53b8c0fd8176d946066bdca098dc0d2f2ab2045b",
+      "4dc253c680eba3977293057fae058b8da74bb09e406e066927ca933e8ac0486e"
+    ]
+  },
+  {
+    "name": "20261010008000_official_fitness_taxonomies",
+    "checksums": [
+      "53b3a6b7ce08a1e62921670e992d7f8799b1597b765153515ca33f3f3fd006c3",
+      "4886d2473e572dd29e73a127bdcca71883801c5e5b7409d5cd6963f874972d8a"
+    ]
+  },
+  {
+    "name": "20261010009000_fitness_taxonomy_traditional_names",
+    "checksums": [
+      "4eb65adab239bb7642b6d3717cabbea6b33085145d02ab58b5030aba49be50b3",
+      "95a266def364399a7faea8a27c9a5c373844bb31fdbb7d1873711ea8ffc7b5d7"
+    ]
+  },
+  {
+    "name": "20261011000000_remove_user_admin_flag",
+    "checksums": [
+      "64f125d20b466e2256215cb80b3b9ed7a25905424ce0803da18bec6c88a490bc",
+      "222fd51331611b0d7f4312a19bc888b46d9a16ffe41d5d2a6411fa03fe8d4223"
+    ]
+  },
+  {
+    "name": "20261011001000_remove_recurring_cursor_ownership",
+    "checksums": [
+      "35fa35f847142362ab2c30d2329e4afb9a690e53a3df17686d3620eceeb2c890",
+      "77463073c209da7ef3240a6423b759cc9482c9775fc8c6193cb444d868b33059"
+    ]
+  },
+  {
+    "name": "20261012000000_analytics_behavior_catalog",
+    "checksums": [
+      "0a4c796eb0213aaf1486ced585343187046c1c2376bff21f5578d5c4cf869286",
+      "4210a3f826eed6fbfdbcfa58a58971e6acff62aabced2b557c16320c2c810f5b"
+    ]
+  },
+  {
+    "name": "20261012001000_remove_analytics_categories",
+    "checksums": [
+      "86fcd96930b94a4de477c8a0b9567b7c8630fcbcff3abeb570487cb592aaa2af",
+      "da647e9833fefd87ea64a2c77e1859e046cf9492f4881a8fc50351c3c0e06468"
+    ]
+  },
+  {
+    "name": "20261012002000_analytics_funnel_context",
+    "checksums": [
+      "22081898e70dad23e26d0820e9349d1d08416f52d2f2fc4cd2e62d6684fdadb8",
+      "5389d80de655123cb00956fd41cf24434a71f7021919c829eeca602369418567"
+    ]
+  },
+  {
+    "name": "20261012003000_analytics_collection_state",
+    "checksums": [
+      "a3df9cfc8084bcc27330cf395682e8450df7805fdcc0119eee6328765e96ee56",
+      "999f012bb97fcc60b8c3caaab2cc39b23a6f490571baf4243642ee42d23781d4"
+    ]
+  },
+  {
+    "name": "20261013000000_analytics_event_sequence",
+    "checksums": [
+      "ddbf55266c6646413b3bac69a087045d21f54f56a9d0901c18160f7ef5cb7c6b",
+      "d10831b9451725f4c63e283f9fdf6476be13ba6e35a3eeaf859d2037fc9ceef5"
+    ]
+  },
+  {
+    "name": "20261013001000_fitness_reference_index",
+    "checksums": [
+      "363db70bdba444ddeab9a51113514cae57c6497373d41db263ba6d264dca1f79",
+      "c7096228cd6d76d5143eaccc711590446e26c34bbff8816ace8b3d2712066589"
+    ]
+  },
+  {
+    "name": "20261013002000_mutation_reservations",
+    "checksums": [
+      "f42b6903cc3b9dd7911db50eaa7fb19d36b4107725803ecdaa6635f29b5ad93c",
+      "c33f741adc0bef840cc5674c6bba1326a408ff9f829831b8e61ffd3eb0f60c6c"
+    ]
+  },
+  {
+    "name": "20261013003000_fitness_reference_candidates",
+    "checksums": [
+      "0d07566e7b75baae181eea2ab0ead6b7ebcae6833eae29cdde0ff2463861186c",
+      "c12e8283f4a2c02cadf39a0a716d9cfaa9a214c2803b4e8fd9b16ea2c1ee7b81"
+    ]
+  },
+  {
+    "name": "20261013004000_mutation_identity_lookup",
+    "checksums": [
+      "e7ca14eedaeac49db1f3f8a26b00105c3dd42ea3736ab1f40e7e19637b4052cb",
+      "ea82d32ffa8302392607f5fc252ed436f7baf0f0105a4231edd44cbc8c4102f1"
+    ]
+  },
+  {
+    "name": "20261014000000_analytics_page_event_names",
+    "checksums": [
+      "707ead49aadb503a7de339d999c316e3a632a2dfaf82198788fcacd71e3ecdc4",
+      "a709b3837c4edaeedddb4b9c7b009dcf709356300bea66ef07857dd118afeef0"
+    ]
+  },
+  {
+    "name": "20261015000000_complete_default_category_catalog",
+    "checksums": [
+      "4232c869e69d5060e97026f36b094b334db24170d3f63d7ad42225171452d8ea",
+      "533c36be164b9cac628497e7543106a2bc6f7fad5566f4ab5334bbd71e1ac6b4"
+    ]
+  },
+  {
+    "name": "20261019000000_remove_transaction_stats_exclusion",
+    "checksums": [
+      "f39b9446debfae6d07089e9f66cf998a378cf9cc8ba069ce7a0783670721918b",
+      "04cd9acb4952f3b48943a44c7da029e7415c1cc24e658ed2dec243bf7645abf4"
+    ]
+  },
+  {
+    "name": "20261020000000_sync_protocol_cutover",
+    "checksums": [
+      "32206b70bf7e53946830226556dbc7fa145c5722f56301c157976da4c82a8ad6",
+      "010ec361736d0e505d21b6df9c1756e4749d7ecd318ce6b142cfb6952feb25f5"
+    ]
+  },
+  {
+    "name": "20261023000000_sync_cursor_floor",
+    "checksums": [
+      "195b35011462999dd644dfd3695c32d30a8bf469eaa284dbf421eb92b53b052f",
+      "5f610ba20a2d01e976b55305a41f2042ae949945514150c9031f25a93a4979e1"
+    ]
+  },
+  {
+    "name": "20261029000000_app_banners",
+    "checksums": [
+      "712c51f571d7d82872931da3513e67035a3c166ba318de18834d47f645e2e1c6",
+      "51514e30b305da5fbe4d3126c4f18e850a85d99f00943b74ffa1a139ef34b013"
+    ]
+  },
+  {
+    "name": "20261029001000_banner_permissions",
+    "checksums": [
+      "0ccd4888de9e0de162e6573bf80a94ed336c8b3e603f38e4788d7fc4ce2c1f1a",
+      "3946a716f809bde5a898ae9aa2852dd1f7fe374e24fe00d6d3be09f1eb7f825b"
+    ]
+  },
+  {
+    "name": "20261029002000_banner_analytics",
+    "checksums": [
+      "56216226a3bf2abb5bab2cddd090e5cfbac4887e0d1dd43535bed062802f6ad4",
+      "da628ed8ff812173ac4c4b7d6d794e85ce0cb63a25e7b686303cc086e349e2c5"
+    ]
+  },
+  {
+    "name": "20261029003000_banner_carousel",
+    "checksums": [
+      "00848e1e7a12f17d5e76a94480b97a8038d485e876b2080bd7f6c679894470d5",
+      "afb716b369aa3e9f2680da959ee21a740616b89c0d4450306e81cf089673a339"
+    ]
+  }
+]

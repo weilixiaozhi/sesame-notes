@@ -39,14 +39,16 @@ NODE_REQUIREMENT = re.compile(r">=([0-9]+\.[0-9]+\.[0-9]+)\s+<([0-9]+)")
 IMAGE_VERSION_REPORT = "JSON.stringify({api:require('./apps/api/package.json').version,node:process.versions.node})"
 TAG_LINE = re.compile(rb"(?m)^([ \t]*(?:export[ \t]+)?PROD_IMAGE_TAG[ \t]*=[ \t]*)(?:\"[^\"\r\n]*\"|'[^'\r\n]*'|[^\s#\r\n]*)([ \t]*(?:#[^\r\n]*)?)(\r?)$")
 DNS_REPORT = "require('node:dns').lookup('postgres',{all:true},(e,a)=>{if(e)process.exitCode=1;else console.log(JSON.stringify(a.map(x=>x.address)))})"
-CUTOVER_STATUS = """
+CURRENT_SYNC_STATUS = """
 const {PrismaClient}=require('./apps/api/node_modules/@prisma/client'); const p=new PrismaClient();
 (async()=>{try{
-  const [columns]=await p.$queryRawUnsafe("SELECT count(*)::int AS installed FROM information_schema.columns WHERE table_schema='public' AND table_name='server_epochs' AND column_name IN ('sync_cutover_cursor','sync_cutover_at')");
-  if(columns.installed!==2){console.log(JSON.stringify({required:true}));return;}
-  const [epoch]=await p.$queryRawUnsafe('SELECT sync_cutover_cursor::text AS cursor, sync_cutover_at AS completed FROM server_epochs WHERE id=0');
-  if(!epoch || (epoch.cursor===null)!==(epoch.completed===null))throw new Error('同步切换记录无效');
-  console.log(JSON.stringify({required:epoch.cursor===null,original_cursor:epoch.cursor}));
+  const [columns]=await p.$queryRawUnsafe("SELECT count(*)::int AS installed FROM information_schema.columns WHERE table_schema='public' AND table_name='server_epochs' AND column_name IN ('sync_cutover_cursor','sync_cutover_at','sync_cursor_floor')");
+  if(columns.installed!==3)throw new Error('数据库不具备当前同步结构');
+  const [epoch]=await p.$queryRawUnsafe('SELECT sync_cutover_cursor::text AS cursor, sync_cutover_at AS completed, sync_cursor_floor::text AS floor FROM server_epochs WHERE id=0');
+  if(!epoch || typeof epoch.cursor!=='string' || !/^(0|[1-9][0-9]*)$/.test(epoch.cursor)
+    || !(epoch.completed instanceof Date) || !Number.isFinite(epoch.completed.getTime())
+    || typeof epoch.floor!=='string' || !/^(0|[1-9][0-9]*)$/.test(epoch.floor))throw new Error('当前同步切点或持久水位未完成');
+  console.log(JSON.stringify({completed:true,original_cursor:epoch.cursor,cursor_floor:epoch.floor}));
 }catch(error){console.error('同步切换状态读取失败：',error);process.exitCode=1;}finally{await p.$disconnect();}})();
 """
 
@@ -138,7 +140,8 @@ class ApiRelease(initializer.Bootstrap):
             self.previous_api_restored = False
             self.recovering = False
             self.logging_unavailable = False
-            self.cutover_required = False
+            self.sync_cursor = None
+            self.sync_cursor_floor = None
         except (OSError, UnicodeError, ValueError, KeyError, TypeError) as error:
             raise ReleaseError("无法读取 API 发布所需源码或现有配置，请检查文件完整性和权限。") from error
 
@@ -311,13 +314,16 @@ class ApiRelease(initializer.Bootstrap):
         except (KeyError, TypeError, ValueError) as error:
             raise ReleaseError("API 实际数据库不是预期的 PostgreSQL 17 生产实例，已停止发布。") from error
 
-    def check_cutover(self):
-        """只读识别持久切点，在计划中报告 db-init 需要完成的同步协议升级。"""
+    def check_sync_state(self):
+        """只读验证当前同步事实，缺失切点或持久水位时拒绝发布，不自动切换旧协议。"""
         report = initializer.decode_json(self.docker(
-            ["exec", self.old_containers[0]["Id"], "node", "-e", CUTOVER_STATUS], step="读取同步协议切换状态"))
-        if not isinstance(report.get("required"), bool):
-            raise ReleaseError("同步协议切换状态无效，已停止发布。")
-        self.cutover_required = report["required"]
+            ["exec", self.old_containers[0]["Id"], "node", "-e", CURRENT_SYNC_STATUS], step="核对当前同步切点和持久水位"))
+        if (report.get("completed") is not True
+                or not re.fullmatch(r"(?:0|[1-9][0-9]*)", str(report.get("original_cursor", "")))
+                or not re.fullmatch(r"(?:0|[1-9][0-9]*)", str(report.get("cursor_floor", "")))):
+            raise ReleaseError("当前同步切点或持久水位未完成，不能发布或自动升级旧数据库。")
+        self.sync_cursor = report["original_cursor"]
+        self.sync_cursor_floor = report["cursor_floor"]
 
     def plan(self):
         """验证现有资源并输出不包含凭据的发布计划，不写文件或改变容器。"""
@@ -330,7 +336,7 @@ class ApiRelease(initializer.Bootstrap):
         if self.inspect_image(self.model["services"]["postgres"]["image"], postgres=True) != self.old_containers[1]["Image"]:
             raise ReleaseError("PostgreSQL 镜像标签未指向当前运行镜像，已停止发布。")
         self.check_database(self.old_containers)
-        self.check_cutover()
+        self.check_sync_state()
         existing = self.docker(["image", "ls", "--no-trunc", "--format", "{{.ID}}", "--filter", "reference=" + self.image_reference],
                                step="确认本次镜像标签未被占用")
         if existing.strip():
@@ -339,8 +345,8 @@ class ApiRelease(initializer.Bootstrap):
                 "node_requirement": self.node_requirement,
                 "env_file": str(self.env_file), "env_files": [str(path) for path in self.env_files],
                 "image": self.image_reference, "previous_image_id": self.old_image,
-                "sync_cutover_required": self.cutover_required,
-                "steps": ["拉取基础镜像并构建当前源码的 API 镜像", "核对镜像内 API 和 Node.js 版本", "停止原 API", "执行一次 db-init 完成数据库及同步协议升级", "仅替换 API 并等待 readiness",
+                "sync_cutover_cursor": self.sync_cursor, "sync_cursor_floor": self.sync_cursor_floor,
+                "steps": ["拉取基础镜像并构建当前源码的 API 镜像", "核对镜像内 API 和 Node.js 版本", "停止原 API", "执行一次 db-init 登记当前建库基线并应用新增迁移", "仅替换 API 并等待 readiness",
                           "原子保存 PROD_IMAGE_TAG，其他配置逐字保留"],
                 "requires": "执行前核对迁移兼容性；API 单实例会短暂停机，执行期间不要并行修改该项目 Docker 资源。"}
 
