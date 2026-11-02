@@ -483,11 +483,12 @@ class FrontendSwitch(RUNTIME.Bootstrap):
                 if (previous_target / "index.html").is_symlink():
                     raise ReleaseError("原站点首页不能是嵌套软链接。")
                 previous_metadata = previous_target / "version.json"
-                if previous_metadata.exists() or previous_metadata.is_symlink():
-                    if (previous_metadata.is_symlink() or not previous_metadata.is_file()
-                            or previous_metadata.stat().st_size > MAX_METADATA_BYTES):
-                        raise ReleaseError("原站点版本文件无效或包含嵌套链接。")
-                    version_metadata(previous_metadata.read_bytes(), self.component)
+                if not previous_metadata.exists() and not previous_metadata.is_symlink():
+                    raise ReleaseError("原站点缺少 version.json，当前发布入口要求有效版本标记；原入口和产物已保留。")
+                if (previous_metadata.is_symlink() or not previous_metadata.is_file()
+                        or previous_metadata.stat().st_size > MAX_METADATA_BYTES):
+                    raise ReleaseError("原站点版本文件无效或包含嵌套链接。")
+                version_metadata(previous_metadata.read_bytes(), self.component)
             return {"component": self.component, "site_link": str(self.site_link), "target": str(self.target),
                     "previous_target": previous["target"] if previous else None, "health_url": self.url,
                     "exclusive_site_changes_required": True}
