@@ -18,10 +18,6 @@ export type Library = paths['/api/v1/fitness/library']['get']['responses'][200][
 export type OfficialTemplate = Library['templates'][number];
 export type Catalog = {
   schema_version?: number;
-  source?: string;
-  source_commit?: string;
-  source_asset?: string;
-  source_asset_sha256?: string;
   taxonomies?: {
     body_parts: FitnessTaxon[];
     equipment: FitnessTaxon[];

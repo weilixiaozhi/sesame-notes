@@ -3,6 +3,7 @@ import { isOfficialCatalog, loadOfficialCatalog } from './official-catalog';
 import builtin from './exercise-catalog.json';
 
 const cacheKey = 'sesame:official-fitness-catalog:v1';
+const builtinContent = { exercises: builtin.exercises };
 
 /** 已停用动作仍携带完整元数据，供历史训练展示正确名称和说明。 */
 function publishedCatalog() {
@@ -87,7 +88,7 @@ describe('在线官方动作库', () => {
       const { taxonomies: _taxonomies, ...catalog } = publishedCatalog();
       expect(isOfficialCatalog(catalog)).toBe(false);
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(catalog), { status: 200 })));
-      expect(await loadOfficialCatalog()).toEqual(builtin);
+      expect(await loadOfficialCatalog()).toEqual(builtinContent);
       expect(localStorage.getItem(cacheKey)).toBeNull();
     } catch (cause) {
       throw new Error('在线分类目录完整性验证失败', { cause });
@@ -99,9 +100,9 @@ describe('在线官方动作库', () => {
       const { taxonomies: _taxonomies, ...catalog } = publishedCatalog();
       localStorage.setItem(cacheKey, JSON.stringify(catalog));
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('网络不可用')));
-      expect(await loadOfficialCatalog()).toEqual(builtin);
+      expect(await loadOfficialCatalog()).toEqual(builtinContent);
       localStorage.removeItem(cacheKey);
-      expect(await loadOfficialCatalog()).toEqual(builtin);
+      expect(await loadOfficialCatalog()).toEqual(builtinContent);
     } catch (cause) {
       throw new Error('离线缓存完整性与内置资源格式验证失败', { cause });
     }
@@ -126,6 +127,10 @@ describe('在线官方动作库', () => {
       const catalog = publishedCatalog();
       const payload = {
         ...catalog,
+        source: builtin.source,
+        source_commit: builtin.source_commit,
+        source_asset: builtin.source_asset,
+        source_asset_sha256: builtin.source_asset_sha256,
         attribution: '目录额外素材字段',
         server_extra: '目录额外元数据',
         exercises: catalog.exercises.map((entry) => ({
@@ -151,6 +156,6 @@ describe('在线官方动作库', () => {
   it('无网络且缓存损坏时使用内置文字资料', async () => {
     localStorage.setItem(cacheKey, 'invalid');
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('网络不可用')));
-    expect(await loadOfficialCatalog()).toEqual(builtin);
+    expect(await loadOfficialCatalog()).toEqual(builtinContent);
   });
 });
