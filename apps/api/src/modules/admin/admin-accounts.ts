@@ -405,7 +405,6 @@ export function registerAdminAccountRoutes(app: FastifyInstance, prisma: PrismaC
             where: { id: current.id },
             data: {
               deletedAt,
-              deletedBy: auth.username,
               isEnabled: false,
               updatedBy: auth.username,
               version: { increment: 1 },

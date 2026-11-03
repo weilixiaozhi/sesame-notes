@@ -137,11 +137,8 @@ export function registerAdminAuthRoutes(app: FastifyInstance, prisma: PrismaClie
               data: {
                 adminId: current.id,
                 tokenHash: hashAdminSessionToken(token),
-                createdAt: now,
                 lastSeenAt: now,
                 expiresAt: new Date(now.getTime() + (config.adminSessionTtlSeconds ?? 28_800) * 1000),
-                ip: request.ip.slice(0, 64),
-                userAgent: request.headers['user-agent']?.slice(0, 512) ?? null,
               },
               include: { admin: { include: { group: true } } },
             });

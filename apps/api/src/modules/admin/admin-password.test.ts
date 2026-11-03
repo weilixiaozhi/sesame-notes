@@ -44,7 +44,6 @@ function accountFixture(username: string, identityType = 'standard_user'): Admin
       updatedAt: now,
       createdBy: null,
       updatedBy: null,
-      deletedBy: null,
       deletedAt: null,
     },
     version: 1,
@@ -56,7 +55,6 @@ function accountFixture(username: string, identityType = 'standard_user'): Admin
     updatedAt: now,
     createdBy: null,
     updatedBy: null,
-    deletedBy: null,
     deletedAt: null,
   };
 }

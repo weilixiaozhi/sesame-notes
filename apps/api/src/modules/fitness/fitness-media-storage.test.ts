@@ -90,7 +90,7 @@ function repository() {
 async function saveMetadata(tx: Prisma.TransactionClient, id: string): Promise<void> {
   await tx.officialFitnessMedia.upsert({
     where: { id },
-    create: { id, fileName: 'test.gif', mimeType: 'image/gif', byteSize: 5, width: 1, height: 1, frames: 1 },
+    create: { id, fileName: 'test.gif', byteSize: 5, width: 1, height: 1, frames: 1 },
     update: {},
   });
 }

@@ -147,7 +147,6 @@ export function registerOfficialFitnessMediaRoutes(
               create: {
                 id: media.id,
                 fileName: body.filename,
-                mimeType: 'image/gif',
                 byteSize: media.bytes.length,
                 width: media.width,
                 height: media.height,

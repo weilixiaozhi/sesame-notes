@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { cp, mkdir, writeFile } from 'node:fs/promises';
 import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 import type { PrismaClient } from '@prisma/client';
 import { expect, it } from 'vitest';
 import { BASELINE_MIGRATION, CURRENT_HISTORY } from '../prisma/current-baseline.mjs';
@@ -42,6 +42,17 @@ assertLifecycleSuite('database-initialization.test.ts', process.env);
 
 const PROBE_MIGRATION = '20990101000000_current_probe';
 const BROKEN_MIGRATION = '20990102000000_broken_probe';
+const CLEANUP_MIGRATION = '20261103000000_remove_unused_storage_columns';
+const cleanupColumns: Record<string, string[]> = {
+  official_fitness_media: ['mime_type'],
+  ledger_invites: ['code_prefix'],
+  product_analytics_events: ['received_at'],
+  admin_sessions: ['user_agent', 'ip', 'created_at'],
+  mutation_reservations: ['created_at'],
+  idempotency_keys: ['created_at'],
+  admin_accounts: ['deleted_by'],
+  admin_groups: ['deleted_by'],
+};
 
 /** 读取正式迁移目录，验证新库只执行当前基线与后续显式增量。 */
 function expectedAppliedMigrations() {
@@ -71,12 +82,26 @@ async function initialize(
 }
 
 /** 复制当前基线到根目录 Temp，在专属项目内验证文件完整性和后续增量事务。 */
-async function createProject(migrations: Record<string, string> = {}): Promise<string> {
+async function createProject(migrations: Record<string, string> = {}, baselineOnly = false): Promise<string> {
   let project: string | undefined;
   try {
     project = await createOwnedFixture('prisma-current-baseline');
     const directory = join(project, 'prisma');
-    await cp(join(apiDirectory, 'prisma'), directory, { recursive: true });
+    const migrationRoot = join(apiDirectory, 'prisma/migrations');
+    await cp(join(apiDirectory, 'prisma'), directory, {
+      recursive: true,
+      // 独立基线夹具只复制冻结建库文件，正常夹具包含全部正式增量。
+      filter: (source) => {
+        const child = relative(migrationRoot, source);
+        return (
+          !baselineOnly ||
+          !child ||
+          child.startsWith('..') ||
+          child === 'migration_lock.toml' ||
+          child.split(sep)[0] === BASELINE_MIGRATION
+        );
+      },
+    });
     await linkOwnedFixtureDependencies(project);
     for (const [name, sql] of Object.entries(migrations)) {
       await mkdir(join(directory, 'migrations', name), { recursive: true });
@@ -86,6 +111,21 @@ async function createProject(migrations: Record<string, string> = {}): Promise<s
   } catch (cause) {
     if (project) await removeOwnedFixture(project);
     throw new Error('当前基线验收项目创建失败', { cause });
+  }
+}
+
+/** 在专属项目中保持冻结基线结构，用于验证迁移身份登记和拒绝边界。 */
+async function withBaselineDatabase(
+  run: (url: string, database: PrismaClient, setup: string) => Promise<void>,
+): Promise<void> {
+  let project: string | undefined;
+  try {
+    project = await createProject({}, true);
+    await withIsolatedDatabase((url, database) => run(url, database, project!));
+  } catch (cause) {
+    throw new Error('冻结基线独立夹具验收失败', { cause });
+  } finally {
+    if (project) await removeOwnedFixture(dirname(dirname(project)));
   }
 }
 
@@ -112,7 +152,7 @@ async function withIsolatedDatabase(run: (url: string, database: PrismaClient) =
 }
 
 /** 按表计算业务内容摘要，断言中只显示摘要，覆盖账号、种子、审计和同步事实。 */
-async function contentSnapshot(database: PrismaClient): Promise<Record<string, string>> {
+async function contentSnapshot(database: PrismaClient, omitRetiredColumns = false): Promise<Record<string, string>> {
   try {
     const tables = await database.$queryRaw<Array<{ name: string }>>`
       SELECT tablename AS name FROM pg_tables
@@ -121,8 +161,12 @@ async function contentSnapshot(database: PrismaClient): Promise<Record<string, s
     const snapshot: Record<string, string> = {};
     for (const { name } of tables) {
       if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error('业务表名无效');
+      const retired = omitRetiredColumns ? (cleanupColumns[name] ?? []) : [];
+      const projection = retired.length
+        ? `to_jsonb(item) - ARRAY[${retired.map((column) => `'${column}'`).join(',')}]::text[]`
+        : 'to_jsonb(item)';
       const [row] = await database.$queryRawUnsafe<Array<{ content: string }>>(
-        `SELECT COALESCE(jsonb_agg(to_jsonb(item) ORDER BY to_jsonb(item)::text),'[]'::jsonb)::text AS content FROM public."${name}" item`,
+        `SELECT COALESCE(jsonb_agg(${projection} ORDER BY (${projection})::text),'[]'::jsonb)::text AS content FROM public."${name}" item`,
       );
       snapshot[name] = createHash('sha256').update(row!.content).digest('hex');
     }
@@ -198,6 +242,76 @@ async function seedCurrentData(database: PrismaClient): Promise<string> {
     return user.id;
   } catch (cause) {
     throw new Error('当前业务数据夹具创建失败', { cause });
+  }
+}
+
+/** 写入待精简列的非空值及其对应业务，保证删列验收覆盖真实已有行。 */
+async function seedRetiredMetadata(database: PrismaClient, userId: string): Promise<void> {
+  try {
+    const ledger = await database.ledger.findFirstOrThrow({ where: { ownerId: userId } });
+    const admin = await database.adminAccount.create({
+      data: { username: 'storage_cleanup', displayName: '保留的后台用户', passwordHash: 'fixture-password-hash' },
+    });
+    const removedAdmin = await database.adminAccount.create({
+      data: { username: 'removed_cleanup', displayName: '保留的已删除后台用户', passwordHash: 'fixture-password-hash' },
+    });
+    const removedGroup = await database.adminGroup.create({ data: { name: '保留的已删除组' } });
+    await database.$executeRaw`
+      UPDATE admin_accounts SET deleted_at='2026-11-01'::timestamptz,is_enabled=false,
+        deleted_by='fixture-actor',updated_by='fixture-actor' WHERE id=${removedAdmin.id}::uuid
+    `;
+    await database.$executeRaw`
+      UPDATE admin_groups SET deleted_at='2026-11-01'::timestamptz,is_enabled=false,
+        deleted_by='fixture-actor',updated_by='fixture-actor' WHERE id=${removedGroup.id}::uuid
+    `;
+    await database.$executeRaw`
+      INSERT INTO ledger_invites(id,code_hash,code_prefix,ledger_id,created_by_id,expires_at)
+      VALUES (${randomUUID()}::uuid,${'1'.repeat(64)},'prefix01',${ledger.id}::uuid,${userId}::uuid,'2099-01-01'::timestamptz)
+    `;
+    await database.$executeRaw`
+      INSERT INTO official_fitness_media(id,file_name,mime_type,byte_size,width,height,frames)
+      VALUES (${'2'.repeat(64)},'保留的素材.gif','image/gif',12,2,3,4)
+    `;
+    await database.$executeRaw`
+      INSERT INTO product_analytics_events(actor_key,event_id,kind,occurred_at,received_at,platform)
+      VALUES (${'3'.repeat(64)},${randomUUID()}::uuid,'active','2026-11-01'::timestamptz,'2026-11-02'::timestamptz,'app')
+    `;
+    await database.$executeRaw`
+      INSERT INTO admin_sessions(id,admin_id,token_hash,created_at,last_seen_at,expires_at,ip,user_agent)
+      VALUES (${randomUUID()}::uuid,${admin.id}::uuid,${'4'.repeat(64)},'2026-11-01'::timestamptz,
+        '2026-11-02'::timestamptz,'2099-01-01'::timestamptz,'127.0.0.9','fixture-agent')
+    `;
+    await database.mutationReservation.create({
+      data: { scope: 'device', userId, scopeId: randomUUID(), mutationId: randomUUID(), requestHash: '5'.repeat(64) },
+    });
+    const epoch = await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } });
+    await database.idempotencyKey.create({
+      data: {
+        userId,
+        key: 'preserved-replay',
+        requestHash: '6'.repeat(64),
+        response: { preserved: true },
+        expiresAt: new Date('2099-01-01'),
+        generation: epoch.idempotencyGeneration,
+      },
+    });
+  } catch (cause) {
+    throw new Error('精简列存量数据夹具创建失败', { cause });
+  }
+}
+
+/** 只接受当前精简列全部消失，其他业务约束继续使用完整定义校验。 */
+async function expectRetiredColumnsAbsent(database: PrismaClient): Promise<void> {
+  try {
+    for (const [table, columns] of Object.entries(cleanupColumns)) {
+      const actual = await database.$queryRaw<Array<{ column_name: string }>>`
+        SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=${table}
+      `;
+      for (const column of columns) expect(actual.map((entry) => entry.column_name)).not.toContain(column);
+    }
+    await expectCurrentDefinitions(database);
+  } catch (cause) {
+    throw new Error('物理删列及保留约束验收失败', { cause });
   }
 }
 
@@ -432,7 +546,10 @@ it('空库直接建立当前业务约束与种子，重复部署保持对象和�
       await expectCurrentDefinitions(database);
       await expectFitnessWarmupRestSeconds(database);
       await expectFitnessReferenceIndex(database);
-      expect(expectedAppliedMigrations()).toEqual([{ migration_name: BASELINE_MIGRATION, applied: true }]);
+      expect(expectedAppliedMigrations()).toEqual([
+        { migration_name: BASELINE_MIGRATION, applied: true },
+        { migration_name: CLEANUP_MIGRATION, applied: true },
+      ]);
       expect(await database.officialFitnessContent.count()).toBeGreaterThan(100);
       expect(await database.officialFitnessTaxon.count()).toBe(38);
       expect(
@@ -459,21 +576,21 @@ it('空库直接建立当前业务约束与种子，重复部署保持对象和�
 }, 180_000);
 
 it('当前存量库仅收敛迁移记录，全部业务数据和同步代际逐字保留', async () => {
-  await withIsolatedDatabase(async (url, database) => {
+  await withBaselineDatabase(async (url, database, setup) => {
     try {
-      await initialize(url, database);
+      await initialize(url, database, setup);
       await seedCurrentData(database);
       await restoreCurrentHistory(database);
       const before = await contentSnapshot(database);
       const epoch = await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } });
-      await initialize(url, database);
+      await initialize(url, database, setup);
       expect(await contentSnapshot(database)).toEqual(before);
       expect(await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } })).toEqual(epoch);
       expect(
         await database.$queryRaw`SELECT migration_name,finished_at IS NOT NULL AS applied FROM _prisma_migrations`,
       ).toEqual([{ migration_name: BASELINE_MIGRATION, applied: true }]);
       const history = await migrationSnapshot(database);
-      await initialize(url, database);
+      await initialize(url, database, setup);
       expect(await contentSnapshot(database)).toEqual(before);
       expect(await migrationSnapshot(database)).toEqual(history);
     } catch (cause) {
@@ -483,27 +600,27 @@ it('当前存量库仅收敛迁移记录，全部业务数据和同步代际逐�
 }, 180_000);
 
 it('非当前结构、损坏部署记录和未完成同步状态均拒绝收敛，不改业务或记录', async () => {
-  await withIsolatedDatabase(async (url, database) => {
+  await withBaselineDatabase(async (url, database, setup) => {
     try {
-      await initialize(url, database);
+      await initialize(url, database, setup);
       await seedCurrentData(database);
       await restoreCurrentHistory(database);
       const before = await contentSnapshot(database);
       await database.$executeRaw`UPDATE _prisma_migrations SET checksum=${'0'.repeat(64)} WHERE migration_name=${CURRENT_HISTORY[0]!.name}`;
       const damaged = await migrationSnapshot(database);
-      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      await expect(initialize(url, database, setup)).rejects.toThrow('当前数据库初始化失败');
       expect(await migrationSnapshot(database)).toEqual(damaged);
       expect(await contentSnapshot(database)).toEqual(before);
       await restoreCurrentHistory(database);
       await database.$executeRawUnsafe('ALTER TABLE users ADD COLUMN unsupported_probe TEXT');
       const drifted = await migrationSnapshot(database);
-      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      await expect(initialize(url, database, setup)).rejects.toThrow('当前数据库初始化失败');
       expect(await migrationSnapshot(database)).toEqual(drifted);
       await database.$executeRawUnsafe('ALTER TABLE users DROP COLUMN unsupported_probe');
       expect(await contentSnapshot(database)).toEqual(before);
       await database.serverEpoch.update({ where: { id: 0 }, data: { syncCutoverCursor: null, syncCutoverAt: null } });
       const incomplete = await contentSnapshot(database);
-      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      await expect(initialize(url, database, setup)).rejects.toThrow('当前数据库初始化失败');
       expect(await migrationSnapshot(database)).toEqual(drifted);
       expect(await contentSnapshot(database)).toEqual(incomplete);
     } catch (cause) {
@@ -513,9 +630,9 @@ it('非当前结构、损坏部署记录和未完成同步状态均拒绝收敛�
 }, 180_000);
 
 it('基线登记写入失败时回滚整组迁移记录，业务内容与同步水位保持原值', async () => {
-  await withIsolatedDatabase(async (url, database) => {
+  await withBaselineDatabase(async (url, database, setup) => {
     try {
-      await initialize(url, database);
+      await initialize(url, database, setup);
       await seedCurrentData(database);
       await restoreCurrentHistory(database);
       const before = await contentSnapshot(database);
@@ -534,7 +651,7 @@ it('基线登记写入失败时回滚整组迁移记录，业务内容与同步�
         FOR EACH ROW WHEN (NEW.migration_name='${BASELINE_MIGRATION}')
         EXECUTE FUNCTION baseline_failure.reject_baseline()
       `);
-      await expect(initialize(url, database)).rejects.toThrow('当前数据库初始化失败');
+      await expect(initialize(url, database, setup)).rejects.toThrow('当前数据库初始化失败');
       expect(await migrationSnapshot(database)).toEqual(history);
       expect(await contentSnapshot(database)).toEqual(before);
     } catch (cause) {
@@ -591,6 +708,75 @@ it('当前基线支持后续显式增量，失败事务保留业务数据且不�
       ]);
     } catch (cause) {
       throw new Error('当前基线增量与事务回滚验收失败', { cause });
+    } finally {
+      if (project) await removeOwnedFixture(dirname(dirname(project)));
+    }
+  });
+}, 180_000);
+
+it('存量基线精简物理列后保留全部其余行、序列、幂等凭据与同步水位', async () => {
+  await withBaselineDatabase(async (url, database, setup) => {
+    try {
+      await initialize(url, database, setup);
+      const userId = await seedCurrentData(database);
+      await seedRetiredMetadata(database, userId);
+      const before = await contentSnapshot(database, true);
+      const epoch = await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } });
+      await initialize(url, database);
+      await expectRetiredColumnsAbsent(database);
+      expect(await contentSnapshot(database, true)).toEqual(before);
+      expect(await database.serverEpoch.findUniqueOrThrow({ where: { id: 0 } })).toEqual(epoch);
+      expect(
+        await database.$queryRaw`
+        SELECT migration_name,finished_at IS NOT NULL AS applied FROM _prisma_migrations ORDER BY migration_name
+      `,
+      ).toEqual(expectedAppliedMigrations());
+      const receipt = await database.idempotencyKey.findUniqueOrThrow({
+        where: { userId_key: { userId, key: 'preserved-replay' } },
+      });
+      expect(receipt.response).toEqual({ preserved: true });
+      expect(receipt.generation).toBe(epoch.idempotencyGeneration);
+      const history = await migrationSnapshot(database);
+      await initialize(url, database);
+      expect(await contentSnapshot(database, true)).toEqual(before);
+      expect(await migrationSnapshot(database)).toEqual(history);
+    } catch (cause) {
+      throw new Error('存量物理列精简与幂等验收失败', { cause });
+    }
+  });
+}, 180_000);
+
+it('精简增量末列存在依赖时整次DDL回滚，已删除列与约束全部恢复', async () => {
+  await withBaselineDatabase(async (url, database, setup) => {
+    let project: string | undefined;
+    try {
+      await initialize(url, database, setup);
+      const userId = await seedCurrentData(database);
+      await seedRetiredMetadata(database, userId);
+      const before = await contentSnapshot(database);
+      const constraints = await database.$queryRaw`
+        SELECT conname,pg_get_constraintdef(oid) AS definition FROM pg_constraint
+        WHERE conrelid='official_fitness_media'::regclass ORDER BY conname
+      `;
+      project = await createProject({
+        '20261102120000_dependency_probe':
+          'CREATE VIEW public.storage_cleanup_dependency AS SELECT created_at FROM public.idempotency_keys;\n',
+      });
+      await expect(initialize(url, database, project)).rejects.toThrow('当前数据库初始化失败');
+      expect(await contentSnapshot(database)).toEqual(before);
+      expect(
+        await database.$queryRaw`
+        SELECT conname,pg_get_constraintdef(oid) AS definition FROM pg_constraint
+        WHERE conrelid='official_fitness_media'::regclass ORDER BY conname
+      `,
+      ).toEqual(constraints);
+      expect(
+        await database.$queryRaw`
+        SELECT finished_at IS NULL AS failed FROM _prisma_migrations WHERE migration_name=${CLEANUP_MIGRATION}
+      `,
+      ).toEqual([{ failed: true }]);
+    } catch (cause) {
+      throw new Error('精简增量失败回滚验收失败', { cause });
     } finally {
       if (project) await removeOwnedFixture(dirname(dirname(project)));
     }

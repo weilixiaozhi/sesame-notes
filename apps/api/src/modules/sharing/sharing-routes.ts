@@ -186,7 +186,6 @@ export function registerSharingRoutes(app: FastifyInstance, prisma: PrismaClient
               ledgerId,
               createdById: auth.userId,
               codeHash: hashInviteCode(code),
-              codePrefix: code.slice(0, 8),
               role: 'editor',
               expiresAt: new Date(Date.now() + (body.expires_in_hours ?? 24) * 3_600_000),
             },

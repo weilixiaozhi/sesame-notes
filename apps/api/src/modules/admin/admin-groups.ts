@@ -379,7 +379,6 @@ export function registerAdminGroupRoutes(app: FastifyInstance, prisma: PrismaCli
             where: { id: current.id },
             data: {
               deletedAt: new Date(),
-              deletedBy: auth.username,
               isEnabled: false,
               version: { increment: 1 },
               updatedBy: auth.username,
