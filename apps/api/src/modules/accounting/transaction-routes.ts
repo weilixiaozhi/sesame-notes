@@ -33,6 +33,7 @@ import {
 import { decodeTransactionCursor, encodeTransactionCursor, type TransactionCursor } from '../../shared/pagination.js';
 
 import { TransactionQuerySchema, transactionQueryWhere, type TransactionQuery } from './transaction-query.js';
+import { registerTransactionHistoryRoutes } from './transaction-history-routes.js';
 
 const BaseRevisionSchema = Type.Integer({ minimum: 0 });
 
@@ -46,6 +47,7 @@ type TransactionPatch = Partial<TransactionCreate> & { base_revision: number };
 
 /** 注册账本级交易接口，所有写操作与同步事件在同一事务提交。 */
 export function registerTransactionRoutes(app: FastifyInstance, prisma: PrismaClient, config: ApiConfig): void {
+  registerTransactionHistoryRoutes(app, prisma, config);
   const secured = { preHandler: [authenticate(config, prisma), requireScopes('sync:read', 'sync:write')] };
   app.get(
     '/api/v1/ledgers/:ledger_id/transactions',
