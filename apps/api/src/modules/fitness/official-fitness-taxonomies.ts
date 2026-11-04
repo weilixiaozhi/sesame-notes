@@ -32,7 +32,9 @@ const kindParams = Type.Object({ kind: FitnessTaxonKindSchema });
 const taxonParams = Type.Object({ kind: FitnessTaxonKindSchema, taxon_id: idSchema });
 
 /** 公共目录保留软删除项的名称，历史训练仍能显示正确标签。 */
-export function publicFitnessTaxon(row: OfficialFitnessTaxon) {
+export function publicFitnessTaxon(
+  row: Pick<OfficialFitnessTaxon, 'id' | 'nameZh' | 'nameHant' | 'nameEn' | 'deletedAt'>,
+) {
   return {
     id: row.id,
     name: { zh: row.nameZh, zh_hant: row.nameHant, en: row.nameEn },
@@ -90,7 +92,10 @@ export async function validateOfficialTaxonomies(
       requested.push(...(content.equipment as string[]).map((id) => ({ kind: 'equipment' as const, id })));
     }
     if (!requested.length) return;
-    const rows = await tx.officialFitnessTaxon.findMany({ where: { OR: requested, deletedAt: null } });
+    const rows = await tx.officialFitnessTaxon.findMany({
+      where: { OR: requested, deletedAt: null },
+      select: { kind: true, id: true },
+    });
     if (requested.some((entry) => !rows.some((row) => row.kind === entry.kind && row.id === entry.id))) {
       throw new ApiError(409, 'FITNESS_TAXON_UNAVAILABLE', '部位或器械已删除或不存在，请刷新分类后重新选择');
     }

@@ -54,7 +54,7 @@ describe('同步原值业务错误边界', () => {
       };
       const prisma = {
         $transaction: async (work: (client: typeof tx) => Promise<unknown>) => work(tx),
-        $queryRaw: async () => [{ cursor: 0n, completedAt: now }],
+        $queryRaw: async () => [{ cursor: 0n, cursorFloor: 0n }],
         syncChange: { findFirst: async () => ({ changeId: 42n }) },
       };
       for (const schema of [CategorySchema, CategoryConflictSchema, CategoryResolutionSchema, ErrorSchema])

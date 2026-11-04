@@ -102,7 +102,8 @@ export async function publishBannerMedia(
         // 提交确认丢失时先重新取得同一把锁，只有数据库确认无元数据才删除本次新文件。
         await prisma.$transaction(async (tx) => {
           await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`banner-media:${media.id}`}, 0))`;
-          if (!(await tx.appBannerMedia.findUnique({ where: { id: media.id } }))) await removeFile(target);
+          if (!(await tx.appBannerMedia.findUnique({ where: { id: media.id }, select: { id: true } })))
+            await removeFile(target);
         });
       } catch (cleanupError) {
         logger.error({ err: cleanupError, media_id: media.id }, 'Banner 上传提交状态无法确认，保留文件等待核对');

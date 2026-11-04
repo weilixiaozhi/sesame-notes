@@ -65,7 +65,7 @@ export function adminBannerResponse(row: AppBanner, names: ReadonlyMap<string, s
 /** 在写事务中核对图片和详情目标，避免把不存在或停用的官方内容配置成入口。 */
 export async function validateBannerContent(db: BannerDatabase, body: BannerCreate): Promise<void> {
   try {
-    if (!(await db.appBannerMedia.findUnique({ where: { id: body.image_id } })))
+    if (!(await db.appBannerMedia.findUnique({ where: { id: body.image_id }, select: { id: true } })))
       throw new ApiError(400, 'BANNER_MEDIA_NOT_FOUND', '所选图片不存在，请重新上传');
     if (body.target === 'official-plan' || body.target === 'official-template') {
       if (!body.target_id) throw new ApiError(400, 'BANNER_TARGET_REQUIRED', '请选择要打开的训练计划或模板');

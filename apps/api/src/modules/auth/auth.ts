@@ -426,16 +426,16 @@ function registerAuthClientRoutes(
   );
 }
 
-/** 按手机号解析登录用户；不存在或禁用的账号与错误密码走同一响应路径，防止枚举。 */
+/** 按规范化手机号定位账号锁所需的身份，登录凭据在锁内读取。 */
 async function resolveLoginUser(
   prisma: PrismaClient,
   body: { country_code: string; phone: string },
-): Promise<(SessionUser & { passwordHash: string }) | null> {
+): Promise<Pick<SessionUser, 'id' | 'phoneE164'> | null> {
   try {
     const phoneE164 = normalizeE164Phone(body.country_code, body.phone);
     return await prisma.user.findUnique({
       where: { phoneE164 },
-      include: { profile: true },
+      select: { id: true, phoneE164: true },
     });
   } catch (error) {
     if (error instanceof PhoneInvalidError) throw new ApiError(400, 'PHONE_INVALID', '请输入有效的手机号');

@@ -322,12 +322,12 @@ function registerBannerMediaRoutes(app: FastifyInstance, prisma: PrismaClient, c
       async (request, reply) =>
         execute(request, '读取 Banner 图片', async () => {
           const { media_id: id } = request.params as { media_id: string };
-          const media = await prisma.appBannerMedia.findUnique({ where: { id } });
+          const media = await prisma.appBannerMedia.findUnique({ where: { id }, select: { id: true } });
           const referenced =
             admin ||
             (await prisma.appBanner.findFirst({
               where: { imageId: id, isEnabled: true, deletedAt: null },
-              select: { slot: true },
+              select: { id: true },
             }));
           if (!media || !referenced) throw new ApiError(404, 'BANNER_MEDIA_NOT_FOUND', 'Banner 图片不存在');
           let bytes: Buffer;

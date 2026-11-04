@@ -19,7 +19,7 @@ function routes(findMany = vi.fn().mockResolvedValue([]), cutoverCursor = 0n) {
   } as unknown as FastifyInstance;
   const prisma = {
     syncChange: { findMany },
-    $queryRaw: vi.fn().mockResolvedValue([{ cursor: cutoverCursor, completedAt: new Date(0) }]),
+    $queryRaw: vi.fn().mockResolvedValue([{ cursor: cutoverCursor, cursorFloor: 0n }]),
   } as unknown as PrismaClient;
   const config = { syncRetentionMinCursor: 0 } as ApiConfig;
   registerPullRoutes(app, prisma, config);

@@ -2,12 +2,12 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import { ApiError } from './errors.js';
 
 type CutoverSource = Pick<PrismaClient | Prisma.TransactionClient, '$queryRaw'>;
-export type SyncCutover = { cursor: bigint | null; completedAt: Date | null; cursorFloor: bigint };
+type SyncCutover = { cursor: bigint | null; cursorFloor: bigint };
 
 /** 切点属于服务端持久事实，普通读写不会隐式创建或推进它。 */
-export async function readSyncCutover(prisma: CutoverSource): Promise<SyncCutover | null> {
+async function readSyncCutover(prisma: CutoverSource): Promise<SyncCutover | null> {
   const [row] = await prisma.$queryRaw<SyncCutover[]>`
-    SELECT sync_cutover_cursor AS cursor, sync_cutover_at AS "completedAt", sync_cursor_floor AS "cursorFloor"
+    SELECT sync_cutover_cursor AS cursor, sync_cursor_floor AS "cursorFloor"
     FROM server_epochs WHERE id = 0
   `;
   return row ?? null;

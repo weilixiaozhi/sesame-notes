@@ -36,8 +36,7 @@ function repository() {
     }),
     $queryRaw: vi.fn(async (query: TemplateStringsArray) => {
       const sql = query.join('');
-      if (sql.includes('server_epochs'))
-        return [{ cursor: state.cutover, completedAt: new Date(0), cursorFloor: state.floor }];
+      if (sql.includes('server_epochs')) return [{ cursor: state.cutover, cursorFloor: state.floor }];
       if (sql.includes('SELECT id FROM users')) return [{ id: 'deleting-user' }];
       throw new Error(`未声明的测试查询：${sql}`);
     }),

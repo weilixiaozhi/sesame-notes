@@ -197,7 +197,7 @@ export function registerOfficialFitnessMediaRoutes(
           const { media_id: id } = request.params as { media_id: string };
           const preview = (request.query as { preview?: '1' }).preview === '1';
           if (/^[a-f0-9]{64}$/.test(id)) {
-            const media = await prisma.officialFitnessMedia.findUnique({ where: { id } });
+            const media = await prisma.officialFitnessMedia.findUnique({ where: { id }, select: { id: true } });
             const referenced =
               admin ||
               (await prisma.officialFitnessContent.findFirst({

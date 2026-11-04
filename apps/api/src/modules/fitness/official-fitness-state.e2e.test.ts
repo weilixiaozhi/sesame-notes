@@ -1,7 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { afterAll, expect, it } from 'vitest';
 import { testFixtureDatabaseUrl } from '../../../test/existing-test-database.js';
 import { advanceOfficialContentVersion } from './official-fitness-state.js';
+import { validateOfficialContent } from './official-fitness.js';
+import library from './fitness-library.json' with { type: 'json' };
 
 const prisma = new PrismaClient({ datasourceUrl: testFixtureDatabaseUrl() });
 
@@ -46,4 +49,78 @@ it('目录版本缺失使同一事务的正文修改回滚，不能重建版本�
   expect(failure).toMatchObject({ message: '官方健身目录版本更新失败', cause: { code: 'P2025' } });
   expect(await prisma.officialFitnessState.findUniqueOrThrow({ where: { id: 1 } })).toEqual(state);
   expect(await prisma.officialFitnessContent.findUniqueOrThrow({ where: { id: content.id } })).toEqual(content);
+});
+
+it('官方引用允许重复身份和休息日，并只阻止正在使用的内容停用', async () => {
+  const rollback = new Error('结束官方引用验收事务');
+  try {
+    await prisma.$transaction(async (tx) => {
+      const originalExercise = await tx.officialFitnessContent.findUniqueOrThrow({ where: { id: '0025' } });
+      const exerciseId = randomUUID();
+      const templateId = randomUUID();
+      const planId = randomUUID();
+      const exercise = await tx.officialFitnessContent.create({
+        data: {
+          id: exerciseId,
+          kind: 'exercise',
+          content: { ...(originalExercise.content as object), id: exerciseId },
+        },
+      });
+      const originalTemplate = library.templates[0]!;
+      const repeatedExercise = { ...originalTemplate.exercises[0]!, exercise_id: exerciseId };
+      const template = await tx.officialFitnessContent.create({
+        data: {
+          id: templateId,
+          kind: 'template',
+          content: {
+            ...originalTemplate,
+            id: templateId,
+            equipment: [],
+            exercises: [repeatedExercise, repeatedExercise],
+          },
+        },
+      });
+      const originalPlan = library.plans[0]!;
+      const plan = await tx.officialFitnessContent.create({
+        data: {
+          id: planId,
+          kind: 'plan',
+          content: {
+            ...originalPlan,
+            id: planId,
+            days: originalPlan.days.map((day, index) => ({ ...day, template_id: index === 0 ? null : templateId })),
+          },
+        },
+      });
+
+      await validateOfficialContent(tx, template);
+      await validateOfficialContent(tx, plan);
+      await expect(validateOfficialContent(tx, { ...exercise, isEnabled: false })).rejects.toMatchObject({
+        statusCode: 409,
+        code: 'FITNESS_CONTENT_REFERENCED',
+      });
+      await expect(validateOfficialContent(tx, { ...template, isEnabled: false })).rejects.toMatchObject({
+        statusCode: 409,
+        code: 'FITNESS_CONTENT_REFERENCED',
+      });
+
+      await tx.officialFitnessContent.update({ where: { id: planId }, data: { isEnabled: false } });
+      await validateOfficialContent(tx, { ...template, isEnabled: false });
+      await tx.officialFitnessContent.update({ where: { id: templateId }, data: { isEnabled: false } });
+      await validateOfficialContent(tx, { ...exercise, isEnabled: false });
+      await expect(validateOfficialContent(tx, plan)).rejects.toMatchObject({
+        statusCode: 409,
+        code: 'FITNESS_REFERENCE_UNAVAILABLE',
+      });
+
+      await tx.officialFitnessContent.update({ where: { id: exerciseId }, data: { isEnabled: false } });
+      await expect(validateOfficialContent(tx, template)).rejects.toMatchObject({
+        statusCode: 409,
+        code: 'FITNESS_REFERENCE_UNAVAILABLE',
+      });
+      throw rollback;
+    });
+  } catch (cause) {
+    if (cause !== rollback) throw new Error('官方内容引用验收失败', { cause });
+  }
 });

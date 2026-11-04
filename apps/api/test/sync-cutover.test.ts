@@ -9,11 +9,9 @@ import type { SyncTransaction } from '../src/shared/sync-transaction.js';
 /** 模拟当前同步切点、持久下界与事件水位，验证读取和条件写入共用同一边界。 */
 function repository() {
   try {
-    const state = { cursor: null as bigint | null, completedAt: null as Date | null, cursorFloor: 0n, observed: 0n };
+    const state = { cursor: null as bigint | null, cursorFloor: 0n, observed: 0n };
     const db = {
-      $queryRaw: vi.fn(async () => [
-        { cursor: state.cursor, completedAt: state.completedAt, cursorFloor: state.cursorFloor },
-      ]),
+      $queryRaw: vi.fn(async () => [{ cursor: state.cursor, cursorFloor: state.cursorFloor }]),
       syncChange: {
         aggregate: vi.fn(async () => ({ _max: { changeId: state.observed || null } })),
         findFirst: vi.fn(async (): Promise<{ changeId: bigint } | null> => null),
@@ -32,7 +30,6 @@ describe('当前同步协议的持久水位', () => {
       code: 'SYNC_PROTOCOL_MIGRATION_REQUIRED',
     });
     fixture.state.cursor = 42n;
-    fixture.state.completedAt = new Date(0);
     fixture.state.observed = 0n;
     expect(await fullSnapshotCursor(fixture.prisma, { syncRetentionMinCursor: 0 } as ApiConfig)).toBe(42n);
     expect(await latestVisibleCursor(fixture.prisma, 'user')).toBe(42n);
@@ -47,7 +44,6 @@ describe('当前同步协议的持久水位', () => {
     try {
       const fixture = repository();
       fixture.state.cursor = 42n;
-      fixture.state.completedAt = new Date(0);
       fixture.state.observed = 0n;
       const tx = fixture.prisma as unknown as SyncTransaction;
       const scope = { memoBookId: '11111111-1111-4111-8111-111111111111' };
@@ -71,7 +67,6 @@ describe('当前同步协议的持久水位', () => {
     try {
       const fixture = repository();
       fixture.state.cursor = 42n;
-      fixture.state.completedAt = new Date(0);
       fixture.state.cursorFloor = 70n;
       fixture.state.observed = 60n;
       expect(await requireSyncCutover(fixture.prisma)).toBe(42n);

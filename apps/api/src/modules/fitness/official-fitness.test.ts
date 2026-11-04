@@ -63,7 +63,7 @@ function repository() {
   const db = {
     officialFitnessContent: {
       findMany: vi.fn().mockResolvedValue([row()]),
-      findFirst: vi.fn().mockResolvedValue(row()),
+      findFirst: vi.fn().mockResolvedValue(null),
       findUnique: vi.fn().mockResolvedValue(row()),
       count: vi.fn().mockResolvedValue(1),
       create: vi.fn(),
@@ -193,6 +193,16 @@ describe('官方健身目录', () => {
       expect(response.statusCode, response.body).toBe(200);
       expect(response.json().content_version).toBe(40);
       expect(response.headers.etag).toMatch(/^"fitness-[0-9a-f]{24}"$/);
+      if (url.endsWith('/library')) {
+        expect(db.officialFitnessTaxon.findMany).not.toHaveBeenCalled();
+        expect(db.officialFitnessContent.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { kind: { in: ['template', 'plan'] }, isEnabled: true } }),
+        );
+      } else {
+        expect(db.officialFitnessContent.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ where: { kind: 'exercise' } }),
+        );
+      }
       const cached = await app.inject({ url, headers: { 'if-none-match': String(response.headers.etag) } });
       expect(cached.statusCode, cached.body).toBe(304);
       expect(cached.body).toBe('');
@@ -338,20 +348,16 @@ describe('官方健身目录', () => {
     const db = repository();
     const tx = db as unknown as Prisma.TransactionClient;
     const template = library.templates[0]!;
+    db.officialFitnessContent.count.mockResolvedValue(0);
     await expect(
       validateOfficialContent(tx, row({ id: template.id, kind: 'template', content: template })),
-    ).rejects.toMatchObject({ code: 'FITNESS_REFERENCE_UNAVAILABLE' });
+    ).rejects.toMatchObject({ statusCode: 409, code: 'FITNESS_REFERENCE_UNAVAILABLE' });
     await expect(
       validateOfficialContent(tx, row({ id: library.plans[0]!.id, kind: 'plan', content: library.plans[0]! })),
-    ).rejects.toMatchObject({ code: 'FITNESS_REFERENCE_UNAVAILABLE' });
-    db.officialFitnessContent.findMany.mockResolvedValue([
-      row({
-        id: template.id,
-        kind: 'template',
-        content: { ...template, exercises: [{ ...template.exercises[0]!, exercise_id: '0025' }] },
-      }),
-    ]);
+    ).rejects.toMatchObject({ statusCode: 409, code: 'FITNESS_REFERENCE_UNAVAILABLE' });
+    db.officialFitnessContent.findFirst.mockResolvedValue({ id: template.id });
     await expect(validateOfficialContent(tx, row({ isEnabled: false }))).rejects.toMatchObject({
+      statusCode: 409,
       code: 'FITNESS_CONTENT_REFERENCED',
     });
   });

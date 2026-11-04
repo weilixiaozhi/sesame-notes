@@ -20,7 +20,7 @@ async function setup(scopes: string[]) {
       serverEpoch: { findUniqueOrThrow: vi.fn().mockResolvedValue({ authGeneration: id }) },
       device: { findFirst: vi.fn().mockResolvedValue({ id }) },
       syncChange: { findMany: vi.fn().mockResolvedValue([]) },
-      $queryRaw: vi.fn().mockResolvedValue([{ cursor: 0n, completedAt: new Date(0) }]),
+      $queryRaw: vi.fn().mockResolvedValue([{ cursor: 0n, cursorFloor: 0n }]),
       $disconnect: vi.fn().mockResolvedValue(undefined),
     };
     const app = buildApp({ logger: false, config, prisma: prisma as unknown as PrismaClient });

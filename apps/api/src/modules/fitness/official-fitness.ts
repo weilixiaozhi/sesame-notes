@@ -94,71 +94,65 @@ export async function validateOfficialContent(
   tx: Prisma.TransactionClient,
   row: Pick<OfficialFitnessContent, 'id' | 'kind' | 'content' | 'isEnabled'>,
 ): Promise<void> {
-  const content = row.content as Content;
-  await validateOfficialTaxonomies(tx, row.kind, content);
-  const active = await tx.officialFitnessContent.findMany({
-    where: { isEnabled: true },
-  });
-  if (row.kind === 'exercise') {
-    const exercise = content as OfficialExercise;
-    if (exercise.media_id) {
-      if (!(await tx.officialFitnessMedia.findUnique({ where: { id: exercise.media_id } })))
-        throw new ApiError(400, 'FITNESS_MEDIA_NOT_FOUND', '动作素材不存在，请重新上传');
-    } else if (!Object.values(builtinMedia).includes(exercise.gif_asset)) {
-      throw new ApiError(400, 'FITNESS_MEDIA_NOT_FOUND', '请选择有效的动作 GIF 素材');
+  try {
+    const content = row.content as Content;
+    await validateOfficialTaxonomies(tx, row.kind, content);
+    if (row.kind === 'exercise') {
+      const exercise = content as OfficialExercise;
+      if (exercise.media_id) {
+        if (!(await tx.officialFitnessMedia.findUnique({ where: { id: exercise.media_id }, select: { id: true } })))
+          throw new ApiError(400, 'FITNESS_MEDIA_NOT_FOUND', '动作素材不存在，请重新上传');
+      } else if (!Object.values(builtinMedia).includes(exercise.gif_asset)) {
+        throw new ApiError(400, 'FITNESS_MEDIA_NOT_FOUND', '请选择有效的动作 GIF 素材');
+      }
+      // 停用前查找仍引用该动作的启用模板，只需要知道是否存在。
+      if (
+        !row.isEnabled &&
+        (await tx.officialFitnessContent.findFirst({
+          where: {
+            kind: 'template',
+            isEnabled: true,
+            content: { path: ['exercises'], array_contains: [{ exercise_id: row.id }] },
+          },
+          select: { id: true },
+        }))
+      )
+        throw new ApiError(409, 'FITNESS_CONTENT_REFERENCED', '动作仍被启用的训练模板引用，请先调整模板');
+    } else if (row.kind === 'template') {
+      if (row.isEnabled) {
+        const template = content as unknown as FitnessLibrary['templates'][number];
+        const ids = [...new Set(template.exercises.map((exercise) => exercise.exercise_id))];
+        // 同一动作可以在模板中重复出现，按去重后的身份确认每个引用均有效。
+        const count = await tx.officialFitnessContent.count({
+          where: { kind: 'exercise', isEnabled: true, id: { in: ids } },
+        });
+        if (count !== ids.length)
+          throw new ApiError(409, 'FITNESS_REFERENCE_UNAVAILABLE', '模板引用的动作不存在或已停用');
+      } else if (
+        await tx.officialFitnessContent.findFirst({
+          where: {
+            kind: 'plan',
+            isEnabled: true,
+            content: { path: ['days'], array_contains: [{ template_id: row.id }] },
+          },
+          select: { id: true },
+        })
+      ) {
+        throw new ApiError(409, 'FITNESS_CONTENT_REFERENCED', '模板仍被启用的训练计划引用，请先调整计划');
+      }
+    } else if (row.kind === 'plan' && row.isEnabled) {
+      const plan = content as unknown as FitnessLibrary['plans'][number];
+      const ids = [...new Set(plan.days.map((day) => day.template_id).filter((id) => id !== null))];
+      const count = await tx.officialFitnessContent.count({
+        where: { kind: 'template', isEnabled: true, id: { in: ids } },
+      });
+      if (count !== ids.length)
+        throw new ApiError(409, 'FITNESS_REFERENCE_UNAVAILABLE', '计划引用的模板不存在或已停用');
     }
-    if (
-      !row.isEnabled &&
-      active.some(
-        (item) =>
-          item.kind === 'template' &&
-          (item.content as unknown as FitnessLibrary['templates'][number]).exercises.some(
-            (exercise) => exercise.exercise_id === row.id,
-          ),
-      )
-    )
-      throw new ApiError(409, 'FITNESS_CONTENT_REFERENCED', '动作仍被启用的训练模板引用，请先调整模板');
+  } catch (cause) {
+    if (cause instanceof ApiError) throw cause;
+    throw new Error('官方健身内容引用校验失败', { cause });
   }
-  if (row.kind === 'template') {
-    const template = content as unknown as FitnessLibrary['templates'][number];
-    if (
-      row.isEnabled &&
-      template.exercises.some(
-        (exercise) => !active.some((item) => item.kind === 'exercise' && item.id === exercise.exercise_id),
-      )
-    )
-      throw new ApiError(409, 'FITNESS_REFERENCE_UNAVAILABLE', '模板引用的动作不存在或已停用');
-    if (
-      !row.isEnabled &&
-      active.some(
-        (item) =>
-          item.kind === 'plan' &&
-          (item.content as unknown as FitnessLibrary['plans'][number]).days.some((day) => day.template_id === row.id),
-      )
-    )
-      throw new ApiError(409, 'FITNESS_CONTENT_REFERENCED', '模板仍被启用的训练计划引用，请先调整计划');
-  }
-  if (
-    row.kind === 'plan' &&
-    row.isEnabled &&
-    (content as unknown as FitnessLibrary['plans'][number]).days.some(
-      (day) =>
-        day.template_id !== null && !active.some((item) => item.kind === 'template' && item.id === day.template_id),
-    )
-  )
-    throw new ApiError(409, 'FITNESS_REFERENCE_UNAVAILABLE', '计划引用的模板不存在或已停用');
-}
-
-/** 一次读取同一快照中的版本与正文，避免并发保存生成不一致缓存。 */
-export async function readOfficialContent(prisma: PrismaClient) {
-  return prisma.$transaction(
-    async (tx) => ({
-      version: (await tx.officialFitnessState.findUniqueOrThrow({ where: { id: 1 } })).contentVersion,
-      rows: await tx.officialFitnessContent.findMany({ orderBy: { id: 'asc' } }),
-      taxonomies: await tx.officialFitnessTaxon.findMany({ orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }),
-    }),
-    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
-  );
 }
 
 /** 已保存动作进入同步身份白名单；停用只影响选择入口，历史记录仍可同步。 */
@@ -410,7 +404,24 @@ export function registerOfficialFitnessRoutes(app: FastifyInstance, prisma: Pris
     },
     async (request, reply) =>
       execute(request, '读取官方动作目录', async () => {
-        const { version, rows, taxonomies } = await readOfficialContent(prisma);
+        // 同一快照读取版本、分类和动作，保留历史训练引用的停用动作与已删除分类。
+        const { version, exercises, taxonomies } = await prisma.$transaction(
+          async (tx) => ({
+            version: (
+              await tx.officialFitnessState.findUniqueOrThrow({ where: { id: 1 }, select: { contentVersion: true } })
+            ).contentVersion,
+            exercises: await tx.officialFitnessContent.findMany({
+              where: { kind: 'exercise' },
+              orderBy: { id: 'asc' },
+              select: { content: true, isEnabled: true },
+            }),
+            taxonomies: await tx.officialFitnessTaxon.findMany({
+              orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+              select: { id: true, kind: true, nameZh: true, nameHant: true, nameEn: true, deletedAt: true },
+            }),
+          }),
+          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+        );
         const result = {
           schema_version: 1 as const,
           content_version: version,
@@ -418,13 +429,11 @@ export function registerOfficialFitnessRoutes(app: FastifyInstance, prisma: Pris
             body_parts: taxonomies.filter((row) => row.kind === 'body_part').map(publicFitnessTaxon),
             equipment: taxonomies.filter((row) => row.kind === 'equipment').map(publicFitnessTaxon),
           },
-          exercises: rows
-            .filter((row) => row.kind === 'exercise')
-            .map((row) => ({
-              ...(row.content as unknown as OfficialExercise),
-              media_url: officialMediaUrl(row.content as unknown as OfficialExercise),
-              is_enabled: row.isEnabled,
-            })),
+          exercises: exercises.map((row) => ({
+            ...(row.content as unknown as OfficialExercise),
+            media_url: officialMediaUrl(row.content as unknown as OfficialExercise),
+            is_enabled: row.isEnabled,
+          })),
         };
         const etag = contentEtag(result);
         reply.header('etag', etag).header('cache-control', 'public, max-age=60, stale-if-error=86400');

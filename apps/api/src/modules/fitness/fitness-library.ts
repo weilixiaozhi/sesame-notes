@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import { Value } from '@sinclair/typebox/value';
 import type { FastifyInstance } from 'fastify';
 import { execute } from '../../shared/execute.js';
@@ -6,7 +6,7 @@ import { execute } from '../../shared/execute.js';
 import exerciseCatalog from './fitness-catalog.json' with { type: 'json' };
 import librarySource from './fitness-library.json' with { type: 'json' };
 import { FitnessLibrarySchema, type FitnessLibrary } from './fitness-library-schemas.js';
-import { contentEtag, readOfficialContent } from './official-fitness.js';
+import { contentEtag } from './official-fitness.js';
 
 /** 校验官方内容的封闭结构、稳定身份、计划引用和动作目录引用。 */
 export function validateFitnessLibrary(value: unknown): asserts value is FitnessLibrary {
@@ -64,15 +64,28 @@ export function registerFitnessLibraryRoutes(app: FastifyInstance, prisma: Prism
     },
     async (request, reply) =>
       execute(request, '读取官方训练内容库', async () => {
-        const { version, rows } = await readOfficialContent(prisma);
+        // 同一快照内读取启用的训练内容与目录版本，保证响应和缓存标签对应同一次保存。
+        const { version, rows } = await prisma.$transaction(
+          async (tx) => ({
+            version: (
+              await tx.officialFitnessState.findUniqueOrThrow({ where: { id: 1 }, select: { contentVersion: true } })
+            ).contentVersion,
+            rows: await tx.officialFitnessContent.findMany({
+              where: { kind: { in: ['template', 'plan'] }, isEnabled: true },
+              orderBy: { id: 'asc' },
+              select: { kind: true, content: true },
+            }),
+          }),
+          { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+        );
         const library: FitnessLibrary = {
           schema_version: 1,
           content_version: version,
           templates: rows
-            .filter((row) => row.kind === 'template' && row.isEnabled)
+            .filter((row) => row.kind === 'template')
             .map((row) => row.content as unknown as FitnessLibrary['templates'][number]),
           plans: rows
-            .filter((row) => row.kind === 'plan' && row.isEnabled)
+            .filter((row) => row.kind === 'plan')
             .map((row) => row.content as unknown as FitnessLibrary['plans'][number]),
         };
         const etag = contentEtag(library);
