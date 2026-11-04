@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""清理有完成记录的部署临时产物；默认只读计划，维护窗口内加 --apply 执行。"""
+"""清理已完成的部署临时产物与已识别的独立命令日志；默认只读计划。"""
 
 import argparse
 import datetime
@@ -26,6 +26,7 @@ TASKS = (
     (r"init-production-[a-f0-9]{24}\.jsonl", None, "initialization_completed"),
     (r"cleanup-[a-f0-9]{24}", "cleanup.jsonl", "cleanup_completed"),
 )
+COMMAND_LOG = re.compile(r"(?:prod-pull|prod-check)\.[A-Za-z0-9]{6}\.log")
 MAX_LOG_BYTES = 16 * 1024 * 1024
 SCRIPTS = {"release.py", "release-api.py", "release-frontend.py", "init-production.py",
            "bump-version.mjs", "clean-deployment-temp.py"}
@@ -129,7 +130,7 @@ def activity(temp, *, proc=pathlib.Path("/proc"), runner=subprocess.run):
 
 
 class Cleanup:
-    """仅认领具备完成证据的当前部署任务，保留未知任务与无法确认的操作锁。"""
+    """识别独立命令日志和已完成部署任务，保留未知条目与状态不明的锁。"""
 
     def __init__(self, repo, *, detector=activity, mount_reader=mount_points):
         """固定源码目录和检查器，构造过程不创建文件。"""
@@ -194,8 +195,20 @@ class Cleanup:
         except (OSError, ValueError, UnicodeError) as error:
             raise CleanupError("完成日志缺失、无法读取或已损坏。") from error
 
+    def command_log(self, path, mounts):
+        """核对单个普通日志的文件身份与内容，供实际删除前再次比对。"""
+        try:
+            before = path.lstat()
+            content = read_log(path)
+            tree = self.snapshot(path, mounts)
+            if tree != [(path.name, identity(before))] or not stat.S_ISREG(before.st_mode):
+                raise CleanupError("独立日志在检查期间发生变化。")
+            return {"tree": tree, "log_sha256": hashlib.sha256(content).hexdigest()}
+        except OSError as error:
+            raise CleanupError("无法安全检查独立日志。") from error
+
     def scan(self):
-        """读取当前任务的 JSONL 完成日志与关联锁，候选仅限 Temp 的直接子项。"""
+        """核对独立日志、任务完成记录与关联锁，候选仅限 Temp 的直接子项。"""
         self.check_path()
         tasks, kept, locks, linked = {}, {}, {}, {}
         if not self.temp.exists():
@@ -210,6 +223,11 @@ class Cleanup:
                         raise CleanupError("任务入口不是预期的普通文件或目录。")
                     log = path / rule[1] if rule[1] else path
                     tasks[path.name] = self.completed(path, log, rule[2], mounts)
+                except CleanupError as error:
+                    kept[path.name] = str(error)
+            elif COMMAND_LOG.fullmatch(path.name):
+                try:
+                    tasks[path.name] = self.command_log(path, mounts)
                 except CleanupError as error:
                     kept[path.name] = str(error)
             elif not path.name.endswith(".lock"):
@@ -275,7 +293,7 @@ class Cleanup:
                 raise CleanupError("无法写入清理日志，已停止后续删除。") from error
 
     def apply(self):
-        """在 Linux 维护窗口中逐项复核，通过目录描述符删除已完成任务及其锁。"""
+        """在 Linux 维护窗口逐项复核，通过目录描述符删除候选及其关联锁。"""
         descriptor = None
         try:
             if platform.system() != "Linux" or getattr(os, "geteuid", lambda: -1)() != 0:

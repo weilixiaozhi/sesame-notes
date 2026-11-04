@@ -131,6 +131,43 @@ test('未登记的文本日志、目录和未知 JSONL 均按未知条目保留'
   );
 });
 
+test('识别未占用的独立运维日志，保留同名目录、未知目录和相似名称', () => {
+  withPlan(
+    {
+      'Temp/prod-pull.PKHuTI.log': 'fatal: 无法快进\n',
+      'Temp/prod-check.7dtOeO.log': '健康检查通过\n',
+      'Temp/node-upgrade.QnXFln.log': '软件版本检查失败\n',
+      'Temp/update-source.WTTQ0v.log': '代码已更新\n',
+      'Temp/prod-check.Ab12c3.log/backup.conf': '恢复所需配置\n',
+      'Temp/prod-pull.PKHuTI.log.bak': '额外副本\n',
+      'Temp/nginx-upgrade.riiimf/nginx.conf': '代理配置备份\n',
+      'Temp/finish-api-web-admin-i39t7n5w/release.jsonl': '{"event":"release_started"}\n',
+    },
+    (result) => {
+      assert.deepEqual(result.candidates, ['prod-check.7dtOeO.log', 'prod-pull.PKHuTI.log']);
+      assert.deepEqual(Object.keys(result.retained).sort(), [
+        'finish-api-web-admin-i39t7n5w',
+        'nginx-upgrade.riiimf',
+        'node-upgrade.QnXFln.log',
+        'prod-check.Ab12c3.log',
+        'prod-pull.PKHuTI.log.bak',
+        'update-source.WTTQ0v.log',
+      ]);
+    },
+  );
+});
+
+test('独立日志位于挂载点时保留', () => {
+  withPlan(
+    { 'Temp/prod-check.7dtOeO.log': '健康检查通过\n' },
+    (result) => {
+      assert.deepEqual(result.candidates, []);
+      assert.equal(Object.hasOwn(result.retained, 'prod-check.7dtOeO.log'), true);
+    },
+    'prod-check.7dtOeO.log',
+  );
+});
+
 test('候选仅限 Temp 直接子项，不认领嵌套目录或 Temp 外同名完成任务', () => {
   withPlan(
     {
