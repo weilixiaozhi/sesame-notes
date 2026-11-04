@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { Type } from '@sinclair/typebox';
 import type { ApiConfig } from '../../shared/api-config.js';
 import { AnyUuidSchema, CurrencySchema } from '../../shared/contracts/scalars.js';
@@ -61,7 +61,7 @@ export function registerAaStatisticsRoutes(app: FastifyInstance, prisma: PrismaC
               return { ledger_currency: ledger.currency, aa_enabled: false, ...aaStatistics([], [], userId) };
             const members = await tx.ledgerMember.findMany({
               where: { ledgerId: id },
-              orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+              orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }] satisfies Prisma.LedgerMemberOrderByWithRelationInput[],
             });
             const rows = await tx.transaction.findMany({
               where: { ledgerId: id, deletedAt: null },

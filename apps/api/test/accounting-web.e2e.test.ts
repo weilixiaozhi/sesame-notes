@@ -244,19 +244,39 @@ it('参与者包含历史与占位成员', async () => {
   const stranger = await register();
   const created = await api(session, 'POST', '/ledgers', { name: '历史成员测试' });
   const ledger = created.json<{ id: string; sync_id: string }>();
+  const owner = await prisma.ledgerMember.findFirstOrThrow({
+    where: { ledgerId: ledger.id, linkedAccountId: session.user.user_id },
+    select: { id: true, joinedAt: true },
+  });
+  const joinedAt = new Date(owner.joinedAt.getTime() + 1);
+  const memberIds = [randomUUID(), randomUUID()].sort();
   const member = await prisma.ledgerMember.create({
     data: {
       ledgerId: ledger.id,
-      id: randomUUID(),
+      id: memberIds[1]!,
       displayName: '历史占位成员',
       memberType: 'PLACEHOLDER',
       role: 'editor',
       status: 'REMOVED',
+      joinedAt,
+    },
+  });
+  const peer = await prisma.ledgerMember.create({
+    data: {
+      ledgerId: ledger.id,
+      id: memberIds[0]!,
+      displayName: '同时间加入的成员',
+      memberType: 'PLACEHOLDER',
+      role: 'editor',
+      status: 'ACTIVE',
+      joinedAt,
     },
   });
   const participants = await api(session, 'GET', `/ledgers/${ledger.id}/participants`);
   expect(participants.statusCode, participants.body).toBe(200);
-  expect(participants.json()).toEqual(
+  const rows = participants.json<Array<{ id: string }>>();
+  expect(rows.map(({ id }) => id)).toEqual([owner.id, peer.id, member.id]);
+  expect(rows).toEqual(
     expect.arrayContaining([expect.objectContaining({ id: member.id, member_type: 'PLACEHOLDER', status: 'REMOVED' })]),
   );
   expect((await api(stranger, 'GET', `/ledgers/${ledger.id}/participants`)).statusCode).toBe(404);
@@ -325,9 +345,10 @@ it('完整 AA 结算包含历史移除成员并单列不分摊交易，支持付
       memberType: 'PLACEHOLDER',
       role: 'editor',
       status: 'ACTIVE',
+      joinedAt: new Date(owner.joinedAt.getTime() + 2),
     },
   });
-  await prisma.ledgerMember.create({
+  const historical = await prisma.ledgerMember.create({
     data: {
       id: randomUUID(),
       ledgerId: ledger.id,
@@ -335,6 +356,7 @@ it('完整 AA 结算包含历史移除成员并单列不分摊交易，支持付
       memberType: 'PLACEHOLDER',
       role: 'editor',
       status: 'REMOVED',
+      joinedAt: new Date(owner.joinedAt.getTime() + 1),
     },
   });
   const common = {
@@ -375,6 +397,9 @@ it('完整 AA 结算包含历史移除成员并单列不分摊交易，支持付
     excluded_count: 1,
     skipped_count: 1,
   });
+  expect(
+    response.json<{ participants: Array<{ member_id: string }> }>().participants.map((row) => row.member_id),
+  ).toEqual([owner.id, historical.id, second.id]);
   expect(response.json().participants.find((row: { member_id: string }) => row.member_id === owner.id)).toMatchObject({
     total_paid: '10.005',
     total_should_pay: '7.345',

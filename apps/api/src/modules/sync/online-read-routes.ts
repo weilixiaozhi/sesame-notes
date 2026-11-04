@@ -60,7 +60,7 @@ export function registerOnlineReadRoutes(app: FastifyInstance, prisma: PrismaCli
             await getLedgerReadAccess(tx, userId, id, 'editor');
             const rows = await tx.ledgerMember.findMany({
               where: { ledgerId: id },
-              orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+              orderBy: [{ joinedAt: 'asc' }, { id: 'asc' }] satisfies Prisma.LedgerMemberOrderByWithRelationInput[],
             });
             return rows.map(memberSnapshot);
           },
