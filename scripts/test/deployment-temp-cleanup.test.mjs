@@ -18,9 +18,8 @@ try:
     module=importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     repo=pathlib.Path(sys.argv[2])
-    options=json.loads(sys.argv[3])
-    mounts={repo/'Temp'/options['mountCandidate']} if options.get('mountCandidate') else set()
-    operation=module.Cleanup(repo,detector=lambda _temp:[],mount_reader=lambda:mounts,included=options['included'])
+    mounts={repo/'Temp'/sys.argv[3]} if len(sys.argv)>3 else set()
+    operation=module.Cleanup(repo,detector=lambda _temp:[],mount_reader=lambda:mounts)
     print(json.dumps(operation.plan()[0],ensure_ascii=True))
 except Exception as error:
     print(type(error).__name__+': '+str(error),file=sys.stderr)
@@ -45,7 +44,7 @@ function removeFixture(fixture) {
 }
 
 /** 在仓库 Temp 内创建独立目录，只运行只读计划并在结束时清理本次拥有的夹具。 */
-function withPlan(files, verify, mountCandidate, included = []) {
+function withPlan(files, verify, mountCandidate) {
   let fixture;
   let failure;
   try {
@@ -59,7 +58,7 @@ function withPlan(files, verify, mountCandidate, included = []) {
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, content);
     }
-    const args = ['-X', 'utf8', '-c', python, script, fixture, JSON.stringify({ mountCandidate, included })];
+    const args = ['-c', python, script, fixture, ...(mountCandidate ? [mountCandidate] : [])];
     const result = JSON.parse(
       execFileSync(process.platform === 'win32' ? 'python' : 'python3', args, {
         encoding: 'utf8',
@@ -167,41 +166,6 @@ test('独立日志位于挂载点时保留', () => {
     },
     'prod-check.7dtOeO.log',
   );
-});
-
-test('指定名称只加入明确选择的普通日志和目录，保护未完成任务和目录内的锁', () => {
-  const selected = ['finish-api-web-admin-i39t7n5w', 'nginx-upgrade.riiimf', 'node-upgrade.QnXFln.log'];
-  withPlan(
-    {
-      'Temp/finish-api-web-admin-i39t7n5w/publish.log': '发布过程\n',
-      'Temp/nginx-upgrade.riiimf/nginx.conf': '操作前的配置副本\n',
-      'Temp/node-upgrade.QnXFln.log': '版本检查失败\n',
-      'Temp/update-source.WTTQ0v.log': '其他操作\n',
-      'Temp/locked-directory/release.lock': '部署进行中\n',
-      [`Temp/nested-task/${incompleteName}/build.jsonl`]: '{"event":"build_started"}\n',
-      [`Temp/${incompleteName}/build.jsonl`]: '{"event":"build_started"}\n',
-    },
-    (result) => {
-      assert.deepEqual(result.candidates, selected);
-      assert.deepEqual(Object.keys(result.retained).sort(), [
-        incompleteName,
-        'locked-directory',
-        'nested-task',
-        'update-source.WTTQ0v.log',
-      ]);
-    },
-    undefined,
-    [...selected, 'locked-directory', 'nested-task', incompleteName, 'already-removed'],
-  );
-});
-
-test('指定路径或锁会拒绝执行', () => {
-  for (const name of ['../deploy', 'logs/child', '..\\outside', 'release-api.lock']) {
-    assert.throws(
-      () => withPlan({}, () => assert.fail('无效名称不应生成清理计划'), undefined, [name]),
-      (error) => /只接受 Temp 内的直接子项名称/.test(error.cause?.stderr ?? ''),
-    );
-  }
 });
 
 test('候选仅限 Temp 直接子项，不认领嵌套目录或 Temp 外同名完成任务', () => {
