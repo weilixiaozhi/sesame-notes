@@ -132,8 +132,12 @@ def activity(temp, *, proc=pathlib.Path("/proc"), runner=subprocess.run):
 class Cleanup:
     """识别独立命令日志和已完成部署任务，保留未知条目与状态不明的锁。"""
 
-    def __init__(self, repo, *, detector=activity, mount_reader=mount_points):
+    def __init__(self, repo, *, detector=activity, mount_reader=mount_points, included=()):
         """固定源码目录和检查器，构造过程不创建文件。"""
+        self.included = frozenset(included)
+        if any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,254}", name)
+               or name.lower().endswith(".lock") for name in self.included):
+            raise CleanupError("--include 只接受 Temp 内的直接子项名称，不能指定路径或锁。")
         self.repo = pathlib.Path(os.path.abspath(repo))
         self.temp = self.repo / "Temp"
         self.detector = detector
@@ -207,6 +211,27 @@ class Cleanup:
         except OSError as error:
             raise CleanupError("无法安全检查独立日志。") from error
 
+    def included_entry(self, path, mounts):
+        """核对指定日志或目录，含受管理任务或操作锁的目录必须保留。"""
+        try:
+            before = path.lstat()
+            if stat.S_ISREG(before.st_mode) and path.suffix == ".log":
+                return self.command_log(path, mounts)
+            if not stat.S_ISDIR(before.st_mode):
+                raise CleanupError("指定条目必须是普通日志文件或目录。")
+            tree = self.snapshot(path, mounts)
+            if dict(tree).get(path.name) != identity(before):
+                raise CleanupError("指定目录在检查期间发生变化。")
+            for name, _ in tree:
+                if name == path.name:
+                    continue
+                leaf = pathlib.PurePath(name).name
+                if leaf.lower().endswith(".lock") or any(re.fullmatch(rule[0], leaf) for rule in TASKS):
+                    raise CleanupError("指定目录包含部署任务或操作锁，保留目录及其内容。")
+            return {"tree": tree}
+        except OSError as error:
+            raise CleanupError("无法安全检查指定条目。") from error
+
     def scan(self):
         """核对独立日志、任务完成记录与关联锁，候选仅限 Temp 的直接子项。"""
         self.check_path()
@@ -214,6 +239,8 @@ class Cleanup:
         if not self.temp.exists():
             return {"tasks": tasks, "kept": kept, "locks": locks, "linked": linked}
         mounts = self.mount_reader()
+        if self.included and (self.temp in mounts or os.path.ismount(self.temp)):
+            raise CleanupError("Temp 是挂载点，无法安全清理手动指定的条目。")
         for path in sorted(self.temp.iterdir()):
             rule = next((item for item in TASKS if re.fullmatch(item[0], path.name)), None)
             if rule:
@@ -228,6 +255,11 @@ class Cleanup:
             elif COMMAND_LOG.fullmatch(path.name):
                 try:
                     tasks[path.name] = self.command_log(path, mounts)
+                except CleanupError as error:
+                    kept[path.name] = str(error)
+            elif path.name in self.included:
+                try:
+                    tasks[path.name] = self.included_entry(path, mounts)
                 except CleanupError as error:
                     kept[path.name] = str(error)
             elif not path.name.endswith(".lock"):
@@ -359,8 +391,10 @@ def main(arguments=None):
         parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
         parser.add_argument("--repo", default=str(ROOT), help="源码仓库根目录，临时目录固定为其 Temp")
         parser.add_argument("--apply", action="store_true", help="仅限 Linux sudo：维护窗口内实际清理")
+        parser.add_argument("--include", action="append", default=[], metavar="NAME",
+                            help="加入确认可删除的 Temp 直属日志或目录，可重复指定")
         options = parser.parse_args(arguments)
-        operation = Cleanup(options.repo)
+        operation = Cleanup(options.repo, included=options.include)
         report = operation.apply() if options.apply else operation.plan()[0]
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
