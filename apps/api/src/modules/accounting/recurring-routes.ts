@@ -220,7 +220,6 @@ export function registerRecurringRoutes(app: FastifyInstance, prisma: PrismaClie
                     createdByMemberId: author,
                     lastEditedByMemberId: author,
                     updatedAt: now,
-                    updatedByDeviceId: auth.deviceId,
                   },
                   splits: null,
                 });

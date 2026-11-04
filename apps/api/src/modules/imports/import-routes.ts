@@ -154,7 +154,7 @@ export function registerImportRoutes(app: FastifyInstance, prisma: PrismaClient,
               const splitMembers = await resolveSplitMembers(tx, ledgerId, item.splits ?? null);
               await createTransactionMutation(tx, auth, {
                 // payer 解析失败会抛业务错误，此处必然非空
-                data: transactionData(ledgerId, ledger.ownerId, auth, item, category, now, payerMemberId!),
+                data: transactionData(ledgerId, ledger.ownerId, auth.userId, item, category, now, payerMemberId!),
                 splits: splitMembers,
               });
               importedTransactionCount += 1;

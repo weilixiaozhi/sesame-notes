@@ -80,7 +80,6 @@ describe('分类无事件回执的全局mutation身份', () => {
       parentId: null,
       sortOrder: 0,
       icon: null,
-      createdAt: new Date(0),
       updatedAt: new Date(1000),
       updatedByDeviceId: 'other',
       deletedAt: null,

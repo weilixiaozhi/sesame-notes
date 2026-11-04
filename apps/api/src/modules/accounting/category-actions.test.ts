@@ -94,7 +94,6 @@ function category(id: string, level: 1 | 2, parent: string | null, offset: numbe
     parentId: parent,
     sortOrder: 0,
     icon: null,
-    createdAt: time(-1000),
     updatedAt: time(offset),
     updatedByDeviceId: deviceId,
     deletedAt: null,

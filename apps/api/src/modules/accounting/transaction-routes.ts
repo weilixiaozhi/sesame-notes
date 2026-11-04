@@ -160,7 +160,7 @@ export function registerTransactionRoutes(app: FastifyInstance, prisma: PrismaCl
           const splitMembers = await resolveSplitMembers(tx, ledgerId, body.splits ?? null);
           const created = await createTransactionMutation(tx, auth, {
             // payer 解析失败会抛业务错误，此处必然非空
-            data: transactionData(ledgerId, ledger.ownerId, auth, body, category, now, payerMemberId!),
+            data: transactionData(ledgerId, ledger.ownerId, auth.userId, body, category, now, payerMemberId!),
             splits: splitMembers,
           });
           const response = mapTransaction(created.transaction);

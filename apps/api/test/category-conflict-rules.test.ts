@@ -23,7 +23,6 @@ const row: Category = {
   parentId: null,
   sortOrder: 3,
   icon: 'cloud',
-  createdAt: new Date(0),
   updatedAt: new Date('2026-01-01T00:00:00.123Z'),
   updatedByDeviceId: '22222222-2222-4222-8222-222222222222',
   deletedAt: null,

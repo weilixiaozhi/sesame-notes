@@ -223,7 +223,6 @@ export async function applyTransaction(
         revision: 1,
         lastEditedAt: optionalDate(payload, 'last_edited_at'),
         updatedAt,
-        updatedByDeviceId: auth.deviceId,
       },
       splits: splitMembers,
       mutationId: change.mutation_id,

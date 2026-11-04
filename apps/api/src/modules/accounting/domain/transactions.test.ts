@@ -3,7 +3,7 @@ import { transactionData, validateTransactionSource } from './transactions.js';
 
 const ledgerId = '11111111-1111-4111-8111-111111111111';
 const ruleId = '22222222-2222-4222-8222-222222222222';
-const auth = { userId: '33333333-3333-4333-8333-333333333333', deviceId: ledgerId };
+const userId = '33333333-3333-4333-8333-333333333333';
 const ordinary = {
   tx_type: 'expense',
   amount: '10',
@@ -20,15 +20,15 @@ describe('交易周期来源边界', () => {
     { occurrence_date: '2026-01-10' },
   ])('普通创建和通用导入拒绝周期来源：%j', (source) => {
     expect(() =>
-      transactionData(ledgerId, auth.userId, auth, { ...ordinary, ...source }, null, new Date(), ledgerId),
+      transactionData(ledgerId, userId, userId, { ...ordinary, ...source }, null, new Date(), ledgerId),
     ).toThrow('周期发生请通过到期生成或完整周期历史迁入');
   });
 
   it('普通交易可创建，显式空来源不产生周期引用', () => {
     const saved = transactionData(
       ledgerId,
-      auth.userId,
-      auth,
+      userId,
+      userId,
       {
         ...ordinary,
         recurring_id: null,

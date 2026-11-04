@@ -79,7 +79,6 @@ export async function applyDayChange(
             deletedAt: data.updatedAt,
             updatedAt: data.updatedAt,
             revision: { increment: 1 },
-            updatedByDeviceId: auth.deviceId,
           },
         });
       const saved = book
@@ -99,7 +98,7 @@ export async function applyDayChange(
       if (change.action === 'delete') {
         saved = await tx.dayEvent.update({
           where: { id: change.entity_id },
-          data: { deletedAt: now, updatedAt: now, revision: { increment: 1 }, updatedByDeviceId: auth.deviceId },
+          data: { deletedAt: now, updatedAt: now, revision: { increment: 1 } },
         });
       } else {
         const definition = validateDayEvent(change.payload);
@@ -114,7 +113,6 @@ export async function applyDayChange(
           ...dateColumns('start', definition.start),
           ...dateColumns('end', definition.end),
           updatedAt: now,
-          updatedByDeviceId: auth.deviceId,
         };
         saved = current
           ? await tx.dayEvent.update({ where: { id: change.entity_id }, data: { ...data, revision: { increment: 1 } } })

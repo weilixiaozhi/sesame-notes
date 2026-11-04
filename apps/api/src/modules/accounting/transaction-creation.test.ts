@@ -35,7 +35,6 @@ function storedTransaction(overrides: Partial<StoredTransaction> = {}): StoredTr
     revision: 1,
     lastEditedAt: null,
     updatedAt: now,
-    updatedByDeviceId: auth.deviceId,
     deletedAt: null,
     createdAt: now,
     splits: [{ id: memberId, transactionId, ledgerId, memberId, amount: new Prisma.Decimal('7') }],

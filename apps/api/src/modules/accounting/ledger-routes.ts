@@ -96,7 +96,6 @@ export function registerLedgerRoutes(app: FastifyInstance, prisma: PrismaClient,
           });
           // Owner 必须是一等 Member：与账本同一事务创建 owner 成员行
           await ensureOwnerMember(tx, created.id, auth.userId, {
-            createdAt: now,
             updatedAt: now,
             updatedByDeviceId: auth.deviceId,
           });

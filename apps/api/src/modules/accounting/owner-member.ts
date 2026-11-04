@@ -7,7 +7,7 @@ export async function ensureOwnerMember(
   tx: Prisma.TransactionClient,
   ledgerId: string,
   ownerId: string,
-  timestamps: { createdAt: Date; updatedAt: Date; updatedByDeviceId: string | null },
+  timestamps: { updatedAt: Date; updatedByDeviceId: string | null },
 ): Promise<void> {
   try {
     const user = await tx.user.findUnique({
@@ -27,7 +27,6 @@ export async function ensureOwnerMember(
         linkedAccountId: ownerId,
         role: 'owner',
         status: 'ACTIVE',
-        createdAt: timestamps.createdAt,
         updatedAt: timestamps.updatedAt,
         updatedByDeviceId: timestamps.updatedByDeviceId,
       },

@@ -136,7 +136,7 @@ export function validateCurrencySnapshot(
 export function transactionData(
   ledgerId: string,
   ownerId: string,
-  auth: { userId: string; deviceId: string },
+  userId: string,
   body: TransactionCreate,
   category: Category | null,
   now: Date,
@@ -161,11 +161,10 @@ export function transactionData(
     nativeAmount: body.native_amount,
     recurringId: null,
     // 记账人/操作者由认证推导，payer 为解析后的账本级成员引用
-    createdByMemberId: createdByMemberIdFor(ledgerId, auth.userId),
-    lastEditedByMemberId: createdByMemberIdFor(ledgerId, auth.userId),
+    createdByMemberId: createdByMemberIdFor(ledgerId, userId),
+    lastEditedByMemberId: createdByMemberIdFor(ledgerId, userId),
     payerMemberId,
     aaMode: parseAaMode(body.aa_mode),
     updatedAt: now,
-    updatedByDeviceId: auth.deviceId,
   };
 }

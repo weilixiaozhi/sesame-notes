@@ -349,13 +349,11 @@ model Device {
   user                         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokens                RefreshToken[]
   updatedLedgers               Ledger[]               @relation("LedgerUpdatedByDevice")
-  updatedTransactions          Transaction[]          @relation("TransactionUpdatedByDevice")
   updatedRecurringTransactions RecurringTransaction[] @relation("RecurringUpdatedByDevice")
   updatedCategories            Category[]             @relation("CategoryUpdatedByDevice")
   updatedRateOverrides         ExchangeRateOverride[] @relation("RateUpdatedByDevice")
   updatedMembers               LedgerMember[]         @relation("LedgerMemberUpdatedByDevice")
   archivedMembers              LedgerMember[]         @relation("LedgerMemberArchiveUpdatedByDevice")
-  updatedDayEvents             DayEvent[]
 
   @@unique([id, userId])
   @@unique([userId, installationId])
@@ -424,7 +422,6 @@ model LedgerMember {
   archiveUpdatedAt         DateTime?                @map("archive_updated_at") @db.Timestamptz(3)
   archiveUpdatedByDeviceId String?                  @map("archive_updated_by_device_id") @db.Uuid
   joinedAt                 DateTime                 @default(now()) @map("joined_at") @db.Timestamptz(3)
-  createdAt                DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
   updatedByDeviceId        String?                  @map("updated_by_device_id") @db.Uuid
   ledger                   Ledger                   @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
@@ -456,7 +453,6 @@ model LedgerInvite {
   usedById    String?   @map("used_by_id") @db.Uuid
   // 作废标记：REMOVE 成员时把账本内未消费邀请置为失效（usedAt 保持 NULL，语义不混淆）
   revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(3)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   ledger      Ledger    @relation(fields: [ledgerId], references: [id], onDelete: Cascade)
   createdBy   User      @relation("InviteCreator", fields: [createdById], references: [id], onDelete: Cascade)
   usedBy      User?     @relation("InviteUsedBy", fields: [usedById], references: [id], onDelete: SetNull)
@@ -490,14 +486,12 @@ model Transaction {
   revision             Int                      @default(1)
   lastEditedAt         DateTime?                @map("last_edited_at") @db.Timestamptz(3)
   updatedAt            DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
-  updatedByDeviceId    String?                  @map("updated_by_device_id") @db.Uuid
   deletedAt            DateTime?                @map("deleted_at") @db.Timestamptz(3)
   createdAt            DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
   ledger               Ledger                   @relation(fields: [ledgerId, ownerId], references: [id, ownerId], onDelete: Cascade, onUpdate: NoAction, map: "transactions_ledger_owner_fkey")
   createdByMember      LedgerMember?            @relation("TransactionCreatedByMember", fields: [createdByMemberId, ledgerId], references: [id, ledgerId], onDelete: NoAction, onUpdate: NoAction, map: "transaction_created_by_member_fkey")
   lastEditedByMember   LedgerMember?            @relation("TransactionLastEditedByMember", fields: [lastEditedByMemberId, ledgerId], references: [id, ledgerId], onDelete: NoAction, onUpdate: NoAction, map: "transaction_last_edited_by_member_fkey")
   payerMember          LedgerMember?            @relation("TransactionPayerMember", fields: [payerMemberId, ledgerId], references: [id, ledgerId], onDelete: NoAction, onUpdate: NoAction, map: "transaction_payer_member_fkey")
-  updatedByDevice      Device?                  @relation("TransactionUpdatedByDevice", fields: [updatedByDeviceId], references: [id], onDelete: SetNull)
   category             Category?                @relation(fields: [categoryId, ownerId], references: [id, ownerId], onDelete: NoAction, onUpdate: NoAction, map: "transactions_category_owner_fkey")
   recurring            RecurringTransaction?    @relation(fields: [recurringId, ledgerId], references: [id, ledgerId], onDelete: NoAction, onUpdate: NoAction, map: "transactions_recurring_ledger_fkey")
   editHistory          TransactionEditHistory[]
@@ -565,7 +559,6 @@ model RecurringTransaction {
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   updatedByDeviceId String?       @map("updated_by_device_id") @db.Uuid
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz(3)
-  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   ledger            Ledger        @relation(fields: [ledgerId, ownerId], references: [id, ownerId], onDelete: Cascade, onUpdate: NoAction, map: "recurring_transactions_ledger_owner_fkey")
   updatedByDevice   Device?       @relation("RecurringUpdatedByDevice", fields: [updatedByDeviceId], references: [id], onDelete: SetNull)
   category          Category?     @relation(fields: [categoryId, ownerId], references: [id, ownerId], onDelete: NoAction, onUpdate: NoAction, map: "recurring_transactions_category_owner_fkey")
@@ -590,7 +583,6 @@ model Category {
   updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
   updatedByDeviceId     String?                @map("updated_by_device_id") @db.Uuid
   deletedAt             DateTime?              @map("deleted_at") @db.Timestamptz(3)
-  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
   owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   updatedByDevice       Device?                @relation("CategoryUpdatedByDevice", fields: [updatedByDeviceId], references: [id], onDelete: SetNull)
   parent                Category?              @relation("CategoryTree", fields: [parentId, ownerId], references: [id, ownerId], onDelete: NoAction, onUpdate: NoAction, map: "categories_parent_owner_fkey")
@@ -733,9 +725,7 @@ model DayEvent {
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
-  updatedByDeviceId  String?   @map("updated_by_device_id") @db.Uuid
   dayBook            DayBook   @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
-  updatedByDevice    Device?   @relation(fields: [updatedByDeviceId], references: [id], onDelete: SetNull)
 
   @@index([dayBookId, deletedAt, category])
   @@index([dayBookId, deletedAt, createdAt, id])

@@ -60,7 +60,6 @@ export async function updateTransactionMutation(
         revision: { increment: 1 },
         lastEditedAt: mutation.updatedAt,
         updatedAt: mutation.updatedAt,
-        updatedByDeviceId: auth.deviceId,
       },
     });
     if (cas.count === 0) return await readMutationFailure(tx, mutation.transactionId, mutation.ledgerId);
@@ -126,7 +125,6 @@ export async function deleteTransactionMutation(
         lastEditedByMemberId: operatorMemberId,
         lastEditedAt: mutation.updatedAt,
         updatedAt: mutation.updatedAt,
-        updatedByDeviceId: auth.deviceId,
       },
     });
     if (cas.count === 0) return await readMutationFailure(tx, mutation.transactionId, mutation.ledgerId);

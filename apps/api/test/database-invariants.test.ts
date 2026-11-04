@@ -479,7 +479,6 @@ describe('数据库冻结不变量', () => {
       'transactions_category_owner_fkey',
       'transactions_ledger_owner_fkey',
       'transactions_recurring_ledger_fkey',
-      'transactions_updated_by_device_id_fkey',
       'user_profiles_avatar_version_check',
     ];
     const constraints = await prisma.$queryRaw<Array<{ conname: string }>>`

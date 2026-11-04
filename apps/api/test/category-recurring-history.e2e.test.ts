@@ -110,7 +110,6 @@ it.each(['rest', 'sync', 'batch'] as const)('分类删除 %s 先处理活交易�
         note: null,
         deletedAt: deleted,
         updatedAt: old,
-        updatedByDeviceId: session.device_id,
         payerMemberId: registeredMemberId(ledger.id, session.user.user_id),
       },
     });
@@ -140,7 +139,6 @@ it.each(['rest', 'sync', 'batch'] as const)('分类删除 %s 先处理活交易�
       revision: 3,
       note: '仍在使用的历史',
       updatedAt: old,
-      updatedByDeviceId: session.device_id,
       payerMemberId: registeredMemberId(ledger.id, session.user.user_id),
     },
   });

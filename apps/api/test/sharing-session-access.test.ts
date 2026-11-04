@@ -52,7 +52,6 @@ async function fixture(action: Action, resource: Resource) {
       role: 'editor',
       status: 'ACTIVE',
       joinedAt: now,
-      createdAt: now,
       updatedAt: now,
     };
     const invitation = {

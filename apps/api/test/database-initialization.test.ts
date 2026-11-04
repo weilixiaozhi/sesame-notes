@@ -13,7 +13,7 @@ import {
 } from './lifecycle-test-database.js';
 import { runLifecycleSetup } from './lifecycle-setup.js';
 import { fitnessPreferences } from './fitness-fixtures.js';
-import { registeredMemberId } from '../src/modules/accounting/index.js';
+import { recurringOccurrenceId, registeredMemberId } from '../src/modules/accounting/index.js';
 import { createOwnedFixture, linkOwnedFixtureDependencies, removeOwnedFixture } from './owned-fixture-directory.js';
 
 const dayConstraintDefinitions = JSON.parse(
@@ -43,9 +43,15 @@ assertLifecycleSuite('database-initialization.test.ts', process.env);
 const PROBE_MIGRATION = '20990101000000_current_probe';
 const BROKEN_MIGRATION = '20990102000000_broken_probe';
 const CLEANUP_MIGRATION = '20261103000000_remove_unused_storage_columns';
+const DOMAIN_CLEANUP_MIGRATION = '20261104000000_remove_unused_domain_columns';
 const cleanupColumns: Record<string, string[]> = {
   official_fitness_media: ['mime_type'],
-  ledger_invites: ['code_prefix'],
+  ledger_invites: ['code_prefix', 'created_at'],
+  ledger_members: ['created_at'],
+  categories: ['created_at'],
+  recurring_transactions: ['created_at'],
+  transactions: ['updated_by_device_id'],
+  day_events: ['updated_by_device_id'],
   product_analytics_events: ['received_at'],
   admin_sessions: ['user_agent', 'ip', 'created_at'],
   mutation_reservations: ['created_at'],
@@ -82,7 +88,7 @@ async function initialize(
 }
 
 /** 复制当前基线到根目录 Temp，在专属项目内验证文件完整性和后续增量事务。 */
-async function createProject(migrations: Record<string, string> = {}, baselineOnly = false): Promise<string> {
+async function createProject(migrations: Record<string, string> = {}, throughMigration?: string): Promise<string> {
   let project: string | undefined;
   try {
     project = await createOwnedFixture('prisma-current-baseline');
@@ -90,15 +96,15 @@ async function createProject(migrations: Record<string, string> = {}, baselineOn
     const migrationRoot = join(apiDirectory, 'prisma/migrations');
     await cp(join(apiDirectory, 'prisma'), directory, {
       recursive: true,
-      // 独立基线夹具只复制冻结建库文件，正常夹具包含全部正式增量。
+      // 专属旧库夹具复制指定版本及之前的正式迁移。
       filter: (source) => {
         const child = relative(migrationRoot, source);
         return (
-          !baselineOnly ||
+          !throughMigration ||
           !child ||
           child.startsWith('..') ||
           child === 'migration_lock.toml' ||
-          child.split(sep)[0] === BASELINE_MIGRATION
+          child.split(sep)[0]! <= throughMigration
         );
       },
     });
@@ -114,16 +120,17 @@ async function createProject(migrations: Record<string, string> = {}, baselineOn
   }
 }
 
-/** 在专属项目中保持冻结基线结构，用于验证迁移身份登记和拒绝边界。 */
-async function withBaselineDatabase(
+/** 在隔离库中保留指定迁移版本，用于验证登记、升级和拒绝边界。 */
+async function withMigrationDatabase(
   run: (url: string, database: PrismaClient, setup: string) => Promise<void>,
+  throughMigration = BASELINE_MIGRATION,
 ): Promise<void> {
   let project: string | undefined;
   try {
-    project = await createProject({}, true);
+    project = await createProject({}, throughMigration);
     await withIsolatedDatabase((url, database) => run(url, database, project!));
   } catch (cause) {
-    throw new Error('冻结基线独立夹具验收失败', { cause });
+    throw new Error('指定版本数据库夹具验收失败', { cause });
   } finally {
     if (project) await removeOwnedFixture(dirname(dirname(project)));
   }
@@ -312,6 +319,135 @@ async function expectRetiredColumnsAbsent(database: PrismaClient): Promise<void>
     await expectCurrentDefinitions(database);
   } catch (cause) {
     throw new Error('物理删列及保留约束验收失败', { cause });
+  }
+}
+
+/** 写入升级前的业务关联和旧设备标记，保留可逐项核对的同步事件与编辑历史。 */
+async function seedDomainMetadata(database: PrismaClient, userId: string): Promise<void> {
+  try {
+    const ledger = await database.ledger.findFirstOrThrow({ where: { ownerId: userId } });
+    const category = await database.category.findFirstOrThrow({ where: { ownerId: userId } });
+    const memberId = registeredMemberId(ledger.id, userId);
+    const now = new Date('2026-11-01T08:00:00.123Z');
+    const device = await database.device.create({ data: { userId, installationId: randomUUID() } });
+    await database.ledgerMember.update({
+      where: { id: memberId },
+      data: { joinedAt: now, updatedAt: now, updatedByDeviceId: device.id },
+    });
+    await database.category.update({
+      where: { id_ownerId: { id: category.id, ownerId: userId } },
+      data: { updatedAt: now, updatedByDeviceId: device.id },
+    });
+    await database.ledgerInvite.create({
+      data: { ledgerId: ledger.id, createdById: userId, codeHash: '7'.repeat(64), expiresAt: new Date('2099-01-01') },
+    });
+    const rule = await database.recurringTransaction.create({
+      data: {
+        ledgerId: ledger.id,
+        ownerId: userId,
+        categoryId: category.id,
+        txType: 'expense',
+        amount: '128.56',
+        currencyCode: 'CNY',
+        frequency: 'daily',
+        startDate: now,
+        lastGeneratedDate: now,
+        timeZone: 'Asia/Shanghai',
+        updatedAt: now,
+        updatedByDeviceId: device.id,
+      },
+    });
+    const transaction = await database.transaction.create({
+      data: {
+        id: recurringOccurrenceId(ledger.id, rule.id, '2026-11-01'),
+        ledgerId: ledger.id,
+        ownerId: userId,
+        txType: 'expense',
+        amount: '128.56',
+        nativeAmount: '128.56',
+        currencyCode: 'CNY',
+        happenedAt: now,
+        note: '保留的周期账单备注',
+        categoryId: category.id,
+        categoryName: category.name,
+        categoryKind: category.kind,
+        recurringId: rule.id,
+        occurrenceDate: '2026-11-01',
+        createdByMemberId: memberId,
+        lastEditedByMemberId: memberId,
+        payerMemberId: memberId,
+        revision: 2,
+        lastEditedAt: now,
+        updatedAt: now,
+      },
+    });
+    const changes = { note: transaction.note };
+    await database.transactionEditHistory.create({
+      data: { transactionId: transaction.id, ledgerId: ledger.id, operatorMemberId: memberId, version: 2, changes },
+    });
+    const book = await database.dayBook.create({ data: { ownerId: userId, name: '保留的日子本' } });
+    const dayEvent = await database.dayEvent.create({
+      data: {
+        dayBookId: book.id,
+        name: '保留的生日',
+        category: 'birthday',
+        repeatType: 'yearly',
+        statisticType: 'year',
+        eventCalendarType: 'solar',
+        eventOriginalYear: 1990,
+        eventOriginalMonth: 6,
+        eventOriginalDay: 15,
+        eventIsLeapMonth: false,
+        eventSolarDate: new Date('1990-06-15'),
+        revision: 2,
+        updatedAt: now,
+      },
+    });
+    // 使用原生 SQL 在升级前的真实列中写入设备 ID，当前 ORM 只操作现行字段。
+    await database.$executeRaw`UPDATE transactions SET updated_by_device_id=${device.id}::uuid WHERE id=${transaction.id}::uuid`;
+    await database.$executeRaw`UPDATE day_events SET updated_by_device_id=${device.id}::uuid WHERE id=${dayEvent.id}::uuid`;
+    await database.syncChange.createMany({
+      data: [
+        {
+          userId,
+          ledgerId: ledger.id,
+          scope: 'ledger',
+          entityType: 'transaction',
+          entityId: transaction.id,
+          action: 'upsert',
+          mutationId: randomUUID(),
+          deviceId: device.id,
+          payload: { revision: 2, ...changes },
+          updatedAt: now,
+        },
+        {
+          userId,
+          dayBookId: book.id,
+          scope: 'user',
+          entityType: 'day_event',
+          entityId: dayEvent.id,
+          action: 'upsert',
+          mutationId: randomUUID(),
+          deviceId: device.id,
+          payload: { revision: 2, name: dayEvent.name },
+          updatedAt: now,
+        },
+      ],
+    });
+  } catch (cause) {
+    throw new Error('待升级业务关系与历史数据夹具创建失败', { cause });
+  }
+}
+
+/** 比较全部业务外键定义，核对删列仅移除对应设备引用。 */
+async function foreignKeySnapshot(database: PrismaClient) {
+  try {
+    return await database.$queryRaw<Array<{ name: string; definition: string }>>`
+      SELECT conrelid::regclass::text || '.' || conname AS name,pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint WHERE connamespace='public'::regnamespace AND contype='f' ORDER BY name
+    `;
+  } catch (cause) {
+    throw new Error('业务外键定义读取失败', { cause });
   }
 }
 
@@ -543,12 +679,13 @@ it('空库直接建立当前业务约束与种子，重复部署保持对象和�
   await withIsolatedDatabase(async (url, database) => {
     try {
       await initialize(url, database);
-      await expectCurrentDefinitions(database);
+      await expectRetiredColumnsAbsent(database);
       await expectFitnessWarmupRestSeconds(database);
       await expectFitnessReferenceIndex(database);
       expect(expectedAppliedMigrations()).toEqual([
         { migration_name: BASELINE_MIGRATION, applied: true },
         { migration_name: CLEANUP_MIGRATION, applied: true },
+        { migration_name: DOMAIN_CLEANUP_MIGRATION, applied: true },
       ]);
       expect(await database.officialFitnessContent.count()).toBeGreaterThan(100);
       expect(await database.officialFitnessTaxon.count()).toBe(38);
@@ -576,7 +713,7 @@ it('空库直接建立当前业务约束与种子，重复部署保持对象和�
 }, 180_000);
 
 it('当前存量库仅收敛迁移记录，全部业务数据和同步代际逐字保留', async () => {
-  await withBaselineDatabase(async (url, database, setup) => {
+  await withMigrationDatabase(async (url, database, setup) => {
     try {
       await initialize(url, database, setup);
       await seedCurrentData(database);
@@ -600,7 +737,7 @@ it('当前存量库仅收敛迁移记录，全部业务数据和同步代际逐�
 }, 180_000);
 
 it('非当前结构、损坏部署记录和未完成同步状态均拒绝收敛，不改业务或记录', async () => {
-  await withBaselineDatabase(async (url, database, setup) => {
+  await withMigrationDatabase(async (url, database, setup) => {
     try {
       await initialize(url, database, setup);
       await seedCurrentData(database);
@@ -630,7 +767,7 @@ it('非当前结构、损坏部署记录和未完成同步状态均拒绝收敛�
 }, 180_000);
 
 it('基线登记写入失败时回滚整组迁移记录，业务内容与同步水位保持原值', async () => {
-  await withBaselineDatabase(async (url, database, setup) => {
+  await withMigrationDatabase(async (url, database, setup) => {
     try {
       await initialize(url, database, setup);
       await seedCurrentData(database);
@@ -715,7 +852,7 @@ it('当前基线支持后续显式增量，失败事务保留业务数据且不�
 }, 180_000);
 
 it('存量基线精简物理列后保留全部其余行、序列、幂等凭据与同步水位', async () => {
-  await withBaselineDatabase(async (url, database, setup) => {
+  await withMigrationDatabase(async (url, database, setup) => {
     try {
       await initialize(url, database, setup);
       const userId = await seedCurrentData(database);
@@ -747,7 +884,7 @@ it('存量基线精简物理列后保留全部其余行、序列、幂等凭据�
 }, 180_000);
 
 it('精简增量末列存在依赖时整次DDL回滚，已删除列与约束全部恢复', async () => {
-  await withBaselineDatabase(async (url, database, setup) => {
+  await withMigrationDatabase(async (url, database, setup) => {
     let project: string | undefined;
     try {
       await initialize(url, database, setup);
@@ -781,4 +918,66 @@ it('精简增量末列存在依赖时整次DDL回滚，已删除列与约束全�
       if (project) await removeOwnedFixture(dirname(dirname(project)));
     }
   });
+}, 180_000);
+
+it('从已部署版本删去六列，业务行、编辑历史、设备事件与其余外键逐项保留', async () => {
+  await withMigrationDatabase(async (url, database, setup) => {
+    try {
+      await initialize(url, database, setup);
+      const userId = await seedCurrentData(database);
+      await seedDomainMetadata(database, userId);
+      const before = await contentSnapshot(database, true);
+      const foreignKeys = await foreignKeySnapshot(database);
+      const retiredKeys = [
+        'transactions.transactions_updated_by_device_id_fkey',
+        'day_events.day_events_updated_by_device_id_fkey',
+      ];
+      expect(foreignKeys.map(({ name }) => name)).toEqual(expect.arrayContaining(retiredKeys));
+      await initialize(url, database);
+      await expectRetiredColumnsAbsent(database);
+      expect(await contentSnapshot(database, true)).toEqual(before);
+      expect(await foreignKeySnapshot(database)).toEqual(foreignKeys.filter(({ name }) => !retiredKeys.includes(name)));
+      expect(
+        await database.$queryRaw`
+          SELECT migration_name,finished_at IS NOT NULL AS applied FROM _prisma_migrations ORDER BY migration_name
+        `,
+      ).toEqual(expectedAppliedMigrations());
+    } catch (cause) {
+      throw new Error('业务字段物理删列与存量数据保留验收失败', { cause });
+    }
+  }, CLEANUP_MIGRATION);
+}, 180_000);
+
+it('日子设备列存在额外依赖时，本次六列和两个设备外键全部回滚', async () => {
+  await withMigrationDatabase(async (url, database, setup) => {
+    let project: string | undefined;
+    try {
+      await initialize(url, database, setup);
+      const userId = await seedCurrentData(database);
+      await seedDomainMetadata(database, userId);
+      const before = await contentSnapshot(database);
+      const foreignKeys = await foreignKeySnapshot(database);
+      project = await createProject({
+        '20261103120000_domain_dependency_probe':
+          'CREATE VIEW public.domain_cleanup_dependency AS SELECT updated_by_device_id FROM public.day_events;\n',
+      });
+      await expect(initialize(url, database, project)).rejects.toThrow('当前数据库初始化失败');
+      expect(await contentSnapshot(database)).toEqual(before);
+      expect(await foreignKeySnapshot(database)).toEqual(foreignKeys);
+      // 依赖视图由上一条增量提交，原列仍在且可通过该视图读取非空设备标记。
+      expect(
+        await database.$queryRaw`SELECT updated_by_device_id IS NOT NULL AS preserved FROM public.domain_cleanup_dependency`,
+      ).toEqual([{ preserved: true }]);
+      expect(
+        await database.$queryRaw`
+          SELECT finished_at IS NULL AS failed
+          FROM _prisma_migrations WHERE migration_name=${DOMAIN_CLEANUP_MIGRATION}
+        `,
+      ).toEqual([{ failed: true }]);
+    } catch (cause) {
+      throw new Error('业务字段物理删列失败回滚验收失败', { cause });
+    } finally {
+      if (project) await removeOwnedFixture(dirname(dirname(project)));
+    }
+  }, CLEANUP_MIGRATION);
 }, 180_000);

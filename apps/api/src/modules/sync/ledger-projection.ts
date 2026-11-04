@@ -168,7 +168,6 @@ export async function applyLedger(
   });
   // 同步创建/更新的账本，Owner 必须是同事务内的一等成员行
   await ensureOwnerMember(tx, change.entity_id, auth.userId, {
-    createdAt: updatedAt,
     updatedAt,
     updatedByDeviceId: auth.deviceId,
   });

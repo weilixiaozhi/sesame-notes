@@ -82,7 +82,6 @@ function storedTransaction(): Prisma.TransactionGetPayload<{ include: { splits: 
     lastEditedAt: now,
     updatedAt: now,
     createdAt: now,
-    updatedByDeviceId: auth.deviceId,
     deletedAt: null,
     splits: [{ id: auth.deviceId, transactionId, ledgerId, memberId: auth.userId, amount: new Prisma.Decimal('20') }],
   };

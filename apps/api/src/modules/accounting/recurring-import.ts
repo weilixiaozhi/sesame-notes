@@ -137,7 +137,6 @@ export async function importRecurringInitialState(
           // 墓碑比首次物化高一个修订，客户端不能把删除当成同版本重放忽略。
           revision: deleted ? 2 : 1,
           updatedAt: deleted ?? updatedAt,
-          updatedByDeviceId: auth.deviceId,
         },
         splits,
       });

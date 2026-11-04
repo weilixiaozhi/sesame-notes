@@ -200,7 +200,6 @@ async function existingEmptyLedger(user: Session) {
     });
     const now = new Date();
     await ensureOwnerMember(tx, ledger.id, user.user.user_id, {
-      createdAt: now,
       updatedAt: now,
       updatedByDeviceId: user.device_id,
     });
