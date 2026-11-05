@@ -4277,7 +4277,10 @@ export interface operations {
     postAdminGroups: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                "idempotency-key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -5364,7 +5367,10 @@ export interface operations {
     postAdminAccounts: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                "idempotency-key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7722,7 +7728,10 @@ export interface operations {
     createAdminBanner: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                "idempotency-key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -18153,7 +18162,10 @@ export interface operations {
     createOfficialFitnessTaxonomy: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                "idempotency-key"?: string;
+            };
             path: {
                 kind: "body_part" | "equipment";
             };
@@ -18735,7 +18747,10 @@ export interface operations {
     postAdminFitnessExercises: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                "idempotency-key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -19165,7 +19180,10 @@ export interface operations {
     postAdminFitnessTemplates: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                "idempotency-key"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -19646,7 +19664,10 @@ export interface operations {
     postAdminFitnessPlans: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                "idempotency-key"?: string;
+            };
             path?: never;
             cookie?: never;
         };

@@ -15,6 +15,7 @@ import {
   StatusBadge,
 } from '../../../components/ui';
 import { api, errorMessage, InputError, reportError, request } from '../../../api/client';
+import { createAdminCreation } from '../../../api/create-intent';
 import { queryClient, useSession } from '../../../auth/session';
 import { useClampPage } from '../../../api/paging';
 import { useListQuerySubmit } from '../../../lib/use-list-query-submit';
@@ -203,6 +204,17 @@ async function invalidateGroups() {
 /** 基础资料与权限分开编辑，名称唯一性由服务端核对。 */
 function GroupEditor({ group, onClose }: { group?: Group; onClose: () => void }) {
   const [error, setError] = useState('');
+  const [saveNew] = useState(() =>
+    createAdminCreation({
+      create: api.adminGroups.create,
+      /** 启停是独立授权变化，未知创建恢复后仍需在已有组上确认原因。 */
+      update: (saved, body, previous) => {
+        if (body.is_enabled !== previous.is_enabled)
+          throw new InputError('用户组已创建。修改启用状态需要操作原因，请关闭弹窗并刷新后编辑。');
+        return api.adminGroups.update(saved.id, { ...body, version: saved.version });
+      },
+    }),
+  );
   const form = useForm<z.infer<typeof groupSchema>>({
     resolver: zodResolver(groupSchema),
     defaultValues: {
@@ -243,7 +255,7 @@ function GroupEditor({ group, onClose }: { group?: Group; onClose: () => void })
       else
         await request(
           () =>
-            api.adminGroups.create({
+            saveNew({
               name: value.name,
               description: value.description,
               sort: value.sort,

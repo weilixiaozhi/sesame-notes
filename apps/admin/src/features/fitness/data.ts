@@ -18,7 +18,13 @@ export async function listFitness(kind: FitnessKind, query: Paging & { q?: strin
 }
 
 /** 确认后的内容保存后立即生效，身份与修订始终从可编辑正文中移除。 */
-export async function saveFitness(kind: FitnessKind, content: FitnessContent, enabled: boolean, current?: FitnessRow) {
+export async function saveFitness(
+  kind: FitnessKind,
+  content: FitnessContent,
+  enabled: boolean,
+  current?: FitnessRow,
+  idempotencyKey?: string,
+): Promise<FitnessRow> {
   const editable = editableContent(content);
   if (kind === 'exercise') {
     const body = { content: editable as Omit<ExerciseContent, 'id'>, is_enabled: enabled };
@@ -26,7 +32,7 @@ export async function saveFitness(kind: FitnessKind, content: FitnessContent, en
       () =>
         current
           ? api.adminFitnessExercises.update(current.id, { ...body, version: current.version })
-          : api.adminFitnessExercises.create(body),
+          : api.adminFitnessExercises.create(body, idempotencyKey),
       'fitness-exercise-save',
     );
   }
@@ -36,7 +42,7 @@ export async function saveFitness(kind: FitnessKind, content: FitnessContent, en
       () =>
         current
           ? api.adminFitnessTemplates.update(current.id, { ...body, version: current.version })
-          : api.adminFitnessTemplates.create(body),
+          : api.adminFitnessTemplates.create(body, idempotencyKey),
       'fitness-template-save',
     );
   }
@@ -45,7 +51,7 @@ export async function saveFitness(kind: FitnessKind, content: FitnessContent, en
     () =>
       current
         ? api.adminFitnessPlans.update(current.id, { ...body, version: current.version })
-        : api.adminFitnessPlans.create(body),
+        : api.adminFitnessPlans.create(body, idempotencyKey),
     'fitness-plan-save',
   );
 }

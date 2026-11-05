@@ -4,16 +4,29 @@
 
 ## 日常开发
 
-| 命令                                          | 用途                                                                                 |
-| --------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `pnpm dev:test`                               | 启动共用测试 API 和数据库                                                            |
-| `pnpm dev:test:init`                          | 新 clone 首次准备本机测试配置、PostgreSQL 17 镜像与独立测试卷；不启动服务            |
-| `pnpm dev:web` / `pnpm admin:dev`             | 启动 Web / Admin 开发页面                                                            |
-| `pnpm dev:web:preview` / `pnpm admin:preview` | 启动连接共用测试 API 的验收页面                                                      |
-| `pnpm test:mobile:backend`                    | 手机与测试后端联调，可追加 `-MobilePath` 等原有参数                                  |
-| `pnpm version:bump api`                       | 递增所选端版本；端可选 `api`、`web`、`admin`，可追加 `minor`、`major` 或 `--dry-run` |
-| `pnpm analyze:deps` / `pnpm contract:check`   | 依赖分析 / 契约一致性与兼容性检查                                                    |
-| `pnpm test:scripts`                           | 验证目录数据、当前数据库发布与接口兼容性                                             |
+### 管理端新增与浏览器能力
+
+管理端新增官方健身内容、部位/器械分类、Banner、后台账号和用户组时，同一编辑过程使用固定的 `Idempotency-Key` UUID。服务端先复核当前管理员会话及权限，再在同一事务内创建实体、追加审计并保存白名单响应回执；同键同请求返回首次结果，同键不同内容返回 `ADMIN_CREATION_KEY_REUSED`。旧管理端未提供该可选头时仍执行单次新增，不具备未知结果恢复保障。
+
+新增回执按管理员和请求标识隔离，长期保留，避免迟到重试再次创建；请求指纹使用随机盐和现有管理员固定成本派生算法，不受 JWT 密钥轮换影响。回执不保存请求正文、密码、令牌或内部 Prisma 行。部署时需先应用新增回执表迁移，再运行支持恢复的管理端。
+
+编辑器内的未知结果会先按原键、原载荷恢复，再将变化后的草稿更新到同一实体；关闭编辑器后重新打开是新意图，应先核对列表。密码、登录名和需独立确认原因的变更按对应管理流程处理，不会静默重建账号或用户组。
+
+用户 Web 入口要求安全上下文、WebCrypto 的 `crypto.randomUUID`/`crypto.subtle.digest`、`AbortController` 及 `AbortSignal.any`/`throwIfAborted`。能力不足时显示浏览器升级或安全连接提示，业务入口不启动；构建没有引入额外 polyfill。
+
+### 常用命令
+
+| 命令                                                     | 用途                                                                                 |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `pnpm dev:test`                                          | 启动共用测试 API 和数据库                                                            |
+| `pnpm dev:test:init`                                     | 新 clone 首次准备本机测试配置、PostgreSQL 17 镜像与独立测试卷；不启动服务            |
+| `pnpm dev:web` / `pnpm admin:dev`                        | 启动 Web / Admin 开发页面                                                            |
+| `pnpm dev:web:preview` / `pnpm admin:preview`            | 启动连接共用测试 API 的验收页面                                                      |
+| `pnpm test:mobile:backend`                               | 手机与测试后端联调，可追加 `-MobilePath` 等原有参数                                  |
+| `pnpm version:bump api`                                  | 递增所选端版本；端可选 `api`、`web`、`admin`，可追加 `minor`、`major` 或 `--dry-run` |
+| `pnpm analyze:deps` / `pnpm contract:check`              | 依赖分析 / 契约一致性与兼容性检查                                                    |
+| `pnpm --filter @sesame-notes/api fitness:baseline:check` | 只读校验官方训练内容基线的结构、身份及引用，不连接数据库                             |
+| `pnpm test:scripts`                                      | 验证目录数据、当前数据库发布与接口兼容性                                             |
 
 验收页面和共用测试环境支持追加 `-Rebuild` 重建或 `-Stop` 停止。手机联调默认读取相邻的 `sesame-notes-mobile` 仓库。
 
@@ -58,6 +71,8 @@ python3 -B scripts/release.py --help
 日常发布统一使用 `scripts/release.py`，选择 `api`、`web` 或 `admin`；默认预检，追加 `--apply` 才执行。Web、Admin 需要各自的 `--site-link` 和 `--health-url`。重试同一版本不重复递增版本号。
 
 API 发布只接受具备当前完整结构、已完成同步切点与持久水位的数据库。停止服务后，`db-init` 对照已冻结的迁移身份、列、约束、索引、函数、触发器和序列依赖核验现有数据库，在独占事务内仅把 Prisma 迁移元数据登记为当前建库基线，保留全部业务数据、账号、配置、事件与水位；后续发布继续应用新增迁移。全新空库执行单一完整基线，创建当前结构、默认组、官方内容、字典与初始状态。旧结构、未完成迁移或未完成切点直接拒绝，入口不转换旧库或恢复旧备份。迁移开始后失败保留停服状态和错误日志，恢复旧镜像前需要人工确认结构兼容性。
+
+API 按单实例部署：实时票据与连接、限流桶、汇率缓存和维护任务状态由当前进程持有。生产 Compose 的固定 `container_name` 明确限制 API 副本数；反向代理只转发到这一个 API 容器。需要扩容时，应先完成共享票据、跨实例通知、统一限流和维护任务协调，再调整部署拓扑。
 
 | 入口                                               | 用途                                             |
 | -------------------------------------------------- | ------------------------------------------------ |

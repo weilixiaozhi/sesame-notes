@@ -16,6 +16,7 @@ import {
 import { unwrap, type components } from '@sesame-notes/api-client';
 import { api, pushChange, queryClient, useSession } from '../../lib/session';
 import { createDefaultBookProvisioner } from '../../app/default-book';
+import { createLedgerSubmitter } from './entity-submit';
 import { useProductAnalyticsPage } from '../../lib/use-product-analytics';
 import {
   beginProductAnalyticsFlow,
@@ -64,7 +65,9 @@ export function AccountingPage() {
     ledgerId: string;
     context: ProductAnalyticsContext | null;
   } | null>(null);
-  const [ensureDefaultLedger] = useState(() => createDefaultBookProvisioner('accounting', accountId));
+  const [ensureDefaultLedger] = useState(() =>
+    createDefaultBookProvisioner('accounting', accountId, createLedgerSubmitter),
+  );
   const firstRecord = useMutation({ mutationFn: ensureDefaultLedger });
   const ledgerQuery = useQuery({
     queryKey: ['account', accountId, 'accounting', 'ledgers'],

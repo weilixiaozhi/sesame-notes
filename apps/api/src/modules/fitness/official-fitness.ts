@@ -6,7 +6,14 @@ import type { FastifyInstance } from 'fastify';
 import type { ApiConfig } from '../../shared/api-config.js';
 import { ApiError } from '../../shared/errors.js';
 import { execute } from '../../shared/execute.js';
-import { authenticateAdmin, verifyAdminWriteRequest, withAdminMutation, writeAuditLog } from '../admin/index.js';
+import {
+  AdminCreationHeadersSchema,
+  authenticateAdmin,
+  verifyAdminWriteRequest,
+  withAdminCreation,
+  withAdminMutation,
+  writeAuditLog,
+} from '../admin/index.js';
 import type { FitnessLibrary } from './fitness-library-schemas.js';
 import {
   FitnessCatalogSchema,
@@ -308,6 +315,7 @@ export function registerOfficialFitnessRoutes(app: FastifyInstance, prisma: Pris
             { content: editable, is_enabled: Type.Optional(Type.Boolean()) },
             { additionalProperties: false },
           ),
+          headers: AdminCreationHeadersSchema,
           response: { 201: rowSchema },
         },
       },
@@ -316,7 +324,7 @@ export function registerOfficialFitnessRoutes(app: FastifyInstance, prisma: Pris
           const body = request.body as { content: Content; is_enabled?: boolean };
           const id = randomUUID();
           const content = normalizeOfficialContent(kind, body.content, id);
-          const row = await withAdminMutation(prisma, request, 'fitness:write', async (tx, auth) => {
+          const row = await withAdminCreation(prisma, request, 'fitness:write', async (tx, auth) => {
             const isEnabled = body.is_enabled ?? true;
             await validateOfficialContent(tx, { id, kind, content: content as Prisma.JsonObject, isEnabled });
             const result = await tx.officialFitnessContent.create({
@@ -337,9 +345,9 @@ export function registerOfficialFitnessRoutes(app: FastifyInstance, prisma: Pris
               ip: request.ip,
               metadata: { enabled: isEnabled },
             });
-            return result;
+            return officialResponse(result);
           });
-          return reply.code(201).send(officialResponse(row));
+          return reply.code(201).send(row);
         }),
     );
     app.patch(

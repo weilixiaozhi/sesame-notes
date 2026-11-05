@@ -8,12 +8,14 @@ import { TemplateFields } from './template-fields';
 import { PlanFields } from './plan-fields';
 import { Field } from './fields';
 import { saveFitness } from './data';
+import { createAdminCreation } from '../../api/create-intent';
 import {
   contentError,
   contentName,
   kindLabels,
   newContent,
   type ExerciseContent,
+  type FitnessContent,
   type FitnessKind,
   type FitnessRow,
   type PlanContent,
@@ -40,6 +42,12 @@ export function FitnessEditor({
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
   const lock = useRef(false);
+  const [saveNew] = useState(() =>
+    createAdminCreation<{ content: FitnessContent; enabled: boolean }, FitnessRow>({
+      create: (body, key) => saveFitness(kind, body.content, body.enabled, undefined, key),
+      update: (saved, body) => saveFitness(kind, body.content, body.enabled, saved),
+    }),
+  );
   const bodyParts = useTaxonomies('body_part', kind === 'exercise');
   const equipment = useTaxonomies('equipment', kind !== 'plan');
   const taxonomiesPending = (kind === 'exercise' && bodyParts.isPending) || (kind !== 'plan' && equipment.isPending);
@@ -69,7 +77,8 @@ export function FitnessEditor({
     setBusy(true);
     setError('');
     try {
-      await saveFitness(kind, content, enabled, current);
+      if (current) await saveFitness(kind, content, enabled, current);
+      else await saveNew({ content, enabled });
       await onSaved();
       onClose();
     } catch (failure) {

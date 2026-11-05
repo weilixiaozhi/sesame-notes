@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { calendarRange, localDateKey, shiftCalendarMonth, validCalendarDate } from './calendar-dates';
+import { calendarRange, shiftCalendarMonth, validCalendarDate } from './calendar-dates';
+import { localDateKey } from '../../lib/local-date';
 
 describe('日历日期边界', () => {
   it('拒绝滚入下月的日期与支持区间外深链', () => {

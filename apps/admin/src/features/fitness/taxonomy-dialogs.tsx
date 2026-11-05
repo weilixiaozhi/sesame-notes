@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { api, InputError, request } from '../../api/client';
+import { createAdminCreation } from '../../api/create-intent';
 import { queryClient, useSession } from '../../auth/session';
 import { Button, ConfirmDialog, Empty, Loading, Modal, RequestError } from '../../components/ui';
 import { Field } from './fields';
@@ -131,7 +132,7 @@ export function TaxonomyManager({ kind, onClose }: { kind: TaxonomyKind; onClose
 }
 
 /** 名称和排序与操作原因一次提交，修改携带打开弹窗时的分类版本。 */
-export function TaxonomyEditor({
+function TaxonomyEditor({
   kind,
   current,
   onClose,
@@ -147,6 +148,13 @@ export function TaxonomyEditor({
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const label = taxonomyLabels[kind];
+  const [saveNew] = useState(() =>
+    createAdminCreation({
+      create: (body: Parameters<typeof api.adminFitnessTaxonomies.create>[1], key) =>
+        api.adminFitnessTaxonomies.create(kind, body, key),
+      update: (saved, body) => api.adminFitnessTaxonomies.update(kind, saved.id, { ...body, version: saved.version }),
+    }),
+  );
   /** 验证三种语言和排序，服务端成功后再让所有分类引用刷新。 */
   async function save(reason: string) {
     if (lock.current) return;
@@ -159,7 +167,7 @@ export function TaxonomyEditor({
         () =>
           current
             ? api.adminFitnessTaxonomies.update(kind, current.id, { ...parsed.data, version: current.version, reason })
-            : api.adminFitnessTaxonomies.create(kind, { ...parsed.data, reason }),
+            : saveNew({ ...parsed.data, reason }),
         `fitness-${kind}-save`,
       );
       onSaved(`${label}已${current ? '更新' : '新增'}。`);
@@ -209,7 +217,7 @@ export function TaxonomyEditor({
 }
 
 /** 引用中的分类先迁移到有效替代项，再删除分类本身，动作和模板保持保留。 */
-export function TaxonomyDelete({
+function TaxonomyDelete({
   row,
   rows,
   onClose,

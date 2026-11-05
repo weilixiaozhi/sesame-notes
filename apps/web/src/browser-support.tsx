@@ -1,15 +1,26 @@
 type BrowserSupportIssue = 'insecure-connection' | 'unsupported-browser';
 
-/** 在加载会话与业务模块前检查浏览器能力，避免提交操作时才因安全上下文缺失而失败。 */
+/** Web 入口要求安全上下文、Web Crypto 与可组合的请求取消信号；缺少能力时不加载业务模块。 */
 export function getBrowserSupportIssue(): BrowserSupportIssue | null {
-  if (!window.isSecureContext) return 'insecure-connection';
-  if (typeof window.crypto?.randomUUID !== 'function' || typeof window.crypto?.subtle?.digest !== 'function')
+  try {
+    if (!window.isSecureContext) return 'insecure-connection';
+    if (
+      typeof window.crypto?.randomUUID !== 'function' ||
+      typeof window.crypto?.subtle?.digest !== 'function' ||
+      typeof window.AbortController !== 'function' ||
+      typeof window.AbortSignal?.any !== 'function' ||
+      typeof window.AbortSignal?.prototype?.throwIfAborted !== 'function'
+    )
+      return 'unsupported-browser';
+    return null;
+  } catch (error) {
+    console.error('浏览器能力检查失败', error);
     return 'unsupported-browser';
-  return null;
+  }
 }
 
 /** 为私有 IPv4 的常用开发端口提供本机指引，不猜测站点的 HTTPS 配置。 */
-export function localPreviewAddress(): string | null {
+function localPreviewAddress(): string | null {
   const hostname = window.location.hostname;
   const octets = hostname.split('.').map(Number);
   const privateIp =

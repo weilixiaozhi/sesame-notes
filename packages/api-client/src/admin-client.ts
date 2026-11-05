@@ -14,6 +14,11 @@ interface AdminApiClientOptions {
   onUnauthorized?: () => void;
 }
 
+/** 每次创建仅在本请求携带固定意图标识，避免影响其他写入或读取请求。 */
+function creationHeaders(idempotencyKey?: string) {
+  return idempotencyKey === undefined ? undefined : { 'idempotency-key': idempotencyKey };
+}
+
 /** 独立后台客户端只访问管理接口，携带 Cookie，并将所有写操作保留为单次请求。 */
 export class AdminApiClient extends ApiClient {
   private sessionGeneration = 0;
@@ -65,8 +70,8 @@ export class AdminApiClient extends ApiClient {
     statistics: async (signal?: AbortSignal) =>
       unwrap(await this.client.GET('/api/v1/admin/banners/statistics', { signal })),
     /** 新增同一位置的一张轮播图片。 */
-    create: async (body: Body<paths['/api/v1/admin/banners']['post']>) =>
-      unwrap(await this.client.POST('/api/v1/admin/banners', { body })),
+    create: async (body: Body<paths['/api/v1/admin/banners']['post']>, idempotencyKey?: string) =>
+      unwrap(await this.client.POST('/api/v1/admin/banners', { body, headers: creationHeaders(idempotencyKey) })),
     /** 按当前修订保存轮播图片与独立跳转目标。 */
     update: async (banner_id: string, body: Body<paths['/api/v1/admin/banners/{banner_id}']['patch']>) =>
       unwrap(await this.client.PATCH('/api/v1/admin/banners/{banner_id}', { params: { path: { banner_id } }, body })),
@@ -104,8 +109,8 @@ export class AdminApiClient extends ApiClient {
     list: async (query: Query<paths['/api/v1/admin/accounts']['get']> = {}, signal?: AbortSignal) =>
       unwrap(await this.client.GET('/api/v1/admin/accounts', { params: { query }, signal })),
     /** 新建具有单个用户组归属的后台用户。 */
-    create: async (body: Body<paths['/api/v1/admin/accounts']['post']>) =>
-      unwrap(await this.client.POST('/api/v1/admin/accounts', { body })),
+    create: async (body: Body<paths['/api/v1/admin/accounts']['post']>, idempotencyKey?: string) =>
+      unwrap(await this.client.POST('/api/v1/admin/accounts', { body, headers: creationHeaders(idempotencyKey) })),
     /** 使用版本校验修改显示名称、启用状态或用户组。 */
     update: async (admin_id: string, body: Body<paths['/api/v1/admin/accounts/{admin_id}']['patch']>) =>
       unwrap(await this.client.PATCH('/api/v1/admin/accounts/{admin_id}', { params: { path: { admin_id } }, body })),
@@ -135,8 +140,8 @@ export class AdminApiClient extends ApiClient {
     list: async (query: Query<paths['/api/v1/admin/groups']['get']> = {}, signal?: AbortSignal) =>
       unwrap(await this.client.GET('/api/v1/admin/groups', { params: { query }, signal })),
     /** 新建无业务授权的用户组。 */
-    create: async (body: Body<paths['/api/v1/admin/groups']['post']>) =>
-      unwrap(await this.client.POST('/api/v1/admin/groups', { body })),
+    create: async (body: Body<paths['/api/v1/admin/groups']['post']>, idempotencyKey?: string) =>
+      unwrap(await this.client.POST('/api/v1/admin/groups', { body, headers: creationHeaders(idempotencyKey) })),
     /** 修改组资料或启用状态。 */
     update: async (group_id: string, body: Body<paths['/api/v1/admin/groups/{group_id}']['patch']>) =>
       unwrap(await this.client.PATCH('/api/v1/admin/groups/{group_id}', { params: { path: { group_id } }, body })),
@@ -247,8 +252,15 @@ export class AdminApiClient extends ApiClient {
     create: async (
       kind: 'body_part' | 'equipment',
       body: Body<paths['/api/v1/admin/fitness/taxonomies/{kind}']['post']>,
+      idempotencyKey?: string,
     ) =>
-      unwrap(await this.client.POST('/api/v1/admin/fitness/taxonomies/{kind}', { params: { path: { kind } }, body })),
+      unwrap(
+        await this.client.POST('/api/v1/admin/fitness/taxonomies/{kind}', {
+          params: { path: { kind } },
+          body,
+          headers: creationHeaders(idempotencyKey),
+        }),
+      ),
     /** 按版本更新分类名称和排序，防止覆盖他人修改。 */
     update: async (
       kind: 'body_part' | 'equipment',
@@ -312,8 +324,10 @@ export class AdminApiClient extends ApiClient {
     list: async (query: Query<paths['/api/v1/admin/fitness/exercises']['get']> = {}, signal?: AbortSignal) =>
       unwrap(await this.client.GET('/api/v1/admin/fitness/exercises', { params: { query }, signal })),
     /** 新建动作并立即生效，标识由服务端生成。 */
-    create: async (body: Body<paths['/api/v1/admin/fitness/exercises']['post']>) =>
-      unwrap(await this.client.POST('/api/v1/admin/fitness/exercises', { body })),
+    create: async (body: Body<paths['/api/v1/admin/fitness/exercises']['post']>, idempotencyKey?: string) =>
+      unwrap(
+        await this.client.POST('/api/v1/admin/fitness/exercises', { body, headers: creationHeaders(idempotencyKey) }),
+      ),
     /** 按当前版本保存动作资料并立即生效。 */
     update: async (content_id: string, body: Body<paths['/api/v1/admin/fitness/exercises/{content_id}']['patch']>) =>
       unwrap(
@@ -329,8 +343,10 @@ export class AdminApiClient extends ApiClient {
     list: async (query: Query<paths['/api/v1/admin/fitness/templates']['get']> = {}, signal?: AbortSignal) =>
       unwrap(await this.client.GET('/api/v1/admin/fitness/templates', { params: { query }, signal })),
     /** 创建模板并立即生效。 */
-    create: async (body: Body<paths['/api/v1/admin/fitness/templates']['post']>) =>
-      unwrap(await this.client.POST('/api/v1/admin/fitness/templates', { body })),
+    create: async (body: Body<paths['/api/v1/admin/fitness/templates']['post']>, idempotencyKey?: string) =>
+      unwrap(
+        await this.client.POST('/api/v1/admin/fitness/templates', { body, headers: creationHeaders(idempotencyKey) }),
+      ),
     /** 保存模板资料与动作编排并立即生效。 */
     update: async (content_id: string, body: Body<paths['/api/v1/admin/fitness/templates/{content_id}']['patch']>) =>
       unwrap(
@@ -346,8 +362,8 @@ export class AdminApiClient extends ApiClient {
     list: async (query: Query<paths['/api/v1/admin/fitness/plans']['get']> = {}, signal?: AbortSignal) =>
       unwrap(await this.client.GET('/api/v1/admin/fitness/plans', { params: { query }, signal })),
     /** 创建周期计划并立即生效。 */
-    create: async (body: Body<paths['/api/v1/admin/fitness/plans']['post']>) =>
-      unwrap(await this.client.POST('/api/v1/admin/fitness/plans', { body })),
+    create: async (body: Body<paths['/api/v1/admin/fitness/plans']['post']>, idempotencyKey?: string) =>
+      unwrap(await this.client.POST('/api/v1/admin/fitness/plans', { body, headers: creationHeaders(idempotencyKey) })),
     /** 保存计划资料与每日模板编排。 */
     update: async (content_id: string, body: Body<paths['/api/v1/admin/fitness/plans/{content_id}']['patch']>) =>
       unwrap(

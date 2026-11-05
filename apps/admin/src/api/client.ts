@@ -42,6 +42,7 @@ export function errorMessage(error: unknown, context: 'operation' | 'login' = 'o
     ADMIN_AUTH_UNAVAILABLE: '后台登录验证暂时不可用，请稍后重试。',
     ORIGIN_DENIED: '请求未通过安全验证，请刷新页面后重试。',
     ADMIN_REQUEST_REQUIRED: '请求未通过安全验证，请刷新页面后重试。',
+    ADMIN_CREATION_KEY_REUSED: '此次创建的内容与原请求不一致，请保留当前输入，关闭弹窗并刷新核对已创建的内容。',
     ADMIN_USERNAME_EXISTS: '此登录账号已存在，请更换。',
     ADMIN_EMAIL_EXISTS: '此邮箱已被其他后台用户使用，请更换。',
     ADMIN_PHONE_EXISTS: '此手机号已被其他后台用户使用，请更换。',

@@ -5229,6 +5229,18 @@
             }
           }
         },
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "example": "056cf10d-2d59-599c-9d97-6749e866aa52",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
         "security": [
           {
             "adminSessionAuth": []
@@ -7534,6 +7546,18 @@
             }
           }
         },
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "example": "056cf10d-2d59-599c-9d97-6749e866aa52",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
         "security": [
           {
             "adminSessionAuth": []
@@ -12104,6 +12128,18 @@
             }
           }
         },
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "example": "056cf10d-2d59-599c-9d97-6749e866aa52",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
         "security": [
           {
             "adminSessionAuth": []
@@ -40003,6 +40039,16 @@
             "in": "path",
             "name": "kind",
             "required": true
+          },
+          {
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "example": "056cf10d-2d59-599c-9d97-6749e866aa52",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
           }
         ],
         "security": [
@@ -41278,6 +41324,18 @@
             }
           }
         },
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "example": "056cf10d-2d59-599c-9d97-6749e866aa52",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
         "security": [
           {
             "adminSessionAuth": []
@@ -42692,6 +42750,18 @@
             }
           }
         },
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "example": "056cf10d-2d59-599c-9d97-6749e866aa52",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
         "security": [
           {
             "adminSessionAuth": []
@@ -44346,6 +44416,18 @@
             }
           }
         },
+        "parameters": [
+          {
+            "schema": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "example": "056cf10d-2d59-599c-9d97-6749e866aa52",
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false
+          }
+        ],
         "security": [
           {
             "adminSessionAuth": []

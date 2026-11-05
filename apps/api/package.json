@@ -16,6 +16,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "fitness:catalog": "tsx scripts/generate-fitness-catalog.ts",
+    "fitness:baseline:check": "vitest run --config vitest.official-fitness.config.ts test/fitness-library-baseline.test.ts",
     "postinstall": "prisma generate",
     "db:seed": "tsx src/admin-bootstrap.ts",
     "db:delete-account": "tsx src/account-delete.ts",

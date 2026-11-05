@@ -13,6 +13,7 @@ import { unwrap } from '@sesame-notes/api-client';
 import { api, pushChange, useSession } from '../../lib/session';
 import { createDefaultBookProvisioner } from '../../app/default-book';
 import { useProductAnalyticsPage } from '../../lib/use-product-analytics';
+import { useLocalToday } from '../../lib/use-local-today';
 import {
   beginProductAnalyticsFlow,
   captureProductAnalyticsContext,
@@ -44,21 +45,6 @@ const dayOrderHints: Record<DayEvent['category'], string> = {
   countdown: '未到期由近到远，已过期排在后面',
   stage: '按开始日期，由新到旧',
 };
-
-/** 跨过午夜或重新聚焦时更新今天，卡片不会一直显示昨天的倒数。 */
-function useToday() {
-  const [today, setToday] = useState(todayDate);
-  useEffect(() => {
-    const update = () => setToday(todayDate());
-    const timer = window.setInterval(update, 30_000);
-    window.addEventListener('focus', update);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('focus', update);
-    };
-  }, []);
-  return today;
-}
 
 /** 整本日子按固定类型分组，并按各类型的实际发生日期展示。 */
 export function DaysPage() {
@@ -98,7 +84,7 @@ export function DaysPage() {
       setEventDialog('new');
     },
   });
-  const today = useToday();
+  const today = useLocalToday();
   const books = useQuery({
     queryKey: ['account', session!.user.user_id, 'day-books'],
     queryFn: async ({ signal }) => unwrap(await api.GET('/api/v1/sync/day-books', { signal })),

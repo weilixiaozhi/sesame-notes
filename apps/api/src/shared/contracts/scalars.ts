@@ -4,7 +4,7 @@ import { ApiError } from '../errors.js';
 
 export const UUID_PATTERN = '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
 const UUID_V5_PATTERN = '^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
-export const TIMESTAMP_PATTERN = '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$';
+const TIMESTAMP_PATTERN = '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$';
 const AMOUNT_PATTERN = '^(?:0|[1-9][0-9]{0,27})(?:\\.[0-9]{0,9}[1-9])?$';
 export const POSITIVE_AMOUNT_PATTERN = '^(?:0\\.(?:[0-9]{0,9}[1-9])|[1-9][0-9]{0,27}(?:\\.[0-9]{0,9}[1-9])?)$';
 export const RATE_PATTERN = '^(?:0\\.(?:[0-9]{0,17}[1-9])|[1-9][0-9]{0,19}(?:\\.[0-9]{0,17}[1-9])?)$';

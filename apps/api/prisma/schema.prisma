@@ -176,6 +176,7 @@ model AdminAccount {
   updatedBy           String?        @map("updated_by") @db.VarChar(100)
   deletedAt           DateTime?      @map("deleted_at") @db.Timestamptz(3)
   sessions            AdminSession[]
+  creationReceipts     AdminCreationReceipt[]
 
   @@index([identityType, isEnabled, deletedAt])
   @@index([groupId, deletedAt])
@@ -214,6 +215,18 @@ model AdminSession {
   @@index([adminId, revokedAt])
   @@index([expiresAt])
   @@map("admin_sessions")
+}
+
+// 管理员新增意图的持久回执，与实体和审计同事务提交，防止未知结果重试再次创建。
+model AdminCreationReceipt {
+  adminId     String       @map("admin_id") @db.Uuid
+  key         String       @db.Uuid
+  requestHash String       @map("request_hash") @db.VarChar(255)
+  response    Json         @db.JsonB
+  admin       AdminAccount @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@id([adminId, key])
+  @@map("admin_creation_receipts")
 }
 
 model User {

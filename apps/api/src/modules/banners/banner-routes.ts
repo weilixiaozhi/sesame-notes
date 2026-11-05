@@ -5,7 +5,14 @@ import type { FastifyInstance } from 'fastify';
 import type { ApiConfig } from '../../shared/api-config.js';
 import { ApiError } from '../../shared/errors.js';
 import { execute } from '../../shared/execute.js';
-import { authenticateAdmin, verifyAdminWriteRequest, withAdminMutation, writeAuditLog } from '../admin/index.js';
+import {
+  AdminCreationHeadersSchema,
+  authenticateAdmin,
+  verifyAdminWriteRequest,
+  withAdminCreation,
+  withAdminMutation,
+  writeAuditLog,
+} from '../admin/index.js';
 import { bannerMediaFile, MAX_BANNER_BYTES, publishBannerMedia, validateBannerImage } from './banner-media.js';
 import {
   activeBannerWhere,
@@ -128,6 +135,7 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
       schema: {
         tags: ['admin-banners'],
         operationId: 'createAdminBanner',
+        headers: AdminCreationHeadersSchema,
         body: BannerCreateSchema,
         response: { 201: AdminBannerEntrySchema },
       },
@@ -135,7 +143,7 @@ export function registerBannerRoutes(app: FastifyInstance, prisma: PrismaClient,
     async (request, reply) =>
       execute(request, '新增 Banner 图片', async () => {
         const body = request.body as BannerCreate;
-        const response = await withAdminMutation(prisma, request, 'banners:write', async (tx, auth) => {
+        const response = await withAdminCreation(prisma, request, 'banners:write', async (tx, auth) => {
           await validateBannerContent(tx, body);
           await assertBannerCapacity(tx, body.slot);
           const row = await tx.appBanner.create({

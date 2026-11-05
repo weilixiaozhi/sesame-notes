@@ -18,6 +18,8 @@ jobs:
           cache: pnpm
       - name: 安装依赖（锁定文件）
         run: pnpm install --frozen-lockfile
+      - name: 官方训练内容基线检查（无数据库）
+        run: pnpm --filter @sesame-notes/api fitness:baseline:check
       - name: Build（先构建共享客户端，供 Web 类型检查和测试使用）
         run: pnpm build
       - name: Lint

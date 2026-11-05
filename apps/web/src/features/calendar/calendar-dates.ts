@@ -1,7 +1,4 @@
-/** 日期以日历数字构造，避免 UTC 字符串被浏览器转换到前一天。 */
-export function localDateKey(value: Date): string {
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-}
+import { localDateKey } from '../../lib/local-date';
 
 /** 只接受支持区间内真实存在的日期，不让地址栏溢出日期自动滚入下月。 */
 export function validCalendarDate(value: string | null): value is string {

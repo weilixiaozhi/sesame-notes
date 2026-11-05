@@ -6,6 +6,7 @@ import { UuidSchema } from '../../shared/contracts/scalars.js';
 import { ApiError } from '../../shared/errors.js';
 import { createMultiKeyRateLimit } from '../../shared/rate-limit.js';
 import { writeAuditLog } from './audit-log.js';
+import { AdminCreationHeadersSchema, withAdminCreation } from './admin-creation.js';
 import { validateAdminPaginationQuery } from './admin-pagination.js';
 import {
   AdminAccountListSchema,
@@ -146,6 +147,7 @@ export function registerAdminAccountRoutes(app: FastifyInstance, prisma: PrismaC
       preHandler: [guarded.preHandler, passwordRateLimited],
       schema: {
         tags: ['admin-accounts'],
+        headers: AdminCreationHeadersSchema,
         body: Type.Object(
           {
             username: Type.String({ minLength: 4, maxLength: 32 }),
@@ -176,7 +178,7 @@ export function registerAdminAccountRoutes(app: FastifyInstance, prisma: PrismaC
         const phone = normalizeAdminPhone(body.phone);
         validateAdminPassword(body.password);
         const passwordHash = await hashAdminPassword(body.password);
-        const created = await withAdminMutation(prisma, request, 'accounts:manage', async (tx, auth) => {
+        const created = await withAdminCreation(prisma, request, 'accounts:manage', async (tx, auth) => {
           const group = await requireAdminGroup(tx, body.group_id ?? DEFAULT_ADMIN_GROUP_ID);
           if (await tx.adminAccount.findUnique({ where: { username }, select: { id: true } }))
             throw new ApiError(409, 'ADMIN_USERNAME_EXISTS', '此登录账号已存在，请更换');
@@ -203,9 +205,9 @@ export function registerAdminAccountRoutes(app: FastifyInstance, prisma: PrismaC
             ip: request.ip,
             metadata: { username, group_name: account.group.name, identity_type: account.identityType },
           });
-          return account;
+          return adminAccountResponse(account);
         });
-        return await reply.code(201).send(adminAccountResponse(created));
+        return await reply.code(201).send(created);
       } catch (error) {
         return adminManagementFailed(error, request);
       }

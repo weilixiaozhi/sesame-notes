@@ -2,7 +2,7 @@ import type { components, paths } from '@sesame-notes/api-client';
 import catalog from './category-catalog.json';
 
 type Category = components['schemas']['Category'];
-export type CategoryTemplate = { key: string; name: string; icon: string; parentKey: string | null };
+type CategoryTemplate = { key: string; name: string; icon: string; parentKey: string | null };
 type Input = paths['/api/v1/ledgers/{ledger_id}/categories']['post']['requestBody']['content']['application/json'];
 
 /** 明确目标失效时允许重新选择，不能按同名替换已有选择。 */

@@ -10,7 +10,7 @@ type Category = components['schemas']['Category'];
 type DayGroup = { date: string; label: string; weekday: string; items: Transaction[] };
 
 /** 按用户所在时区归组，日期倒序展示；分页未加载的金额不会被误算为全天合计。 */
-export function groupTransactionsByDay(items: Transaction[], now = new Date()): DayGroup[] {
+function groupTransactionsByDay(items: Transaction[], now = new Date()): DayGroup[] {
   const groups = new Map<string, DayGroup>();
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);

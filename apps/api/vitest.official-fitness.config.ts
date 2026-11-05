@@ -6,6 +6,7 @@ export default defineConfig({
     include: [
       'src/modules/fitness/official-fitness.test.ts',
       'src/modules/fitness/official-fitness-media.test.ts',
+      'test/fitness-library-baseline.test.ts',
       'test/fitness-rules.test.ts',
       'test/fitness-plan-generation.test.ts',
     ],

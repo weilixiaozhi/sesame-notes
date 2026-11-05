@@ -10,7 +10,9 @@ import { execute } from '../../shared/execute.js';
 import {
   adminOperationReason,
   AdminReasonSchema,
+  AdminCreationHeadersSchema,
   authenticateAdmin,
+  withAdminCreation,
   withAdminMutation,
   writeAuditLog,
 } from '../admin/index.js';
@@ -190,6 +192,7 @@ export function registerOfficialFitnessTaxonomyRoutes(
         schema: {
           tags: ['admin-fitness'],
           operationId: 'createOfficialFitnessTaxonomy',
+          headers: AdminCreationHeadersSchema,
           params: kindParams,
           body: Type.Object(
             { name: FitnessTaxonNameSchema, sort_order: Type.Optional(sortSchema), reason: AdminReasonSchema },
@@ -204,7 +207,7 @@ export function registerOfficialFitnessTaxonomyRoutes(
           const body = request.body as { name: FitnessTaxonName; sort_order?: number; reason: string };
           const reason = adminOperationReason(body);
           const name = normalizeTaxonName(body.name);
-          const row = await withAdminMutation(prisma, request, 'fitness:write', async (tx, auth) => {
+          const row = await withAdminCreation(prisma, request, 'fitness:write', async (tx, auth) => {
             const created = await tx.officialFitnessTaxon.create({
               data: { kind, id: randomUUID(), ...name, sortOrder: body.sort_order ?? 0, updatedBy: auth.username },
             });
@@ -217,9 +220,9 @@ export function registerOfficialFitnessTaxonomyRoutes(
               ip: request.ip,
               metadata: { reason, kind, taxon_name: created.nameZh, target_display: created.nameZh },
             });
-            return created;
+            return taxonResponse(created, { exercises: [], templates: [] });
           });
-          return reply.code(201).send(taxonResponse(row, { exercises: [], templates: [] }));
+          return reply.code(201).send(row);
         }),
     );
     app.patch(

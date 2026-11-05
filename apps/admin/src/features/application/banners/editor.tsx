@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { api, errorMessage, InputError, reportError, request } from '../../../api/client';
+import { createAdminCreation } from '../../../api/create-intent';
 import { Button, Loading, Modal, RequestError } from '../../../components/ui';
 import {
   bannerImageId,
@@ -43,6 +44,12 @@ export function BannerEditor({
   const [busy, setBusy] = useState<'upload' | 'save' | null>(null);
   const [error, setError] = useState('');
   const lock = useRef(false);
+  const [saveNew] = useState(() =>
+    createAdminCreation({
+      create: api.adminBanners.create,
+      update: (saved, body) => api.adminBanners.update(saved.id, { ...body, version: saved.version }),
+    }),
+  );
   const official = draft.target === 'official-plan' || draft.target === 'official-template';
   const kind = draft.target === 'official-plan' ? 'plan' : 'template';
   const targets = useQuery({
@@ -96,10 +103,7 @@ export function BannerEditor({
         sort_order: draft.sort_order,
       };
       await request(
-        () =>
-          current
-            ? api.adminBanners.update(current.id, { ...body, version: current.version })
-            : api.adminBanners.create(body),
+        () => (current ? api.adminBanners.update(current.id, { ...body, version: current.version }) : saveNew(body)),
         'banner-save',
       );
       await refreshBanners();

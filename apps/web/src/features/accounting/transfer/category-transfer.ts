@@ -1,7 +1,7 @@
 import type { SelectedTable } from '../../../lib/transfer/table';
 import type { Snapshot, TransferMapping } from './transfer-schema';
 
-export type CategoryImportChoice = { kind: 'existing'; id: string } | { kind: 'new' };
+type CategoryImportChoice = { kind: 'existing'; id: string } | { kind: 'new' };
 export type CategoryImportChoices = Record<string, CategoryImportChoice>;
 export type CategoryImportSource = {
   key: string;
@@ -13,7 +13,7 @@ export type CategoryImportSource = {
   sourceId: string;
   rows: number[];
 };
-export type CategorySourceCatalog = {
+type CategorySourceCatalog = {
   sources: Map<string, CategoryImportSource>;
   rowKeys: Array<string | null>;
 };

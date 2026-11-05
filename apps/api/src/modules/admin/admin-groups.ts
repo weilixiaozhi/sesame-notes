@@ -5,6 +5,7 @@ import type { ApiConfig } from '../../shared/api-config.js';
 import { UuidSchema } from '../../shared/contracts/scalars.js';
 import { ApiError } from '../../shared/errors.js';
 import { writeAuditLog } from './audit-log.js';
+import { AdminCreationHeadersSchema, withAdminCreation } from './admin-creation.js';
 import {
   AdminAccountListSchema,
   AdminGroupListSchema,
@@ -151,6 +152,7 @@ export function registerAdminGroupRoutes(app: FastifyInstance, prisma: PrismaCli
       ...guarded,
       schema: {
         tags: ['admin-groups'],
+        headers: AdminCreationHeadersSchema,
         body: Type.Object(
           {
             name: Type.String({ maxLength: 100 }),
@@ -167,7 +169,7 @@ export function registerAdminGroupRoutes(app: FastifyInstance, prisma: PrismaCli
       try {
         const body = request.body as { name: string; description?: string; sort?: number; is_enabled?: boolean };
         const name = normalizedAdminText(body.name, 100);
-        const created = await withAdminMutation(prisma, request, 'groups:manage', async (tx, auth) => {
+        const created = await withAdminCreation(prisma, request, 'groups:manage', async (tx, auth) => {
           await assertGroupName(tx, name);
           const group = await tx.adminGroup.create({
             data: {
@@ -188,9 +190,9 @@ export function registerAdminGroupRoutes(app: FastifyInstance, prisma: PrismaCli
             ip: request.ip,
             metadata: { group_name: group.name },
           });
-          return group;
+          return groupResponse(group);
         });
-        return await reply.code(201).send(groupResponse(created));
+        return await reply.code(201).send(created);
       } catch (error) {
         return adminManagementFailed(error, request);
       }

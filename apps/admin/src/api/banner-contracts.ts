@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const bannerSlotSchema = z.enum(['fitness-plan-library', 'fitness-template-library']);
-export const bannerTargetSchema = z.enum([
+const bannerSlotSchema = z.enum(['fitness-plan-library', 'fitness-template-library']);
+const bannerTargetSchema = z.enum([
   'fitness-plan-library',
   'fitness-template-library',
   'fitness-exercises',

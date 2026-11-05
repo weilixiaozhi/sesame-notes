@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@sesame-notes/api-client';
-import { createDefaultBookProvisioner, type DefaultBookKind } from './default-book';
+import { createDefaultBookProvisioner as createProvisioner, type DefaultBookKind } from './default-book';
+import { createLedgerSubmitter } from '../features/accounting/entity-submit';
 
 const mock = vi.hoisted(() => ({
   get: vi.fn(),
@@ -63,6 +64,17 @@ const keys: Record<DefaultBookKind, string[]> = {
   days: ['account', 'user', 'day-books'],
   fitness: ['account', 'user', 'fitness', 'spaces'],
 };
+
+/** 各入口提供其领域能力，测试继续通过真实账本保存器验证未知结果恢复。 */
+function createDefaultBookProvisioner(
+  kind: DefaultBookKind,
+  accountId: string,
+  memoType: 'normal' | 'credentials' = 'normal',
+) {
+  if (kind === 'accounting') return createProvisioner(kind, accountId, createLedgerSubmitter);
+  if (kind === 'memos') return createProvisioner(kind, accountId, memoType);
+  return createProvisioner(kind, accountId);
+}
 
 /** 测试目录与实际接口使用相同容器形状，发布缓存必须保留完整快照。 */
 function directory(path: string) {

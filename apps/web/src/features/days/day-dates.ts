@@ -1,5 +1,6 @@
 import type { components } from '@sesame-notes/api-client';
 import { LunarDay, LunarMonth, LunarYear, SolarDay } from 'tyme4ts';
+import { localDateKey } from '../../lib/local-date';
 
 export type DayEvent = components['schemas']['DayEvent'];
 export type DayBook = components['schemas']['DayBook'];
@@ -27,7 +28,7 @@ const dayMilliseconds = 86_400_000;
 
 /** 用本地年月日取得今天，避免时区偏移改变自然日。 */
 export function todayDate(now = new Date()): string {
-  return formatDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  return localDateKey(now);
 }
 
 /** 纯日期固定序列化，不经过本地时区转换。 */

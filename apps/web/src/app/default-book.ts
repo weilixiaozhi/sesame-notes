@@ -1,11 +1,12 @@
 import { ApiError, unwrap } from '@sesame-notes/api-client';
-import { createLedgerSubmitter } from '../features/accounting/entity-submit';
 import { captureSessionOperation, createChangeBatch, queryClient, type SyncChange } from '../lib/session';
 
 export type DefaultBookKind = 'accounting' | 'memos' | 'days' | 'fitness';
 
 type Candidate = { id: string; sync_id: string; archived_at?: string | null; type?: string };
 type Directory = { books: readonly Candidate[]; queryKey: readonly string[]; publish: () => void };
+type LedgerSubmitter = (body: { name: string; currency: string }) => Promise<{ id: string }>;
+type LedgerSubmitterFactory = () => LedgerSubmitter;
 
 const defaultNames = {
   accounting: '默认账本',
@@ -14,15 +15,31 @@ const defaultNames = {
   fitness: '默认健身空间',
 } satisfies Record<DefaultBookKind, string>;
 
+/** 账本入口提供自身的创建能力，协调器只负责目录、会话与首次记录流程。 */
+export function createDefaultBookProvisioner(
+  kind: 'accounting',
+  accountId: string,
+  createLedger: LedgerSubmitterFactory,
+): () => Promise<string>;
+/** 两类备忘录各自选择默认本，其他私有领域无需提供账本创建能力。 */
+export function createDefaultBookProvisioner(
+  kind: 'memos',
+  accountId: string,
+  memoType?: 'normal' | 'credentials',
+): () => Promise<string>;
+/** 日子和健身空间通过各自的同步变更准备默认本。 */
+export function createDefaultBookProvisioner(kind: 'days' | 'fitness', accountId: string): () => Promise<string>;
 /** 首次新增时才准备所属本子；同一入口的并发和重试共用已捕获的会话与提交身份。 */
 export function createDefaultBookProvisioner(
   kind: DefaultBookKind,
   accountId: string,
-  memoType: 'normal' | 'credentials' = 'normal',
+  creation: 'normal' | 'credentials' | LedgerSubmitterFactory = 'normal',
 ): () => Promise<string> {
+  const memoType = typeof creation === 'string' ? creation : 'normal';
+  const createLedger = typeof creation === 'function' ? creation : undefined;
   let operation: ReturnType<typeof captureSessionOperation> | undefined;
   let batch: ReturnType<typeof createChangeBatch> | undefined;
-  let submitLedger: ReturnType<typeof createLedgerSubmitter> | undefined;
+  let submitLedger: LedgerSubmitter | undefined;
   let privateChange: SyncChange | undefined;
   let primaryCurrency: string | undefined;
   let pending: Promise<string> | undefined;
@@ -128,7 +145,8 @@ export function createDefaultBookProvisioner(
     }
     if (!createdId) {
       if (kind === 'accounting') {
-        submitLedger ??= createLedgerSubmitter();
+        if (!createLedger) throw new Error('账本创建暂时无法准备，请重新打开记账页面。');
+        submitLedger ??= createLedger();
         const ledger = await submitLedger({ name: defaultNames.accounting, currency: primaryCurrency ?? 'CNY' });
         operation!.assertCurrent();
         createdId = ledger.id;

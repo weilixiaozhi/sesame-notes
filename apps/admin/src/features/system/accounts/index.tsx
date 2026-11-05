@@ -16,6 +16,7 @@ import {
 } from '../../../components/ui';
 import { GroupSelect } from '../../../components/group-select';
 import { api, errorMessage, request, InputError } from '../../../api/client';
+import { createAdminCreation } from '../../../api/create-intent';
 import { useClampPage } from '../../../api/paging';
 import { useSession, queryClient } from '../../../auth/session';
 import { accountName, password, reason, validationError } from '../../../lib/validation';
@@ -282,6 +283,21 @@ function AccountEditor({ account, onClose }: { account?: Account; onClose: () =>
   const contactInputId = useId();
   const session = useSession();
   const [error, setError] = useState('');
+  const [saveNew] = useState(() =>
+    createAdminCreation({
+      create: api.adminAccounts.create,
+      /** 密码和授权资料不能混同普通资料补写，恢复后交由各自的受控编辑流程。 */
+      update: (saved, body, previous) => {
+        if (body.password !== previous.password)
+          throw new InputError('账号已按上次提交的密码创建。请关闭弹窗并刷新，修改密码请使用“重置密码”。');
+        if (body.username !== previous.username)
+          throw new InputError('账号已按上次提交的登录账号创建，登录账号不能修改。请关闭弹窗并刷新核对。');
+        if (body.email !== previous.email || body.phone !== previous.phone || body.group_id !== previous.group_id)
+          throw new InputError('账号已创建。修改联系方式或分组需要确认操作原因，请关闭弹窗并刷新后编辑。');
+        return api.adminAccounts.update(saved.id, { version: saved.version, display_name: body.display_name });
+      },
+    }),
+  );
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -336,7 +352,7 @@ function AccountEditor({ account, onClose }: { account?: Account; onClose: () =>
       else
         await request(
           () =>
-            api.adminAccounts.create({
+            saveNew({
               username: value.username,
               display_name: value.display_name,
               email: normalizeEmail(value.email),

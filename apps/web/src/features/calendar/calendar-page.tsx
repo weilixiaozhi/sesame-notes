@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router';
 import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, Dumbbell, KeyRound, NotebookPen } from 'lucide-react';
 import { unwrap, type components } from '@sesame-notes/api-client';
 import { api, useSession } from '../../lib/session';
 import { trackProductAction } from '../../lib/product-analytics-runtime';
+import { useLocalToday } from '../../lib/use-local-today';
 import { Button, EmptyState, ErrorState, Field, LoadingState, PageHeading } from '../../components/ui';
 import { monthOccurrences } from '../days/day-calendar';
 import './calendar-page.css';
 import { dayLabels, type DayEvent } from '../days/day-dates';
 import { displayAmount } from '../accounting/money';
-import { calendarDates, calendarRange, localDateKey, shiftCalendarMonth, validCalendarDate } from './calendar-dates';
+import { calendarDates, calendarRange, shiftCalendarMonth, validCalendarDate } from './calendar-dates';
 
 type MemoBook = components['schemas']['MemoBook'];
 const calendarYears = Array.from({ length: 200 }, (_, index) => String(1901 + index));
@@ -21,16 +22,7 @@ export function CalendarPage() {
   const { session } = useSession();
   const accountId = session!.user.user_id;
   const [params, setParams] = useSearchParams();
-  const [today, setToday] = useState(() => localDateKey(new Date()));
-  useEffect(() => {
-    const update = () => setToday(localDateKey(new Date()));
-    const timer = window.setInterval(update, 30_000);
-    window.addEventListener('focus', update);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('focus', update);
-    };
-  }, []);
+  const today = useLocalToday();
   const requestedDate = params.get('date');
   const selected = validCalendarDate(requestedDate) ? requestedDate : today;
   const requestedMonth = params.get('month');

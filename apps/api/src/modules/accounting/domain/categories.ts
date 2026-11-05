@@ -32,7 +32,7 @@ export type CategoryCreate = {
 };
 
 /** 所属关系是分类结构的唯一来源；持久化与协议层级字段由关系派生。 */
-export function categoryLevel(parentId: string | null | undefined): 1 | 2 {
+function categoryLevel(parentId: string | null | undefined): 1 | 2 {
   return parentId == null ? 1 : 2;
 }
 
