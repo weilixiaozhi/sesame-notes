@@ -7,12 +7,12 @@
     },
     {
       "file": "lib/shared/services/seed_service.dart",
-      "sha256": "e944dedbe3279009eb57def061301357199b7e03de1b6cfe1c2b0370a76b1e3c"
+      "sha256": "c30ba0bf5035cb6148b86a7bd37a0abc5fa57bb48d314141d215e8f386bd6b16"
     },
-    { "file": "lib/l10n/app_zh.arb", "sha256": "6d8f09567712f21cc1616499e006a177174e834ea19281e6fd59e2162fc20c3a" },
+    { "file": "lib/l10n/app_zh.arb", "sha256": "755964a6476488512c19616c45cc0d84aac546a13d66ea58aaf73833b0258464" },
     {
       "file": "lib/utils/default_category_ids.dart",
-      "sha256": "08c2a1955360cf0f7f90e7df0463ae84c980d6c448fb761412b7320334891998"
+      "sha256": "6bba1c72f2d71dd26fd23d9fb04780e20c1aeba757b07995271818c158aebaed"
     }
   ],
   "items": [
