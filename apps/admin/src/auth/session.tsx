@@ -2,7 +2,7 @@ import { ApiError } from '@sesame-notes/api-client';
 import { QueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { api, errorMessage, reportError, request, sessionEvents } from '../api/client';
+import { api, errorMessage, invalidateAdminOperations, reportError, request, sessionEvents } from '../api/client';
 import type { SessionResponse } from '../api/types';
 import { performSessionOperation, SessionVerification } from './verification';
 
@@ -43,7 +43,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   /** 会话失效立即隐藏业务内容并清理缓存，写请求由用户重新确认。 */
   const end = useCallback((text = '登录状态已失效，请重新登录。') => {
     verification.current.invalidate();
-    api.invalidateSessionRequests();
+    invalidateAdminOperations();
     loginVerification.current = null;
     current.current = null;
     clearQueries();
@@ -76,6 +76,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         (previous.admin.id !== next.admin.id ||
           previous.admin.authorization_version !== next.admin.authorization_version)
       ) {
+        invalidateAdminOperations();
         clearQueries();
         setEpoch((value) => value + 1);
         setMessage('账号权限已变化，已重新加载工作区。');
@@ -87,6 +88,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (token !== verification.current.generation) return;
       if (error instanceof ApiError && error.status === 401) unauthorized();
       else {
+        invalidateAdminOperations();
         reportError('verify-session', error);
         current.current = null;
         clearQueries();
@@ -100,6 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (username: string, password: string) => {
       verification.current.invalidate();
+      invalidateAdminOperations();
       setMessage('');
       await performSessionOperation(
         verification.current,
@@ -127,6 +130,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   /** 退出结果未确认时遮蔽业务数据，保留明确重试入口。 */
   const logout = useCallback(async () => {
     verification.current.invalidate();
+    invalidateAdminOperations();
     current.current = null;
     clearQueries();
     setSession(null);

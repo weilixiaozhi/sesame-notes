@@ -5,6 +5,7 @@ import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@sesame-notes/api-client';
 import { api, errorMessage } from '../api/client';
+import { createAdminCreation } from '../api/create-intent';
 import type { SessionResponse } from '../api/types';
 import { queryClient, SessionProvider, useSession } from './session';
 
@@ -69,6 +70,116 @@ afterEach(async () => {
 });
 
 describe('后台会话认证与隔离', () => {
+  it.each(['身份变化', '授权变化', '核验错误', '登录失败', '退出失败'] as const)(
+    '%s 后旧编辑器不能继续创建',
+    async (boundary) => {
+      fetchMock.mockResolvedValueOnce(response(200, authenticated));
+      await renderSession();
+      const create = vi.fn(async () => ({ id: 'created' }));
+      const save = createAdminCreation({ create, update: vi.fn() });
+      if (boundary === '身份变化' || boundary === '授权变化') {
+        fetchMock.mockResolvedValueOnce(
+          response(200, {
+            ...authenticated,
+            admin: {
+              ...authenticated.admin,
+              id: boundary === '身份变化' ? 'another-admin' : authenticated.admin.id,
+              authorization_version: boundary === '授权变化' ? '2' : authenticated.admin.authorization_version,
+            },
+          }),
+        );
+        await act(async () => latest.verify());
+      } else if (boundary === '核验错误') {
+        fetchMock.mockRejectedValueOnce(new TypeError('核验连接失败'));
+        await act(async () => latest.verify());
+      } else if (boundary === '登录失败') {
+        fetchMock.mockResolvedValueOnce(response(401, { code: 'INVALID_CREDENTIALS', message: '密码错误' }));
+        await act(async () => {
+          await expect(latest.login('operator', 'incorrect-password')).rejects.toMatchObject({ status: 401 });
+        });
+      } else {
+        fetchMock.mockRejectedValueOnce(new TypeError('退出连接失败'));
+        await act(async () => latest.logout());
+      }
+      await expect(save({ name: '旧页面输入' })).rejects.toMatchObject({ code: 'ADMIN_SESSION_CHANGED' });
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('恢复创建响应期间切换管理员，旧流程不能继续向新会话发送更新', async () => {
+    const nextSession: SessionResponse = {
+      ...authenticated,
+      admin: { ...authenticated.admin, id: 'admin-next', username: 'next-operator' },
+    };
+    const original = {
+      slot: 'fitness-plan-library' as const,
+      image_id: 'a'.repeat(64),
+      target: 'fitness-plan-library' as const,
+      target_id: null,
+      sort_order: 0,
+    };
+    const created = {
+      id: '11111111-1111-4111-8111-111111111111',
+      slot: original.slot,
+      image_path: `/api/v1/banners/media/${original.image_id}`,
+      target: original.target,
+      source: 'remote',
+      target_id: null,
+      target_name: null,
+      sort_order: 0,
+      version: 1,
+      updated_at: '2026-11-06T00:00:00Z',
+      updated_by: 'operator',
+    };
+    let resolveRecovery!: (result: Response) => void;
+    let recoveryStarted!: () => void;
+    const recovery = new Promise<Response>((resolve) => {
+      resolveRecovery = resolve;
+    });
+    const recovering = new Promise<void>((resolve) => {
+      recoveryStarted = resolve;
+    });
+    let currentSession = authenticated;
+    let creationRequests = 0;
+    const writes: Array<{ method: string; admin: string }> = [];
+    fetchMock.mockImplementation(async (input) => {
+      const request = input as Request;
+      const path = new URL(request.url).pathname;
+      if (path === '/api/v1/admin/auth/me') return response(200, currentSession);
+      if (path === '/api/v1/admin/auth/logout') return new Response(null, { status: 204 });
+      if (path === '/api/v1/admin/auth/login') {
+        currentSession = nextSession;
+        return response(200, currentSession);
+      }
+      writes.push({ method: request.method, admin: currentSession.admin.id });
+      if (request.method === 'POST') {
+        creationRequests++;
+        if (creationRequests === 1) throw new TypeError('创建成功后响应丢失');
+        recoveryStarted();
+        return recovery;
+      }
+      return response(200, { ...created, sort_order: 5, version: 2 });
+    });
+    await renderSession();
+    const save = createAdminCreation({
+      create: api.adminBanners.create,
+      update: (saved, body) => api.adminBanners.update(saved.id, { ...body, version: saved.version }),
+    });
+    await expect(save(original)).rejects.toThrow('响应丢失');
+    const outcome = save({ ...original, sort_order: 5 }).then(
+      (value) => ({ value, error: undefined }),
+      (error: unknown) => ({ value: undefined, error }),
+    );
+    await recovering;
+    await act(async () => latest.logout());
+    await act(async () => latest.login('next-operator', 'next-test-password'));
+    expect(latest.session?.admin.id).toBe('admin-next');
+    resolveRecovery(response(201, created));
+    const result = await outcome;
+    expect(writes.filter((entry) => entry.method === 'PATCH')).toEqual([]);
+    expect(result.error).toMatchObject({ code: 'ADMIN_SESSION_CHANGED' });
+  });
+
   it('首次未登录保持匿名状态，不标记会话过期', async () => {
     fetchMock.mockResolvedValue(response(401, { code: 'ADMIN_UNAUTHORIZED', message: '请先登录管理后台' }));
     await renderSession();
@@ -165,6 +276,12 @@ describe('后台会话认证与隔离', () => {
 });
 
 describe('后台登录错误分类', () => {
+  it('工作区操作失效提示重新打开编辑器，不误报网络错误或退出新登录', () => {
+    expect(errorMessage(new ApiError(409, 'ADMIN_SESSION_CHANGED', '内部错误'))).toBe(
+      '后台登录或权限已变化，请重新打开编辑页面。',
+    );
+  });
+
   it.each([
     [401, 'INVALID_CREDENTIALS', '账号或密码不正确，请检查后重试。'],
     [401, 'HTTP_401', '登录验证未通过，请检查账号和密码后重试。'],

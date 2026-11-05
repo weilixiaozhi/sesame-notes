@@ -1,11 +1,59 @@
 import { ApiError } from '@sesame-notes/api-client';
 import { describe, expect, it, vi } from 'vitest';
 import { createAdminCreation } from './create-intent';
+import { invalidateAdminOperationScope } from './operation-scope';
 
 type Draft = { name: string; settings: { enabled: boolean } };
 type Saved = { id: string; version: number; name: string };
 
 describe('管理新增意图恢复', () => {
+  it('创建迟到成功也不能交付给新工作区，旧编辑器后续提交不再发请求', async () => {
+    let finish!: (value: Saved) => void;
+    const create = vi.fn(() => new Promise<Saved>((resolve) => (finish = resolve)));
+    const update = vi.fn();
+    const save = createAdminCreation<Draft, Saved>({ create, update });
+    const result = save({ name: '旧草稿', settings: { enabled: true } });
+    invalidateAdminOperationScope();
+    finish({ id: 'already-created', version: 1, name: '旧草稿' });
+    await expect(result).rejects.toMatchObject({ code: 'ADMIN_SESSION_CHANGED' });
+    await expect(save({ name: '后续草稿', settings: { enabled: true } })).rejects.toMatchObject({
+      code: 'ADMIN_SESSION_CHANGED',
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('已确认创建的编辑器在代际变化后不能更新，新工作区可建立自己的新意图', async () => {
+    const entity: Saved = { id: 'saved', version: 1, name: '原内容' };
+    const create = vi.fn(async () => entity);
+    const update = vi.fn();
+    const save = createAdminCreation<Draft, Saved>({ create, update });
+    await expect(save({ name: '原内容', settings: { enabled: true } })).resolves.toEqual(entity);
+    invalidateAdminOperationScope();
+    await expect(save({ name: '修改', settings: { enabled: true } })).rejects.toMatchObject({
+      code: 'ADMIN_SESSION_CHANGED',
+    });
+    expect(update).not.toHaveBeenCalled();
+    const next = createAdminCreation<Draft, Saved>({ create, update });
+    await expect(next({ name: '新意图', settings: { enabled: true } })).resolves.toEqual(entity);
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it('已发送的更新在会话变化后成功返回，不继续发布旧编辑器的成功结果', async () => {
+    let finish!: (value: Saved) => void;
+    const entity: Saved = { id: 'saved', version: 1, name: '原内容' };
+    const create = vi.fn(async () => entity);
+    const update = vi.fn(() => new Promise<Saved>((resolve) => (finish = resolve)));
+    const save = createAdminCreation<Draft, Saved>({ create, update });
+    await save({ name: '原内容', settings: { enabled: true } });
+    const result = save({ name: '更新', settings: { enabled: true } });
+    invalidateAdminOperationScope();
+    finish({ ...entity, version: 2, name: '更新' });
+    await expect(result).rejects.toMatchObject({ code: 'ADMIN_SESSION_CHANGED' });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
   it('提交后响应丢失时原键原载荷恢复，后续草稿更新同一实体', async () => {
     const writes: Array<{ key: string; body: Draft }> = [];
     const stored: Saved = { id: 'created-once', version: 1, name: '原内容' };

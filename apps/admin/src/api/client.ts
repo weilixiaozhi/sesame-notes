@@ -1,5 +1,6 @@
 import { AdminApiClient, ApiError } from '@sesame-notes/api-client';
 import { validateAdminResponse } from './response-validation';
+import { invalidateAdminOperationScope } from './operation-scope';
 
 export const sessionEvents = new EventTarget();
 export const api = new AdminApiClient({
@@ -7,6 +8,12 @@ export const api = new AdminApiClient({
   validateResponse: validateAdminResponse,
   onUnauthorized: () => sessionEvents.dispatchEvent(new Event('unauthorized')),
 });
+
+/** 工作区边界同时作废旧操作和旧请求的会话通知，避免迟到任务影响新身份。 */
+export function invalidateAdminOperations(): void {
+  invalidateAdminOperationScope();
+  api.invalidateSessionRequests();
+}
 
 /** 前端可纠正的输入错误仅携带已知友好文案，不冒充网络故障。 */
 export class InputError extends Error {}
@@ -42,6 +49,7 @@ export function errorMessage(error: unknown, context: 'operation' | 'login' = 'o
     ADMIN_AUTH_UNAVAILABLE: '后台登录验证暂时不可用，请稍后重试。',
     ORIGIN_DENIED: '请求未通过安全验证，请刷新页面后重试。',
     ADMIN_REQUEST_REQUIRED: '请求未通过安全验证，请刷新页面后重试。',
+    ADMIN_SESSION_CHANGED: '后台登录或权限已变化，请重新打开编辑页面。',
     ADMIN_CREATION_KEY_REUSED: '此次创建的内容与原请求不一致，请保留当前输入，关闭弹窗并刷新核对已创建的内容。',
     ADMIN_USERNAME_EXISTS: '此登录账号已存在，请更换。',
     ADMIN_EMAIL_EXISTS: '此邮箱已被其他后台用户使用，请更换。',
