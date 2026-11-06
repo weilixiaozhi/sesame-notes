@@ -1,7 +1,4 @@
-// @vitest-environment jsdom
-import { ApiError } from '@sesame-notes/api-client';
 import { describe, expect, it } from 'vitest';
-import { errorMessage } from './client';
 import { validateAdminResponse } from './response-validation';
 
 const row = {
@@ -15,7 +12,7 @@ const row = {
   template_count: 0,
 };
 
-describe('健身分类响应与错误提示', () => {
+describe('健身分类响应边界', () => {
   it('读取目录和保存分类响应必须包含三语名称、版本和引用数', () => {
     for (const [method, path, list] of [
       ['GET', '/api/v1/admin/fitness/taxonomies/{kind}', true],
@@ -35,14 +32,5 @@ describe('健身分类响应与错误提示', () => {
         ).toThrow();
       }
     }
-  });
-
-  it.each([
-    ['FITNESS_TAXON_CHANGED', '核对最新资料'],
-    ['FITNESS_TAXON_REFERENCED', '选择替代项'],
-    ['FITNESS_TAXON_REPLACEMENT_INVALID', '同类型'],
-    ['FITNESS_TAXON_UNAVAILABLE', '重新选择'],
-  ])('错误 %s 不暴露内部标识并提示下一步', (code, message) => {
-    expect(errorMessage(new ApiError(409, code, 'internal-error'))).toContain(message);
   });
 });

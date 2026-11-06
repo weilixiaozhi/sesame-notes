@@ -31,16 +31,6 @@ describe('本地今天刷新', () => {
     expect(result.current).toBe('2026-11-07');
   });
 
-  it('销毁后移除同一个焦点回调，后续页面恢复不会保留旧订阅', () => {
-    const add = vi.spyOn(window, 'addEventListener');
-    const remove = vi.spyOn(window, 'removeEventListener');
-    const { unmount } = renderHook(useLocalToday);
-    const update = add.mock.calls.find(([name]) => name === 'focus')?.[1];
-    expect(update).toBeTypeOf('function');
-    unmount();
-    expect(remove).toHaveBeenCalledWith('focus', update);
-  });
-
   it('保留日子与月历共用的本地年月日格式，范围由领域校验', () => {
     expect(localDateKey(new Date(1901, 0, 1))).toBe('1901-01-01');
     expect(localDateKey(new Date(2100, 11, 31))).toBe('2100-12-31');

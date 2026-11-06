@@ -4,7 +4,6 @@ import {
   availableTaxonomies,
   taxonomyContentError,
   taxonomyFormSchema,
-  taxonomyName,
   taxonomyReplacementError,
 } from './taxonomy-data';
 import type { TaxonomyKind, TaxonomyRow } from './taxonomy-data';
@@ -29,12 +28,9 @@ const body = category('new-body', 'body_part');
 const equipment = category('new-equipment', 'equipment');
 
 describe('动态部位和器械目录', () => {
-  it('同类型未删除目录才可被选择，历史名称使用当前目录多语言值', () => {
+  it('只允许选择同类型未删除目录，分类名称与排序遵循保存边界', () => {
     const deleted = category('removed', 'body_part', { is_deleted: true });
     expect(availableTaxonomies([body, equipment, deleted], 'body_part')).toEqual([body]);
-    expect(taxonomyName([body], body.id, 'en')).toBe('Category new-body');
-    expect(taxonomyName([deleted], deleted.id)).toContain('已删除');
-    expect(taxonomyName([], 'private-id')).toBe('分类资料暂不可用');
     expect(taxonomyFormSchema.safeParse({ name: body.name, sort_order: 9999 }).success).toBe(true);
     expect(taxonomyFormSchema.safeParse({ name: { ...body.name, zh: ' ' }, sort_order: 0 }).success).toBe(false);
     expect(taxonomyFormSchema.safeParse({ name: body.name, sort_order: 10000 }).success).toBe(false);

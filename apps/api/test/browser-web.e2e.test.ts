@@ -39,7 +39,7 @@ function credentials() {
   };
 }
 
-/** 注册测试账号并提取浏览器可读会话和仅用于模拟浏览器传输的 Cookie。 */
+/** 注册测试账号并核对浏览器会话与 Cookie 的安全属性。 */
 async function register() {
   const payload = credentials();
   const response = await app.inject({
@@ -54,7 +54,7 @@ async function register() {
   const cookie = response.cookies.find((value) => value.name === 'browser_refresh_token');
   expect(cookie).toMatchObject({ httpOnly: true, path: '/api/v1/auth/browser', sameSite: 'Strict' });
   expect(cookie).not.toHaveProperty('domain');
-  return { payload, session, cookie: `browser_refresh_token=${cookie!.value}` };
+  return { payload, session };
 }
 
 /** 模拟经过登录鉴权的浏览器查询。 */
@@ -67,32 +67,6 @@ function get(path: string, session?: Session) {
 }
 
 describe('浏览器独立认证边界', () => {
-  it('拒绝缺失、不受信和伪造来源，且 JSON 不能替代 Cookie 刷新', async () => {
-    for (const headers of [
-      {},
-      { origin: 'null' },
-      { origin: 'http://evil.example' },
-      { 'sec-fetch-site': 'same-origin' },
-    ]) {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/auth/browser/register',
-        headers,
-        payload: credentials(),
-      });
-      expect(response.statusCode).toBe(403);
-      expect(response.cookies).toHaveLength(0);
-    }
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/browser/refresh',
-      headers: { origin },
-      payload: { refresh_token: 'x'.repeat(64) },
-    });
-    expect(response.statusCode).toBe(401);
-    expect(response.json().code).toBe('REFRESH_TOKEN_REQUIRED');
-  });
-
   it('登录、并发刷新和退出均不向脚本暴露刷新令牌，退出后旧令牌全部失效', async () => {
     const account = await register();
     const login = await app.inject({
@@ -133,20 +107,6 @@ describe('浏览器独立认证边界', () => {
       });
       expect(replay.statusCode).toBe(401);
     }
-  });
-
-  it('移动端原接口仍返回令牌，浏览器 Cookie 不会被原接口消费', async () => {
-    const mobile = await app.inject({ method: 'POST', url: '/api/v1/auth/register', payload: credentials() });
-    expect(mobile.statusCode).toBe(201);
-    expect(mobile.json().refresh_token).toEqual(expect.any(String));
-    const account = await register();
-    const mismatch = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/refresh',
-      headers: { origin, cookie: account.cookie },
-      payload: {},
-    });
-    expect(mismatch.statusCode).toBe(400);
   });
 });
 

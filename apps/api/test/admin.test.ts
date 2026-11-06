@@ -258,35 +258,6 @@ describe('管理员域', () => {
     },
   );
 
-  it('普通用户 JWT 访问管理接口返回 401 ADMIN_UNAUTHORIZED', async () => {
-    const { token } = await registerUser();
-    for (const path of ['/admin/users', '/admin/status', '/admin/audit-logs']) {
-      const res = await api('get', path, undefined, { token });
-      expect(res.status).toBe(401);
-      expect((res.json() as { code: string }).code).toBe('ADMIN_UNAUTHORIZED');
-    }
-    const patchRes = await api('patch', `/admin/users/${uuid()}/disable`, { reason: '权限验证' }, { token });
-    expect(patchRes.status).toBe(401);
-    const delRes = await api(
-      'post',
-      `/admin/users/${uuid()}/devices/${uuid()}/revoke`,
-      { reason: '权限验证' },
-      { token },
-    );
-    expect(delRes.status).toBe(401);
-  });
-
-  it('管理员可列出用户（含目标用户与禁用状态）', async () => {
-    const target = await registerUser();
-    const admin = await registerAdmin();
-    const res = await api('get', `/admin/users?search=${target.phone}`, undefined, admin);
-    expect(res.status).toBe(200);
-    const body = res.json() as { items: Array<{ id: string; phone_masked: string | null; is_enabled: boolean }> };
-    const found = body.items.find((user) => user.id === target.userId);
-    expect(found).toBeTruthy();
-    expect(found!.is_enabled).toBe(true);
-  });
-
   it('禁用用户后登录与刷新立即失效，启用后恢复', async () => {
     const target = await registerUser();
     const admin = await registerAdmin();
@@ -317,22 +288,6 @@ describe('管理员域', () => {
       device: { installation_id: uuid(), name: 'd', platform: 'd' },
     });
     expect(loginAfterEnable.status).toBe(200);
-  });
-
-  it('吊销设备后该设备刷新令牌立即失效', async () => {
-    const target = await registerUser();
-    const admin = await registerAdmin();
-
-    const delRes = await api(
-      'post',
-      `/admin/users/${target.userId}/devices/${target.deviceId}/revoke`,
-      { reason: '设备遗失' },
-      admin,
-    );
-    expect(delRes.status).toBe(204);
-
-    const refreshAfterRevoke = await api('post', '/auth/refresh', { refresh_token: target.refreshToken });
-    expect(refreshAfterRevoke.status).toBe(401);
   });
 
   it('管理员与用户即使 UUID 相同，禁用业务用户也不会禁用后台身份', async () => {

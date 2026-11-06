@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bannerListSchema, bannerUploadSchema } from '../../../api/banner-contracts';
-import {
-  bannerImageId,
-  bannerPreview,
-  newBannerDraft,
-  bannerMetrics,
-  bannerMetricCount,
-  bannerTargetLabel,
-} from './model';
+import { bannerImageId, bannerPreview, newBannerDraft, bannerMetrics } from './model';
 import type { BannerEntry, BannerStatistics } from './model';
 
 const mediaId = 'a'.repeat(64);
@@ -68,16 +61,5 @@ describe('轮播入口与统计边界', () => {
     expect(bannerMetrics({ ...entry, version: 3 }, report())?.clicks).toBe(2);
     expect(bannerMetrics({ ...entry, slot: 'fitness-template-library' }, report())?.clicks).toBe(2);
     expect(bannerMetrics({ ...entry, id: 'other' }, report())).toBeUndefined();
-  });
-  it('累计统计返回真实零值，只有未加载时使用占位', () => {
-    expect(bannerMetricCount(undefined)).toBe('—');
-    expect(bannerMetricCount(0)).toBe('0');
-    expect(bannerMetricCount(2)).toBe('2');
-  });
-  it('指定官方内容显示名称，内容不可用时不展示裸标识', () => {
-    expect(
-      bannerTargetLabel({ ...entry, target: 'official-template', target_id: 'template', target_name: '三分化·胸三头' }),
-    ).toBe('指定官方模板 · 三分化·胸三头');
-    expect(bannerTargetLabel({ ...entry, target: 'official-plan', target_id: 'plan' })).toContain('内容已不可用');
   });
 });

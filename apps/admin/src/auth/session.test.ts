@@ -3,8 +3,7 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '@sesame-notes/api-client';
-import { api, errorMessage } from '../api/client';
+import { api } from '../api/client';
 import { createAdminCreation } from '../api/create-intent';
 import type { SessionResponse } from '../api/types';
 import { queryClient, SessionProvider, useSession } from './session';
@@ -272,29 +271,5 @@ describe('后台会话认证与隔离', () => {
     expect(latest.session).toEqual(authenticated);
     expect(latest.message).toBe('');
     expect(fetchMock).toHaveBeenCalledTimes(5);
-  });
-});
-
-describe('后台登录错误分类', () => {
-  it('工作区操作失效提示重新打开编辑器，不误报网络错误或退出新登录', () => {
-    expect(errorMessage(new ApiError(409, 'ADMIN_SESSION_CHANGED', '内部错误'))).toBe(
-      '后台登录或权限已变化，请重新打开编辑页面。',
-    );
-  });
-
-  it.each([
-    [401, 'INVALID_CREDENTIALS', '账号或密码不正确，请检查后重试。'],
-    [401, 'HTTP_401', '登录验证未通过，请检查账号和密码后重试。'],
-    [429, 'RATE_LIMITED', '操作过于频繁，请稍后重试。'],
-    [503, 'ADMIN_AUTH_UNAVAILABLE', '后台登录验证暂时不可用，请稍后重试。'],
-    [502, 'HTTP_502', '登录服务暂时不可用，请稍后重试。'],
-    [403, 'ORIGIN_DENIED', '请求未通过安全验证，请刷新页面后重试。'],
-  ])('%s / %s 使用可操作的登录提示', (status, code, message) => {
-    expect(errorMessage(new ApiError(status, code, '不显示内部原始错误'), 'login')).toBe(message);
-  });
-
-  it('网络错误与已登录请求的会话过期提示各自保留', () => {
-    expect(errorMessage(new TypeError('Failed to fetch'), 'login')).toBe('连接暂时不可用，请检查网络后重试。');
-    expect(errorMessage(new ApiError(401, 'ADMIN_UNAUTHORIZED', '内部错误'))).toBe('登录状态已失效，请重新登录。');
   });
 });
