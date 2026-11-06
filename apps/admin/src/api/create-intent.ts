@@ -10,9 +10,10 @@ export function createAdminCreation<Input, Entity>(operations: {
   type Attempt = { key: string; body: Input; fingerprint: string; uncertain: boolean };
   let attempt: Attempt | undefined;
   let confirmed: { entity: Entity; body: Input; fingerprint: string } | undefined;
+  let updateNeedsConfirmation = false;
   let pending: Promise<Entity> | undefined;
 
-  /** 明确拒绝仅能释放首次尚未提交的意图，键冲突不能通过更换键规避。 */
+  /** 结构化业务拒绝表示本次请求明确未提交，代理错误和创建键冲突仍须保留原意图。 */
   function rejectedBeforeCommit(error: unknown): boolean {
     return (
       error instanceof ApiError &&
@@ -46,16 +47,21 @@ export function createAdminCreation<Input, Entity>(operations: {
       assertCurrent();
       confirmed = { entity, body: frozen.body, fingerprint: frozen.fingerprint };
     }
-    if (confirmed.fingerprint === fingerprint) return confirmed.entity;
+    if (confirmed.fingerprint === fingerprint && !updateNeedsConfirmation) return confirmed.entity;
     // 只有更新响应成功才推进版本，更新失败仍保留原实体，绝不退回新增分支。
     try {
       assertCurrent();
       const entity = await operations.update(confirmed.entity, next, confirmed.body);
       assertCurrent();
       confirmed = { entity, body: next, fingerprint };
+      updateNeedsConfirmation = false;
       return entity;
     } catch (error) {
       assertCurrent();
+      // 未知结果、对象失效或版本冲突使旧快照无法确认当前状态，原草稿也必须携带同一实体版本重新写入。
+      // 后续业务拒绝只说明本次未提交，不能清除更早更新遗留的未确认状态。
+      if (!rejectedBeforeCommit(error) || (error instanceof ApiError && (error.status === 404 || error.status === 409)))
+        updateNeedsConfirmation = true;
       throw error;
     }
   }

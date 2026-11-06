@@ -20,8 +20,13 @@ describe('Web 入口能力基线', () => {
     expect(getBrowserSupportIssue()).toBe('insecure-connection');
   });
 
-  it('缺少取消信号组合能力时在登录前给出升级提示', () => {
-    vi.stubGlobal('AbortSignal', { prototype: { throwIfAborted: vi.fn() } });
+  it.each(['any', 'timeout'] as const)('仅缺少 AbortSignal.%s 时在登录前给出升级提示', (missing) => {
+    vi.stubGlobal('AbortSignal', {
+      any: vi.fn(),
+      timeout: vi.fn(),
+      prototype: { throwIfAborted: vi.fn() },
+      [missing]: undefined,
+    });
     const issue = getBrowserSupportIssue();
     expect(issue).toBe('unsupported-browser');
     render(<BrowserSupportNotice issue={issue!} />);
@@ -31,7 +36,7 @@ describe('Web 入口能力基线', () => {
   });
 
   it('缺少已使用的取消状态检查时也拒绝加载业务', () => {
-    vi.stubGlobal('AbortSignal', { any: vi.fn(), prototype: {} });
+    vi.stubGlobal('AbortSignal', { any: vi.fn(), timeout: vi.fn(), prototype: {} });
     expect(getBrowserSupportIssue()).toBe('unsupported-browser');
   });
 });

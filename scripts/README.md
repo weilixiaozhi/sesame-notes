@@ -14,7 +14,7 @@
 
 当前页面检测到管理员登录、退出、身份或授权变化，或身份核验失败后，旧工作区的多步保存会停止后续请求；已经提交的服务端写入保留，不能用新会话继续旧意图的自动更新。
 
-用户 Web 入口要求安全上下文、WebCrypto 的 `crypto.randomUUID`/`crypto.subtle.digest`、`AbortController` 及 `AbortSignal.any`/`throwIfAborted`。能力不足时显示浏览器升级或安全连接提示，业务入口不启动；构建没有引入额外 polyfill。
+用户 Web 入口要求安全上下文、WebCrypto 的 `crypto.randomUUID`/`crypto.subtle.digest`、`AbortController` 及 `AbortSignal.any`/`timeout`/`throwIfAborted`。能力不足时显示浏览器升级或安全连接提示，业务入口不启动；构建没有引入额外 polyfill。
 
 ### 常用命令
 

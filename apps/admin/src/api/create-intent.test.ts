@@ -143,6 +143,85 @@ describe('管理新增意图恢复', () => {
     expect(update.mock.calls.every((call) => call[0].id === saved.id && call[0].version === 1)).toBe(true);
   });
 
+  it('创建恢复后的更新已提交但响应丢失，改回原草稿也必须向同一实体核验版本', async () => {
+    const original: Draft = { name: 'A', settings: { enabled: true } };
+    const receipt: Saved = { id: 'same-entity', version: 1, name: 'A' };
+    let stored: Saved | undefined;
+    /** 首次提交保存实体后丢失响应，重放始终返回首次创建的固定回执。 */
+    const create = vi.fn(async (_body: Draft, _key: string) => {
+      if (!stored) {
+        stored = structuredClone(receipt);
+        throw new TypeError('创建已提交但响应丢失');
+      }
+      return structuredClone(receipt);
+    });
+    /** 服务端更新先校验版本，首次更新提交后故意丢失成功响应。 */
+    const update = vi.fn(async (saved: Saved, body: Draft) => {
+      if (!stored || stored.version !== saved.version)
+        throw new ApiError(409, 'VERSION_CONFLICT', '内容已变化，请刷新核对');
+      stored = { ...stored, name: body.name, version: stored.version + 1 };
+      throw new TypeError('更新已提交但响应丢失');
+    });
+    const save = createAdminCreation({ create, update });
+    await expect(save(original)).rejects.toThrow('创建已提交');
+    await expect(save({ ...original, name: 'B' })).rejects.toThrow('更新已提交');
+    expect(stored).toEqual({ id: receipt.id, version: 2, name: 'B' });
+    await expect(save(original)).rejects.toMatchObject({ status: 409, code: 'VERSION_CONFLICT' });
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(create.mock.calls[1]).toEqual(create.mock.calls[0]);
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(update.mock.calls[1]).toEqual([receipt, original, original]);
+  });
+
+  it.each([
+    new TypeError('更新连接中断'),
+    new DOMException('更新请求已中止', 'AbortError'),
+    new ApiError(403, 'HTTP_403', '代理未返回业务结果'),
+    new ApiError(404, 'ENTITY_NOT_FOUND', '实体已不存在'),
+    new ApiError(409, 'VERSION_CONFLICT', '服务端版本已变化'),
+  ])('更新结果未知或快照失效后，原草稿也必须重新核验：%s', async (failure) => {
+    const original: Draft = { name: '原内容', settings: { enabled: true } };
+    const entity: Saved = { id: 'saved', version: 1, name: original.name };
+    const create = vi.fn(async () => entity);
+    const update = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValue({ ...entity, version: 2 });
+    const save = createAdminCreation<Draft, Saved>({ create, update });
+    await save(original);
+    await expect(save({ ...original, name: '修改' })).rejects.toBe(failure);
+    await expect(save(original)).resolves.toEqual({ ...entity, version: 2 });
+    await expect(save(original)).resolves.toEqual({ ...entity, version: 2 });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(update.mock.calls[1]).toEqual([entity, original, original]);
+  });
+
+  it('更新首次明确业务校验拒绝仍可确认原草稿，但未知后的撤权不能清除未确认状态', async () => {
+    const original: Draft = { name: '原内容', settings: { enabled: true } };
+    const entity: Saved = { id: 'saved', version: 1, name: original.name };
+    const create = vi.fn(async () => entity);
+    const update = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(400, 'VALIDATION_ERROR', '输入无效'))
+      .mockRejectedValueOnce(new TypeError('更新结果未知'))
+      .mockRejectedValueOnce(new ApiError(403, 'FORBIDDEN', '当前无权修改'))
+      .mockRejectedValueOnce(new ApiError(409, 'VERSION_CONFLICT', '内容已变化'));
+    const save = createAdminCreation<Draft, Saved>({ create, update });
+    await save(original);
+    await expect(save({ ...original, name: '校验错误' })).rejects.toMatchObject({ status: 400 });
+    await expect(save(original)).resolves.toEqual(entity);
+    expect(update).toHaveBeenCalledTimes(1);
+    await expect(save({ ...original, name: '修改' })).rejects.toThrow('更新结果未知');
+    await expect(save({ ...original, name: '修改' })).rejects.toMatchObject({ status: 403 });
+    await expect(save(original)).rejects.toMatchObject({ status: 409 });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(4);
+    expect(update.mock.calls.every((call) => call[0].id === entity.id && call[0].version === entity.version)).toBe(
+      true,
+    );
+  });
+
   it('同一编辑过程的连续提交共用在途请求', async () => {
     let complete: ((value: Saved) => void) | undefined;
     const create = vi.fn(() => new Promise<Saved>((resolve) => (complete = resolve)));

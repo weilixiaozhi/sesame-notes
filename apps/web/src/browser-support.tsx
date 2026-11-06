@@ -1,6 +1,6 @@
 type BrowserSupportIssue = 'insecure-connection' | 'unsupported-browser';
 
-/** Web 入口要求安全上下文、Web Crypto 与可组合的请求取消信号；缺少能力时不加载业务模块。 */
+/** Web 入口要求安全上下文、Web Crypto 与支持超时和组合的请求取消信号；缺少能力时不加载业务模块。 */
 export function getBrowserSupportIssue(): BrowserSupportIssue | null {
   try {
     if (!window.isSecureContext) return 'insecure-connection';
@@ -9,6 +9,7 @@ export function getBrowserSupportIssue(): BrowserSupportIssue | null {
       typeof window.crypto?.subtle?.digest !== 'function' ||
       typeof window.AbortController !== 'function' ||
       typeof window.AbortSignal?.any !== 'function' ||
+      typeof window.AbortSignal?.timeout !== 'function' ||
       typeof window.AbortSignal?.prototype?.throwIfAborted !== 'function'
     )
       return 'unsupported-browser';
