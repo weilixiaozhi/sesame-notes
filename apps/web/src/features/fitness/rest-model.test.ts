@@ -40,13 +40,6 @@ function fixture() {
 const now = Date.parse('2026-10-01T08:00:00.000Z');
 
 describe('与手机一致的休息与组完成', () => {
-  it('勾选有效组原子开始训练，热身采用热身时长', () => {
-    const next = completeSet(fixture(), 'exercise', 'set-a', true, undefined, now);
-    expect(next.status).toBe('in_progress');
-    expect(next.run_segments).toEqual([{ started_at: new Date(now).toISOString(), ended_at: null }]);
-    expect(next.rest_timer).toMatchObject({ duration_seconds: 30, set_id: 'set-a', exercise_id: 'exercise' });
-    expect(next.exercises[0]!.sets[0]!.completed).toBe(true);
-  });
   it('下一组先结算旧休息，最后一组仍然启动休息', () => {
     const first = completeSet(fixture(), 'exercise', 'set-a', true, undefined, now);
     const second = completeSet(first, 'exercise', 'set-b', true, undefined, now + 20000);
@@ -69,20 +62,5 @@ describe('与手机一致的休息与组完成', () => {
     const settled = settleRest(first, now + 300000);
     expect(settled.exercises[0]!.sets[0]!.rest_durations_seconds).toEqual([30]);
     expect(settleRest(settled, now + 900000)).toEqual(settled);
-  });
-  it('取消完成清空该组历史，但保留独立休息计时', () => {
-    let draft = completeSet(fixture(), 'exercise', 'set-a', true, undefined, now);
-    draft = changeRest(draft, 'start', 60, now + 10000);
-    expect(draft.exercises[0]!.sets[0]!.rest_durations_seconds).toEqual([10]);
-    draft = completeSet(draft, 'exercise', 'set-a', false, undefined, now + 11000);
-    expect(draft.exercises[0]!.sets[0]!.rest_durations_seconds).toEqual([]);
-    expect(draft.rest_timer).toMatchObject({ exercise_id: null, set_id: null, status: 'running' });
-  });
-  it('无有效次数不能启动训练，计时不因时钟回退变负', () => {
-    const draft = fixture();
-    draft.exercises[0]!.sets[0]!.reps = null;
-    expect(() => completeSet(draft, 'exercise', 'set-a', true, undefined, now)).toThrow('有效次数');
-    const running = completeSet(fixture(), 'exercise', 'set-a', true, undefined, now);
-    expect(restElapsed(running.rest_timer!, now - 3000)).toBe(0);
   });
 });

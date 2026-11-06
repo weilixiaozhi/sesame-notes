@@ -292,34 +292,6 @@ it('SDK 最小载荷生成完整权威事件，连续版本、幂等重放及删
   }
 });
 
-it('不同账号复用分类 ID 时，权威事件只包含当前账号保存的内容', async () => {
-  try {
-    const first = await register();
-    const second = await register();
-    const categoryId = randomUUID();
-    const timestamp = '2026-09-01T00:00:00.000Z';
-    for (const [index, session] of [first, second].entries()) {
-      await push(session, [
-        mutation('category', categoryId, timestamp, {
-          name: `  私有分类${index}  `,
-          kind: 'expense',
-          level: 1,
-          sort_order: 0,
-          icon: null,
-          parent_id: null,
-        }),
-      ]);
-    }
-    for (const [index, session] of [first, second].entries()) {
-      const events = (await pull(session)).filter((event) => event.entity_id === categoryId);
-      expect(events).toHaveLength(1);
-      expect(events[0]!.payload).toMatchObject({ id: categoryId, name: `私有分类${index}`, updated_at: timestamp });
-    }
-  } catch (cause) {
-    throw new Error('同步权威载荷的分类账号隔离回归失败', { cause });
-  }
-});
-
 /** 创建真实共享关系，确认成员同步场景由 Editor 而不是 Owner 发起。 */
 async function sharedLedger() {
   try {

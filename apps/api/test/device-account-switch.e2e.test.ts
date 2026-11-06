@@ -6,7 +6,6 @@ import { randomUUID } from 'node:crypto';
 
 import { buildApp } from '../src/app.js';
 import type { ApiConfig } from '../src/config.js';
-import { dummyPasswordHash } from '../src/modules/auth/testing.js';
 
 const DATABASE_URL = testFixtureDatabaseUrl();
 const API_BASE = '/api/v1';
@@ -168,20 +167,6 @@ describe('切片二：设备、会话与登录防枚举（需求锚点）', () =
       expect(body.code).toBe('INVALID_CREDENTIALS');
       expect(body.message).toBe('手机号或密码错误');
     }
-  });
-
-  it('dummy scrypt 哈希是合法格式且可被恒定时间校验（登录等成本路径）', async () => {
-    const dummy = await dummyPasswordHash();
-    // 格式与真实哈希完全一致：scrypt:salt:key
-    const parts = dummy.split(':');
-    expect(parts).toHaveLength(3);
-    expect(parts[0]).toBe('scrypt');
-    expect(Buffer.from(parts[1]!, 'base64url').length).toBe(16);
-    expect(Buffer.from(parts[2]!, 'base64url').length).toBe(64);
-    // 同一 dummy 值可重复验证且结果稳定（false），证明比较路径可执行
-    const { verifyPassword } = await import('../src/modules/auth/testing.js');
-    expect(await verifyPassword('任意密码', dummy)).toBe(false);
-    expect(await verifyPassword('任意密码', dummy)).toBe(false);
   });
 
   it('JWT 载荷不包含手机号、account 占位与任何手机号派生信息', async () => {

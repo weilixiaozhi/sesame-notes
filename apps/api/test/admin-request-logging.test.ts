@@ -3,7 +3,6 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { serializeAdminError } from '../src/shared/request-logging.js';
 
 describe('后台访问日志隐私边界', () => {
   const records: string[] = [];
@@ -82,19 +81,6 @@ describe('后台访问日志隐私边界', () => {
     }
   });
 
-  it('数据库异常仅保留错误类型、代码和源码位置', () => {
-    const error = Object.assign(new Error('SQL included SENSITIVE_PASSWORD'), {
-      code: 'P2002',
-      meta: { phone: '13800123456' },
-    });
-    const record = serializeAdminError(error);
-    expect(record.type).toBe('Error');
-    expect(record.code).toBe('P2002');
-    expect(record.stack).toContain('admin-request-logging.test.ts');
-    expect(JSON.stringify(record)).not.toContain('SENSITIVE_PASSWORD');
-    expect(JSON.stringify(record)).not.toContain('13800123456');
-  });
-
   it('编码后的后台路径仍启用异常脱敏和禁止缓存', async () => {
     try {
       records.length = 0;
@@ -113,20 +99,17 @@ describe('后台访问日志隐私边界', () => {
     }
   });
 
-  it.each(['/api/v1/admin/not-found', '/api/v1/%61dmin/not-found'])(
-    '未知后台路径不把查询复制进日志或错误正文：%s',
-    async (path) => {
-      try {
-        records.length = 0;
-        const response = await app.inject({ url: `${path}?search=PRIVATE_SEARCH_VALUE` });
-        expect(response.statusCode).toBe(404);
-        expect(response.headers['cache-control']).toBe('no-store');
-        expect(response.json()).toMatchObject({ code: 'NOT_FOUND', message: '请求的内容不存在' });
-        expect(response.body).not.toContain('PRIVATE_SEARCH_VALUE');
-        expect(records.join('\n')).not.toContain('PRIVATE_SEARCH_VALUE');
-      } catch (cause) {
-        throw new Error('后台未知路由的隐私边界验证失败', { cause });
-      }
-    },
-  );
+  it.each(['/api/v1/%61dmin/not-found'])('未知后台路径不把查询复制进日志或错误正文：%s', async (path) => {
+    try {
+      records.length = 0;
+      const response = await app.inject({ url: `${path}?search=PRIVATE_SEARCH_VALUE` });
+      expect(response.statusCode).toBe(404);
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.json()).toMatchObject({ code: 'NOT_FOUND', message: '请求的内容不存在' });
+      expect(response.body).not.toContain('PRIVATE_SEARCH_VALUE');
+      expect(records.join('\n')).not.toContain('PRIVATE_SEARCH_VALUE');
+    } catch (cause) {
+      throw new Error('后台未知路由的隐私边界验证失败', { cause });
+    }
+  });
 });

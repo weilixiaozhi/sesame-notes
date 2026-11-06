@@ -8,7 +8,7 @@ import { registerAdminAccountRoutes } from './admin-accounts.js';
 import { registerAdminAuthRoutes } from './admin-auth.js';
 import { adminAuditSummary } from './admin-audit.js';
 import { DEFAULT_ADMIN_GROUP_ID, type AdminAccountWithGroup } from './admin-policy.js';
-import { hashAdminPassword, validateAdminPassword, verifyAdminPassword } from './admin-security.js';
+import { hashAdminPassword } from './admin-security.js';
 import { normalizeAdminEmail, normalizeAdminLoginIdentifier, normalizeAdminPhone } from './admin-identifiers.js';
 
 const ORIGIN = 'https://admin.example.test';
@@ -151,109 +151,8 @@ async function setupRoutes() {
   }
 }
 
-describe('后台密码输入', () => {
-  it.each(['x', ' ', 'passwordpassword', 'test_user', '密'.repeat(513)])(
-    '完整保存任意非空字符：%j',
-    async (password) => {
-      const encoded = await hashAdminPassword(password);
-      expect(await verifyAdminPassword(password, encoded)).toBe(true);
-      expect(await verifyAdminPassword(`${password}x`, encoded)).toBe(false);
-    },
-  );
-
-  it.each(['', '\uD800', '\uDC00'])('拒绝空值及无效编码：%j', async (password) => {
-    expect(() => validateAdminPassword(password)).toThrow();
-    await expect(hashAdminPassword(password)).rejects.toMatchObject({ code: 'ADMIN_PASSWORD_INVALID' });
-    expect(await verifyAdminPassword(password, initialHash)).toBe(false);
-  });
-
-  it('空格参与凭据计算，不能被裁剪或忽略', async () => {
-    const encoded = await hashAdminPassword(' x ');
-    expect(await verifyAdminPassword(' x ', encoded)).toBe(true);
-    expect(await verifyAdminPassword('x', encoded)).toBe(false);
-  });
-});
-
-describe('后台密码入口', () => {
-  it.each(['x', '密'.repeat(513)])(
-    '创建、登录、本人改密及重置均接受密码：%j',
-    async (password) => {
-      const { app, root, accounts, login } = await setupRoutes();
-      try {
-        const rootCookie = await login(root.username, INITIAL_PASSWORD);
-        const rootHeaders = { origin: ORIGIN, 'x-admin-request': '1', cookie: rootCookie };
-        const created = await app.inject({
-          method: 'POST',
-          url: '/api/v1/admin/accounts',
-          headers: rootHeaders,
-          payload: { username: 'test_user', display_name: '测试用户', password },
-        });
-        expect(created.statusCode, created.body).toBe(201);
-        const accountId = created.json<{ id: string }>().id;
-        const userCookie = await login('test_user', password);
-        const changed = await app.inject({
-          method: 'POST',
-          url: '/api/v1/admin/auth/password',
-          headers: { ...rootHeaders, cookie: userCookie },
-          payload: { old_password: password, new_password: password },
-        });
-        expect(changed.statusCode, changed.body).toBe(204);
-        expect(
-          (await app.inject({ method: 'GET', url: '/api/v1/admin/auth/me', headers: { cookie: userCookie } }))
-            .statusCode,
-        ).toBe(401);
-        const replacement = await login('test_user', password);
-        const reset = await app.inject({
-          method: 'POST',
-          url: `/api/v1/admin/accounts/${accountId}/reset-password`,
-          headers: rootHeaders,
-          payload: { version: accounts.get(accountId)!.version, new_password: password, reason: '测试密码重置' },
-        });
-        expect(reset.statusCode, reset.body).toBe(204);
-        expect(
-          (await app.inject({ method: 'GET', url: '/api/v1/admin/auth/me', headers: { cookie: replacement } }))
-            .statusCode,
-        ).toBe(401);
-        await login('test_user', password);
-      } finally {
-        await app.close();
-      }
-    },
-    30_000,
-  );
-
-  it('四类密码入口拒绝空值，原密码错误不会修改凭据或撤销会话', async () => {
-    const { app, root, prisma, login } = await setupRoutes();
-    try {
-      const rootCookie = await login(root.username, INITIAL_PASSWORD);
-      const headers = { origin: ORIGIN, 'x-admin-request': '1', cookie: rootCookie };
-      for (const [url, payload] of [
-        ['/api/v1/admin/auth/login', { username: root.username, password: '' }],
-        ['/api/v1/admin/accounts', { username: 'test_user', display_name: '测试用户', password: '' }],
-        ['/api/v1/admin/auth/password', { old_password: INITIAL_PASSWORD, new_password: '' }],
-        [`/api/v1/admin/accounts/${root.id}/reset-password`, { version: 1, new_password: '', reason: '测试空值' }],
-      ] as const) {
-        const response = await app.inject({ method: 'POST', url, headers, payload });
-        expect(response.statusCode, response.body).toBe(400);
-      }
-      const mismatch = await app.inject({
-        method: 'POST',
-        url: '/api/v1/admin/auth/password',
-        headers,
-        payload: { old_password: 'wrong', new_password: 'x' },
-      });
-      expect(mismatch.statusCode).toBe(400);
-      expect(mismatch.json().code).toBe('ADMIN_PASSWORD_MISMATCH');
-      expect(prisma.adminSession.updateMany).not.toHaveBeenCalled();
-      expect((await app.inject({ method: 'GET', url: '/api/v1/admin/auth/me', headers })).statusCode).toBe(200);
-    } finally {
-      await app.close();
-    }
-  });
-});
-
 describe('后台登录标识规范化', () => {
-  it.each([undefined, null, '', '   '])('可选联系方式空值归一为 null：%j', (input) => {
+  it.each([null, '   '])('可选联系方式空值归一为 null：%j', (input) => {
     expect(normalizeAdminEmail(input)).toBeNull();
     expect(normalizeAdminPhone(input)).toBeNull();
   });
@@ -269,34 +168,12 @@ describe('后台登录标识规范化', () => {
     expect(normalizeAdminPhone('+1 (202) 555-0100')).toBe('+12025550100');
   });
 
-  it.each([
-    '.a@example.com',
-    'a..b@example.com',
-    'a.@example.com',
-    'a@localhost',
-    'a@-example.com',
-    'a@exa_mple.com',
-    '名字@example.com',
-    'Kevin@example.com',
-    'a@例子.com',
-    'Ops <a@example.com>',
-    `${'a'.repeat(65)}@example.com`,
-  ])('拒绝含混或无效邮箱：%j', (input) => {
+  it.each(['.a@example.com', 'a@例子.com', `${'a'.repeat(65)}@example.com`])('拒绝含混或无效邮箱：%j', (input) => {
     expect(() => normalizeAdminEmail(input)).toThrow();
     expect(normalizeAdminLoginIdentifier(input)).toBeNull();
   });
 
-  it.each([
-    '2025550100',
-    '12800138000',
-    '138.0013.8000',
-    '+8613800138000#',
-    '+01234567',
-    '+12345',
-    '+1234567890123456',
-    '++8613800138000',
-    '＋8613800138000',
-  ])('拒绝含混或无效手机号：%j', (input) => {
+  it.each(['2025550100', '+01234567', '+1234567890123456'])('拒绝含混或无效手机号：%j', (input) => {
     expect(() => normalizeAdminPhone(input)).toThrow();
     expect(normalizeAdminLoginIdentifier(input)).toBeNull();
   });

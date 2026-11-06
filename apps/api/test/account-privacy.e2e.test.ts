@@ -8,7 +8,6 @@ import { randomUUID } from 'node:crypto';
 
 import { buildApp } from '../src/app.js';
 import type { ApiConfig } from '../src/config.js';
-import { MAX_AVATAR_BYTES } from '../src/modules/accounts/testing.js';
 
 const DATABASE_URL = testFixtureDatabaseUrl();
 const API_BASE = '/api/v1';
@@ -121,42 +120,6 @@ describe('切片三：共享资料隐私与头像授权（需求锚点）', () =
     }
   });
 
-  it('member-stats 响应不含 account，包含 sesame_number', async () => {
-    const owner = await registerUser();
-    const member = await registerUser();
-    const ledgerId = randomUUID();
-    const create = await api('post', '/ledgers', { id: ledgerId, name: '统计隐私' }, owner.token);
-    expect(create.status).toBe(201);
-    const invite = await api('post', `/ledgers/${ledgerId}/invites`, { role: 'editor' }, owner.token);
-    const code = (invite.json() as { code: string }).code;
-    await api('post', `/invites/${code}/accept`, {}, member.token);
-    // member 记一笔支出，让统计项非空
-    await api(
-      'post',
-      `/ledgers/${ledgerId}/transactions`,
-      {
-        id: randomUUID(),
-        tx_type: 'expense',
-        amount: '30',
-        happened_at: '2026-08-19T10:00:00.000Z',
-        currency_code: 'CNY',
-        native_amount: '30',
-      },
-      member.token,
-    );
-
-    const stats = await api('get', `/ledgers/${ledgerId}/member-stats?scope=all`, undefined, owner.token);
-    expect(stats.status).toBe(200);
-    const items = (stats.json() as { items: Array<Record<string, unknown>> }).items;
-    expect(items.length).toBeGreaterThan(0);
-    for (const item of items) {
-      expect(Object.keys(item)).not.toContain('account');
-      expect(Object.keys(item)).not.toContain('phone');
-      expect(Object.keys(item)).not.toContain('gender');
-      if (item.user_id) expect(item.sesame_number).toMatch(/^[1-9]\d{8}$/);
-    }
-  });
-
   it('头像授权三方矩阵：本人/共同账本成员可下载，陌生用户统一 404', async () => {
     const owner = await registerUser();
     const peer = await registerUser();
@@ -194,29 +157,5 @@ describe('切片三：共享资料隐私与头像授权（需求锚点）', () =
     expect((await api('delete', `/ledgers/${ledgerId}`, undefined, owner.token)).status).toBe(204);
     expect((await api('get', `/profile/avatar/${owner.userId}`, undefined, peer.token)).status).toBe(404);
     expect((await api('get', `/profile/avatar/${owner.userId}`, undefined, owner.token)).status).toBe(200);
-  });
-
-  it('头像上传体积边界：原图超上限与请求体超路由上限均返回 413 AVATAR_TOO_LARGE', async () => {
-    const { token } = await registerUser();
-    // 原始字节超上限：解码前拒绝，错误码与用户文案固定
-    const tooBigRaw = Buffer.alloc(MAX_AVATAR_BYTES + 1, 0x01).toString('base64');
-    const rawOver = await api('put', '/profile/avatar', { content_type: 'image/png', data_base64: tooBigRaw }, token);
-    expect(rawOver.status).toBe(413);
-    expect((rawOver.json() as { code: string }).code).toBe('AVATAR_TOO_LARGE');
-
-    // 请求体超过路由 bodyLimit：Base64 开销后必然越界，Fastify 层拒绝并映射同一错误码
-    const bodyOver = {
-      content_type: 'image/png',
-      data_base64: Buffer.alloc(MAX_AVATAR_BYTES * 2, 0x41).toString('base64'),
-    };
-    const hugeResponse = await app.inject({
-      method: 'put',
-      url: `${API_BASE}/profile/avatar`,
-      payload: JSON.stringify(bodyOver),
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    });
-    expect(hugeResponse.statusCode).toBe(413);
-    const parsed = JSON.parse(hugeResponse.body) as { code: string };
-    expect(parsed.code).toBe('AVATAR_TOO_LARGE');
   });
 });

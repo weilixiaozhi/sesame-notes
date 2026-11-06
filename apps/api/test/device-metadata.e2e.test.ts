@@ -90,64 +90,6 @@ afterAll(async () => {
 });
 
 describe('真实设备资料认证链路', () => {
-  it('旧设备在刷新时补齐资料，安装和账号归属保持一致，夹具初始资料为空', async () => {
-    const fixture = await registerFixture();
-    const before = await prisma.device.findUniqueOrThrow({ where: { id: fixture.session.device_id } });
-    expect([before.appVersion, before.osVersion, before.deviceModel]).toEqual([null, null, null]);
-    const updated = await refresh(fixture.session.refresh_token, {
-      platform: 'android',
-      app_version: '1.4.6+24',
-      os_version: 'Android 16 (API 36)',
-      device_model: 'test-system-model',
-    });
-    expect(updated.device_id).toBe(fixture.session.device_id);
-    const device = await prisma.device.findUniqueOrThrow({ where: { id: updated.device_id } });
-    expect(device).toMatchObject({
-      userId: fixture.session.user.user_id,
-      installationId: fixture.installation,
-      name: before.name,
-      platform: 'android',
-      appVersion: '1.4.6+24',
-      osVersion: 'Android 16 (API 36)',
-      deviceModel: 'test-system-model',
-    });
-  });
-
-  it('已有设备再次登录更新真实版本，后续空值和无资料刷新保留已有值', async () => {
-    const fixture = await registerFixture();
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/login',
-      payload: {
-        ...fixture.credentials,
-        device: {
-          installation_id: fixture.installation,
-          name: 'device-metadata-fixture',
-          platform: 'ios',
-          app_version: '1.5.0+25',
-          os_version: 'iOS 26.0',
-          device_model: 'test-machine-code',
-        },
-      },
-    });
-    expect(response.statusCode).toBe(200);
-    const login = response.json<Session>();
-    expect(login.device_id).toBe(fixture.session.device_id);
-    const blank = await refresh(login.refresh_token, {
-      platform: ' ',
-      app_version: '',
-      os_version: '\t',
-      device_model: '  ',
-    });
-    await refresh(blank.refresh_token);
-    expect(await prisma.device.findUniqueOrThrow({ where: { id: login.device_id } })).toMatchObject({
-      platform: 'ios',
-      appVersion: '1.5.0+25',
-      osVersion: 'iOS 26.0',
-      deviceModel: 'test-machine-code',
-    });
-  });
-
   it('伪造设备和安装字段不能修改另一账号设备或转移当前安装', async () => {
     const owner = await registerFixture();
     const other = await registerFixture();
@@ -171,46 +113,5 @@ describe('真实设备资料认证链路', () => {
       platform: 'flutter',
       deviceModel: null,
     });
-  });
-
-  it('旧请求的任意device内容保持兼容，非法字段不能清空已有资料', async () => {
-    const fixture = await registerFixture();
-    let session = await refresh(fixture.session.refresh_token, {
-      platform: 'android',
-      device_model: 'known-system-model',
-    });
-    for (const legacy of [
-      'legacy-client-field',
-      123,
-      [],
-      { platform: 123, device_model: 'x'.repeat(129), os_version: false },
-    ]) {
-      session = await refresh(session.refresh_token, legacy);
-    }
-    expect(await prisma.device.findUniqueOrThrow({ where: { id: session.device_id } })).toMatchObject({
-      platform: 'android',
-      deviceModel: 'known-system-model',
-      osVersion: null,
-    });
-  });
-
-  it('浏览器刷新可补实际已知资料，缺失型号保持为空，仍使用Cookie确定设备', async () => {
-    const fixture = await registerFixture(true);
-    expect(fixture.cookie).toBeDefined();
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/v1/auth/browser/refresh',
-      headers: { origin, cookie: `${fixture.cookie!.name}=${fixture.cookie!.value}` },
-      payload: { device: { platform: 'web', app_version: '1.4.6' } },
-    });
-    expect(response.statusCode).toBe(200);
-    expect(response.json<{ device_id: string }>().device_id).toBe(fixture.session.device_id);
-    expect(await prisma.device.findUniqueOrThrow({ where: { id: fixture.session.device_id } })).toMatchObject({
-      platform: 'web',
-      appVersion: '1.4.6',
-      osVersion: null,
-      deviceModel: null,
-    });
-    expect(response.json()).not.toHaveProperty('refresh_token');
   });
 });

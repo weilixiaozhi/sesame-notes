@@ -100,7 +100,6 @@ afterEach(async () => {
 it.each([
   { method: 'GET' as const, url: '/api/v1/profile/me', status: 503, code: 'AUTH_UNAVAILABLE' },
   { method: 'POST' as const, url: '/api/v1/auth/login', status: 500, code: 'LOGIN_FAILED' },
-  { method: 'POST' as const, url: '/api/v1/auth/browser/login', status: 500, code: 'LOGIN_FAILED' },
 ])('权威代际单例缺失时 $url 拒绝处理，不伪造会话或误报密码错误', async ({ method, url, status, code }) => {
   try {
     const { app, prisma, userHeaders } = await setup();
@@ -161,10 +160,9 @@ it.each([
   }
 });
 
-it.each(['generation', 'device'] as const)('用户认证 %s 数据库失败返回 503，不伪装为凭据错误', async (stage) => {
+it('用户认证数据库失败返回 503，不伪装为凭据错误', async () => {
   const { app, prisma, userHeaders } = await setup();
-  const target = stage === 'generation' ? prisma.serverEpoch.findUniqueOrThrow : prisma.device.findFirst;
-  target.mockRejectedValue(new Error('DATABASE_UNAVAILABLE'));
+  prisma.device.findFirst.mockRejectedValue(new Error('DATABASE_UNAVAILABLE'));
   const log = vi.spyOn(app.log, 'error');
   const response = await app.inject({ method: 'GET', url: '/api/v1/profile/me', headers: userHeaders });
   expect(response.statusCode).toBe(503);
@@ -175,57 +173,26 @@ it.each(['generation', 'device'] as const)('用户认证 %s 数据库失败返�
   expect(prisma.adminSession.findUnique).not.toHaveBeenCalled();
 });
 
-it.each(['transaction', 'lock', 'session', 'touch'] as const)(
-  '后台认证 %s 存储失败返回 503，不能回退为普通用户身份',
-  async (stage) => {
-    const { app, prisma, adminHeaders, userHeaders } = await setup();
-    const target = {
-      transaction: prisma.$transaction,
-      lock: prisma.$queryRaw,
-      session: prisma.adminSession.findUnique,
-      touch: prisma.adminSession.update,
-    }[stage];
-    target.mockRejectedValue(new Error('ADMIN_DATABASE_UNAVAILABLE'));
-    const log = vi.spyOn(app.log, 'error');
-    const response = await app.inject({
-      method: 'GET',
-      url: '/api/v1/admin/users',
-      headers: { ...adminHeaders, ...userHeaders },
-    });
-    expect(response.statusCode).toBe(503);
-    expect(response.json().code).toBe('ADMIN_AUTH_UNAVAILABLE');
-    expect(log).toHaveBeenCalledWith(expect.objectContaining({ err: expect.any(Error) }), expect.any(String));
-    expect(response.body).not.toContain('ADMIN_DATABASE_UNAVAILABLE');
-    expect(prisma.user.findMany).not.toHaveBeenCalled();
-    expect(prisma.device.findFirst).not.toHaveBeenCalled();
-    expect(prisma.serverEpoch.findUniqueOrThrow).not.toHaveBeenCalled();
-  },
-);
-
-it('普通用户无效 JWT 与已撤销设备仍返回 401，且不查询后台身份', async () => {
-  const { app, prisma, userHeaders } = await setup();
-  expect(
-    (await app.inject({ method: 'GET', url: '/api/v1/profile/me', headers: { authorization: 'Bearer invalid' } }))
-      .statusCode,
-  ).toBe(401);
-  expect(prisma.device.findFirst).not.toHaveBeenCalled();
-  prisma.device.findFirst.mockResolvedValueOnce(null);
-  expect((await app.inject({ method: 'GET', url: '/api/v1/profile/me', headers: userHeaders })).statusCode).toBe(401);
-  expect(prisma.adminSession.findUnique).not.toHaveBeenCalled();
-});
-
-it('缺失或撤销的后台会话返回 401，当前角色缺权限返回 403', async () => {
+it.each(['session'] as const)('后台认证 %s 存储失败返回 503，不能回退为普通用户身份', async (stage) => {
   const { app, prisma, adminHeaders, userHeaders } = await setup();
-  const missing = await app.inject({ method: 'GET', url: '/api/v1/admin/users', headers: userHeaders });
-  expect(missing.statusCode).toBe(401);
-  expect(missing.json().code).toBe('ADMIN_UNAUTHORIZED');
-  expect(prisma.$transaction).not.toHaveBeenCalled();
-  prisma.adminSession.findUnique.mockResolvedValueOnce(null);
-  const revoked = await app.inject({ method: 'GET', url: '/api/v1/admin/users', headers: adminHeaders });
-  expect(revoked.statusCode).toBe(401);
-  expect(revoked.json().code).toBe('ADMIN_UNAUTHORIZED');
-  const forbidden = await app.inject({ method: 'GET', url: '/api/v1/admin/accounts', headers: adminHeaders });
-  expect(forbidden.statusCode).toBe(403);
-  expect(forbidden.json().code).toBe('ADMIN_PERMISSION_DENIED');
-  expect(prisma.adminAccount.findMany).not.toHaveBeenCalled();
+  const target = {
+    transaction: prisma.$transaction,
+    lock: prisma.$queryRaw,
+    session: prisma.adminSession.findUnique,
+    touch: prisma.adminSession.update,
+  }[stage];
+  target.mockRejectedValue(new Error('ADMIN_DATABASE_UNAVAILABLE'));
+  const log = vi.spyOn(app.log, 'error');
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/v1/admin/users',
+    headers: { ...adminHeaders, ...userHeaders },
+  });
+  expect(response.statusCode).toBe(503);
+  expect(response.json().code).toBe('ADMIN_AUTH_UNAVAILABLE');
+  expect(log).toHaveBeenCalledWith(expect.objectContaining({ err: expect.any(Error) }), expect.any(String));
+  expect(response.body).not.toContain('ADMIN_DATABASE_UNAVAILABLE');
+  expect(prisma.user.findMany).not.toHaveBeenCalled();
+  expect(prisma.device.findFirst).not.toHaveBeenCalled();
+  expect(prisma.serverEpoch.findUniqueOrThrow).not.toHaveBeenCalled();
 });

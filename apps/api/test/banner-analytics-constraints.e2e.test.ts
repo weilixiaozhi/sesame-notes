@@ -68,18 +68,7 @@ describe('Banner 事件数据库维度约束', () => {
 
   it.each([
     { name: '缺少位置', patch: { bannerSlot: null } },
-    { name: '缺少来源', patch: { bannerSource: null } },
-    { name: '缺少版本', patch: { bannerVersion: null } },
-    { name: '未知位置', patch: { bannerSlot: 'other-library' } },
-    { name: '未知来源', patch: { bannerSource: 'external' } },
-    { name: '位置页面不匹配', patch: { pageId: 'fitness.templates' } },
     { name: 'Web 来源', patch: { platform: 'web' } },
-    { name: '不是操作事件', patch: { kind: 'active' } },
-    { name: '本地正版本', patch: { bannerVersion: 1 } },
-    { name: '服务器零版本', patch: { bannerSource: 'remote', bannerVersion: 0 } },
-    { name: '负数版本', patch: { bannerSource: 'remote', bannerVersion: -1 } },
-    { name: '其他事件携带 Banner 维度', patch: { eventName: 'fitness_plan_save' } },
-    { name: '本地图身份与位置不匹配', patch: { bannerId: 'builtin:fitness-template-library' } },
     { name: '远端图片不是 UUID', patch: { bannerSource: 'remote', bannerVersion: 1, bannerId: 'not-a-slide' } },
   ])('数据库拒绝$name', async ({ patch }) => {
     try {

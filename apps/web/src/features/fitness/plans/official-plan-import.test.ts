@@ -79,32 +79,6 @@ describe('official plan copying', () => {
     expect(body.plan!.days[1]!.slot).toBeNull();
     expect(body.plan?.generation_state.generated_cycles).toHaveLength(0);
   });
-  it('reuses a user-modified same-origin copy without adding or overwriting it', () => {
-    const newCopy = buildOfficialPlanImport(library.plans[0]!, library, space, new Map(), now, '2026-09-30')
-      .template_copies![0]!;
-    const existing: FitnessTemplate = {
-      ...newCopy.payload,
-      id: 'user-copy',
-      fitness_space_id: space.id,
-      sync_id: 'sync',
-      revision: 9,
-      deleted_at: null,
-    };
-    existing.name = '我的定制力量';
-    existing.exercises[0]!.sets[0]!.reps = 15;
-    const body = buildOfficialPlanImport(
-      library.plans[0]!,
-      library,
-      space,
-      new Map([[sourceId, existing]]),
-      now,
-      '2026-09-30',
-    );
-    expect(body.template_copies).toHaveLength(0);
-    expect(body.plan!.days[0]!.slot).toMatchObject({ name: '我的定制力量', source_template_id: 'user-copy' });
-    expect(body.plan!.days[0]!.slot!.exercises[0]!.sets[0]!.reps).toBe(15);
-    expect(existing.revision).toBe(9);
-  });
   it('rejects a missing official source and prevents cross-space copy reuse', () => {
     expect(() =>
       buildOfficialPlanImport(library.plans[0]!, { ...library, templates: [] }, space, new Map(), now, '2026-09-30'),

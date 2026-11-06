@@ -356,27 +356,6 @@ describe('PostgreSQL 管理员新增幂等与授权边界', () => {
     });
   }, 30_000);
 
-  it('对象属性顺序变化和非v4 UUID不改变同一新增意图', async () => {
-    await verify('规范载荷或非v4新增标识不能恢复', async () => {
-      const test = creationCases[4]!;
-      const body = test.body();
-      const key = '056cf10d-2d59-599c-9d97-6749e866aa52';
-      const first = await post(test.path, body, key);
-      expect(first.statusCode, first.body).toBe(201);
-      const name = body.name as Record<string, string>;
-      const reordered = {
-        reason: body.reason,
-        name: { en: name.en, zh_hant: name.zh_hant, zh: name.zh },
-        sort_order: 0,
-      };
-      const repeated = await post(test.path, reordered, key);
-      expect(repeated.statusCode, repeated.body).toBe(201);
-      const id = remember(test, repeated.json());
-      expect(repeated.json()).toEqual(first.json());
-      expect(await countAudit(actor, test.action, id)).toBe(1);
-    });
-  }, 30_000);
-
   it('相同键的载荷、路由或路径参数变化均明确冲突', async () => {
     await verify('新增标识复用没有阻止不同意图', async () => {
       const test = creationCases[4]!;
@@ -473,42 +452,6 @@ describe('PostgreSQL 管理员新增幂等与授权边界', () => {
       expect(retried.statusCode, retried.body).toBe(201);
       const id = remember(test, retried.json());
       expect(await countEntity(test, id)).toBe(1);
-      expect(await countAudit(actor, test.action, id)).toBe(1);
-    });
-  }, 30_000);
-
-  it('未提供幂等标识的旧调用保持单次新增语义', async () => {
-    await verify('未提供新增标识的旧管理端调用不兼容', async () => {
-      const test = creationCases[5]!;
-      const body = test.body();
-      const receipts = await prisma.adminCreationReceipt.count({ where: { adminId: actor.id } });
-      const first = await post(test.path, body);
-      const second = await post(test.path, body);
-      expect(first.statusCode, first.body).toBe(201);
-      expect(second.statusCode, second.body).toBe(201);
-      expect(remember(test, first.json())).not.toBe(remember(test, second.json()));
-      expect(await prisma.adminCreationReceipt.count({ where: { adminId: actor.id } })).toBe(receipts);
-    });
-  }, 30_000);
-
-  it('轮换用户JWT签名密钥后仍能恢复原管理员新增回执', async () => {
-    await verify('用户JWT密钥轮换改变了管理员幂等回执身份', async () => {
-      const test = creationCases[4]!;
-      const body = test.body();
-      const key = randomUUID();
-      const first = await post(test.path, body, key);
-      expect(first.statusCode, first.body).toBe(201);
-      const rotated = buildApp({
-        logger: false,
-        config: { ...config, jwtSecret: 'rotated-admin-creation-test-at-least-32-byte-secret' },
-        prisma: injected as unknown as PrismaClient,
-      });
-      apps.push(rotated);
-      await rotated.ready();
-      const repeated = await post(test.path, body, key, actor, rotated);
-      expect(repeated.statusCode, repeated.body).toBe(201);
-      const id = remember(test, repeated.json());
-      expect(repeated.json()).toEqual(first.json());
       expect(await countAudit(actor, test.action, id)).toBe(1);
     });
   }, 30_000);

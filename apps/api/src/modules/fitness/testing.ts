@@ -47,7 +47,6 @@ export const fitnessLibrary: FitnessLibrary = librarySource;
 
 export { addPlanDays, generatePlanCycles, preparePlanSave } from './fitness-plan-generation.js';
 export { validateFitnessPayload, validateFitnessTransition } from './fitness-rules.js';
-export { fitnessPayloadSchemas } from './fitness-schemas.js';
 export type { FitnessPlanPayload } from './fitness-schemas.js';
 export { fitnessDateContext, summarizeFitness, fitnessCalendar } from './fitness-statistics.js';
 export type { StatisticsWorkout, CalendarPlan } from './fitness-statistics.js';

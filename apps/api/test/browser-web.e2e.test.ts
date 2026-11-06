@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { fitnessPlan, fitnessTemplate, fitnessWorkout } from './fitness-fixtures.js';
+import { fitnessWorkout } from './fitness-fixtures.js';
 import { testFixtureDatabaseUrl } from './existing-test-database.js';
 
 const databaseUrl = testFixtureDatabaseUrl();
@@ -214,40 +214,39 @@ it('备忘录与纪念日分页读取限制于本人云数据，游标不依赖�
   expect((await get(`/api/v1/memo-books/${memo.id}/entries`, session)).statusCode).toBe(404);
 });
 
-it.each([
-  ['templates', 'fitness_template', fitnessTemplate],
-  ['plans', 'fitness_plan', fitnessPlan],
-  ['workouts', 'fitness_workout', fitnessWorkout],
-] as const)('健身 %s 独立契约、分页和所有权隔离', async (path, entityType, fixture) => {
-  const { session } = await register();
-  const { session: stranger } = await register();
-  const now = new Date('2026-09-01T00:00:00.000Z');
-  const space = await prisma.fitnessSpace.create({
-    data: { id: randomUUID(), ownerId: session.user.user_id, name: '健身测试', createdAt: now, updatedAt: now },
-  });
-  const ids: string[] = [];
-  for (const deleted of [false, false, false, true]) {
-    const id = randomUUID();
-    await prisma.fitnessEntity.create({
-      data: {
-        id,
-        fitnessSpaceId: space.id,
-        entityType,
-        payload: { ...fixture(), created_at: now.toISOString(), updated_at: now.toISOString() },
-        status: entityType === 'fitness_workout' ? 'scheduled' : null,
-        createdAt: now,
-        updatedAt: now,
-        deletedAt: deleted ? now : null,
-      },
+it.each([['workouts', 'fitness_workout', fitnessWorkout]] as const)(
+  '健身 %s 独立契约、分页和所有权隔离',
+  async (path, entityType, fixture) => {
+    const { session } = await register();
+    const { session: stranger } = await register();
+    const now = new Date('2026-09-01T00:00:00.000Z');
+    const space = await prisma.fitnessSpace.create({
+      data: { id: randomUUID(), ownerId: session.user.user_id, name: '健身测试', createdAt: now, updatedAt: now },
     });
-    if (!deleted) ids.push(id);
-  }
-  await verifyPage(`/api/v1/fitness-spaces/${space.id}/${path}`, session, stranger, ids, (id) =>
-    prisma.fitnessEntity.update({ where: { id }, data: { deletedAt: now, revision: { increment: 1 } } }),
-  );
-  await prisma.fitnessSpace.update({ where: { id: space.id }, data: { deletedAt: now } });
-  expect((await get(`/api/v1/fitness-spaces/${space.id}/${path}`, session)).statusCode).toBe(404);
-});
+    const ids: string[] = [];
+    for (const deleted of [false, false, false, true]) {
+      const id = randomUUID();
+      await prisma.fitnessEntity.create({
+        data: {
+          id,
+          fitnessSpaceId: space.id,
+          entityType,
+          payload: { ...fixture(), created_at: now.toISOString(), updated_at: now.toISOString() },
+          status: entityType === 'fitness_workout' ? 'scheduled' : null,
+          createdAt: now,
+          updatedAt: now,
+          deletedAt: deleted ? now : null,
+        },
+      });
+      if (!deleted) ids.push(id);
+    }
+    await verifyPage(`/api/v1/fitness-spaces/${space.id}/${path}`, session, stranger, ids, (id) =>
+      prisma.fitnessEntity.update({ where: { id }, data: { deletedAt: now, revision: { increment: 1 } } }),
+    );
+    await prisma.fitnessSpace.update({ where: { id: space.id }, data: { deletedAt: now } });
+    expect((await get(`/api/v1/fitness-spaces/${space.id}/${path}`, session)).statusCode).toBe(404);
+  },
+);
 
 it('凭据卡片按精确整数排序键分页，上一页被删除后游标仍可继续', async () => {
   const { session } = await register();

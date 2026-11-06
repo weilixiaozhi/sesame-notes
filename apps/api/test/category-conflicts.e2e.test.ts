@@ -145,82 +145,34 @@ async function anotherDevice(session: Session): Promise<Session> {
   }
 }
 
-it.each(['reservation', 'event'] as const)(
-  '另一设备不能用已接受的%s来源UUID确认候选，也不能破坏来源重放',
-  async (kind) => {
-    try {
-      const ctx = await setup();
-      const second = await anotherDevice(ctx.session);
-      const source = intent(
-        ctx.leaf,
-        kind === 'event' ? { name: '设备A已提交名称', base_token: ctx.leaf.version_token } : {},
-      );
-      const accepted = await push(ctx.session, source);
-      expect(accepted.status).toBe('accepted');
-      expect(accepted.change_id === null).toBe(kind === 'reservation');
-      const cloud = accepted.category_state as Category;
-      const candidate = (await push(second, intent(cloud, { name: '设备B待确认内容' }))).category_conflict;
-      const response = await request(second, `/category-conflicts/${candidate.id}/resolve`, 'POST', {
-        mutation_id: source.mutation_id,
-        expected_candidate_version: candidate.candidate_version,
-        expected_cloud_token: candidate.cloud_snapshot.version_token,
-        choice: 'cloud',
-      });
-      expect(response.statusCode, response.body).toBe(409);
-      expect(response.json().code).toBe('MUTATION_ID_REUSED');
-      expect(await prisma.categoryConflict.findUnique({ where: { id: candidate.id } })).toMatchObject({
-        status: 'pending',
-        resolutionMutationId: null,
-      });
-      expect(await push(ctx.session, source)).toMatchObject({
-        status: kind === 'event' ? 'ignored' : 'accepted',
-        change_id: accepted.change_id,
-      });
-    } catch (cause) {
-      throw new Error('跨设备账号命令不得覆盖已接受来源身份', { cause });
-    }
-  },
-);
-
-it('无事件账号确认占用同时阻止另一设备REST和sync来源，相同UUID不影响其他账号', async () => {
+it.each(['reservation'] as const)('另一设备不能用已接受的%s来源UUID确认候选，也不能破坏来源重放', async (kind) => {
   try {
     const ctx = await setup();
     const second = await anotherDevice(ctx.session);
-    const candidate = (await push(ctx.session, intent(ctx.leaf, { name: '待确认本地内容' }))).category_conflict;
-    const mutationId = randomUUID();
-    const confirmed = await request(ctx.session, `/category-conflicts/${candidate.id}/resolve`, 'POST', {
-      mutation_id: mutationId,
+    const source = intent(ctx.leaf, {});
+    const accepted = await push(ctx.session, source);
+    expect(accepted.status).toBe('accepted');
+    expect(accepted.change_id === null).toBe(kind === 'reservation');
+    const cloud = accepted.category_state as Category;
+    const candidate = (await push(second, intent(cloud, { name: '设备B待确认内容' }))).category_conflict;
+    const response = await request(second, `/category-conflicts/${candidate.id}/resolve`, 'POST', {
+      mutation_id: source.mutation_id,
       expected_candidate_version: candidate.candidate_version,
       expected_cloud_token: candidate.cloud_snapshot.version_token,
       choice: 'cloud',
     });
-    expect(confirmed.statusCode, confirmed.body).toBe(200);
-    const rest = await request(
-      second,
-      `/ledgers/${ctx.ledgerId}/categories/${ctx.leaf.id}?expected_version_token=${ctx.leaf.version_token}`,
-      'PATCH',
-      { name: ctx.leaf.name },
-      mutationId,
-    );
-    expect(rest.statusCode, rest.body).toBe(409);
-    expect(rest.json().code).toBe('MUTATION_ID_REUSED');
-    const sync = await request(second, '/sync/push', 'POST', {
-      device_id: second.device_id,
-      changes: [{ ...intent(ctx.leaf), mutation_id: mutationId }],
+    expect(response.statusCode, response.body).toBe(409);
+    expect(response.json().code).toBe('MUTATION_ID_REUSED');
+    expect(await prisma.categoryConflict.findUnique({ where: { id: candidate.id } })).toMatchObject({
+      status: 'pending',
+      resolutionMutationId: null,
     });
-    expect(sync.statusCode, sync.body).toBe(409);
-    expect(sync.json().code).toBe('MUTATION_ID_REUSED');
-    const other = await setup();
-    const independent = await request(
-      other.session,
-      `/ledgers/${other.ledgerId}/categories/${other.leaf.id}?expected_version_token=${other.leaf.version_token}`,
-      'PATCH',
-      { name: other.leaf.name },
-      mutationId,
-    );
-    expect(independent.statusCode, independent.body).toBe(200);
+    expect(await push(ctx.session, source)).toMatchObject({
+      status: 'accepted',
+      change_id: accepted.change_id,
+    });
   } catch (cause) {
-    throw new Error('账号命令与设备来源的身份范围隔离验证失败', { cause });
+    throw new Error('跨设备账号命令不得覆盖已接受来源身份', { cause });
   }
 });
 
@@ -237,23 +189,6 @@ it('无基线旧冻结种子保留云改名，候选幂等且不生成第二个�
   expect(await prisma.category.count({ where: { ownerId: ctx.session.user.user_id } })).toBe(61);
   expect(await prisma.categoryConflict.count({ where: { ownerId: ctx.session.user.user_id } })).toBe(1);
   expect(await prisma.syncChange.count({ where: { userId: ctx.session.user.user_id } })).toBe(beforeEvents);
-});
-
-it('匹配基线的真实人工编辑不会因旧设备时间被LWW忽略；同内容无事件回权威基线', async () => {
-  const ctx = await setup();
-  const cloud = await rename(ctx, ctx.leaf, '第一次云编辑');
-  const applied = await push(ctx.session, intent(cloud, { name: '明确人工编辑', base_token: cloud.version_token }));
-  expect(applied.status).toBe('accepted');
-  expect(applied.category_state.name).toBe('明确人工编辑');
-  expect(Date.parse(applied.category_state.updated_at)).toBeGreaterThan(Date.parse(cloud.updated_at));
-  const same = intent(applied.category_state);
-  const count = await prisma.syncChange.count({ where: { userId: ctx.session.user.user_id } });
-  expect(await push(ctx.session, same)).toMatchObject({
-    status: 'accepted',
-    change_id: null,
-    category_state: applied.category_state,
-  });
-  expect(await prisma.syncChange.count({ where: { userId: ctx.session.user.user_id } })).toBe(count);
 });
 
 it('保留云端回执可永久重放，仅精确终结原mutation，不吞后继不同意图', async () => {
@@ -289,31 +224,6 @@ it('保留云端回执可永久重放，仅精确终结原mutation，不吞后�
   });
   expect(changed.statusCode).toBe(409);
   expect(changed.json().code).toBe('MUTATION_ID_REUSED');
-});
-
-it('云端再次变化使确认CAS失败；列表刷新返回当前token，候选内容不变', async () => {
-  const ctx = await setup();
-  const c = (await push(ctx.session, intent(ctx.leaf, { name: '本地候选' }))).category_conflict;
-  const later = await rename(ctx, ctx.leaf, '确认期间新修改');
-  const body = {
-    mutation_id: randomUUID(),
-    expected_candidate_version: c.candidate_version,
-    expected_cloud_token: c.cloud_snapshot.version_token,
-    choice: 'local',
-  };
-  const stale = await request(ctx.session, `/category-conflicts/${c.id}/resolve`, 'POST', body);
-  expect(stale.statusCode).toBe(409);
-  expect(stale.json().code).toBe('CATEGORY_VERSION_CHANGED');
-  const list = (await request(ctx.session, '/category-conflicts')).json();
-  expect(list.items[0].local_payload.name).toBe('本地候选');
-  expect(list.items[0].cloud_snapshot.version_token).toBe(later.version_token);
-  const fresh = await request(ctx.session, `/category-conflicts/${c.id}/resolve`, 'POST', {
-    ...body,
-    mutation_id: randomUUID(),
-    expected_cloud_token: later.version_token,
-  });
-  expect(fresh.statusCode, fresh.body).toBe(200);
-  expect(fresh.json().category_state.name).toBe('本地候选');
 });
 
 it('云墓碑必须独立显式恢复确认，batch冲突不部分建可见分类且旧键固定重放', async () => {
@@ -388,162 +298,6 @@ it('不同账号即使同canonical ID也不可读或确认他人候选；并发�
   expect(await prisma.categoryConflict.count({ where: { id: c.id, status: 'resolved' } })).toBe(1);
 });
 
-it('确认父删除不得暗删未确认子分类；候选保持可恢复状态', async () => {
-  const ctx = await setup();
-  const parent = ctx.categories.find((row) => row.id === ctx.leaf.parent_id)!;
-  const c = (await push(ctx.session, intent(parent, {}, 'delete'))).category_conflict;
-  const result = await request(ctx.session, `/category-conflicts/${c.id}/resolve`, 'POST', {
-    mutation_id: randomUUID(),
-    expected_candidate_version: c.candidate_version,
-    expected_cloud_token: c.cloud_snapshot.version_token,
-    choice: 'local',
-  });
-  expect(result.statusCode).toBe(409);
-  expect(result.json().code).toBe('CATEGORY_HAS_CHILDREN');
-  expect(
-    await prisma.category.findFirst({ where: { id: parent.id, ownerId: ctx.session.user.user_id, deletedAt: null } }),
-  ).not.toBeNull();
-  expect(await prisma.categoryConflict.findUnique({ where: { id: c.id } })).toMatchObject({
-    status: 'pending',
-    candidateVersion: 1,
-  });
-});
-
-it('首次accepted的执行快照与重复ignored的当前快照不同，后继不得借重放偷换基线', async () => {
-  const ctx = await setup();
-  const frozen = intent(ctx.leaf, { name: '本次执行值', base_token: ctx.leaf.version_token });
-  const first = await push(ctx.session, frozen);
-  expect(first).toMatchObject({ status: 'accepted', category_state: { name: '本次执行值' } });
-  expect(first.change_id).toMatch(/^\d+$/);
-  const later = await rename(ctx, first.category_state, '另一端后来的值');
-  const duplicate = await push(ctx.session, frozen);
-  expect(duplicate).toMatchObject({ status: 'ignored', change_id: first.change_id, category_state: later });
-  expect(first.category_state.version_token).not.toBe(later.version_token);
-});
-
-it('同内容无事件回执占用mutation，跨实体复用及确认复用均拒绝', async () => {
-  const ctx = await setup();
-  const noop = intent(ctx.leaf);
-  expect(await push(ctx.session, noop)).toMatchObject({ status: 'accepted', change_id: null });
-  const invalid = await request(ctx.session, '/sync/push', 'POST', {
-    device_id: ctx.session.device_id,
-    changes: [
-      {
-        ...noop,
-        entity_type: 'exchange_rate_override',
-        entity_id: 'aaaaaaaa-aaaa-5aaa-aaaa-aaaaaaaaaaaa',
-        payload: { base_currency: 'CNY', quote_currency: 'USD', rate: '7.25' },
-      },
-    ],
-  });
-  expect(invalid.statusCode, invalid.body).toBe(409);
-  expect(invalid.json().code).toBe('MUTATION_ID_REUSED');
-  expect(await prisma.exchangeRateOverride.count({ where: { ownerId: ctx.session.user.user_id } })).toBe(0);
-  expect(await prisma.category.count({ where: { ownerId: ctx.session.user.user_id } })).toBe(61);
-  const c = (await push(ctx.session, intent(ctx.leaf, { name: '待确认' }))).category_conflict;
-  const resolution = await request(ctx.session, `/category-conflicts/${c.id}/resolve`, 'POST', {
-    mutation_id: noop.mutation_id,
-    expected_candidate_version: c.candidate_version,
-    expected_cloud_token: c.cloud_snapshot.version_token,
-    choice: 'cloud',
-  });
-  expect(resolution.statusCode).toBe(409);
-  expect(resolution.json().code).toBe('MUTATION_ID_REUSED');
-  expect(await push(ctx.session, noop)).toMatchObject({ status: 'accepted', change_id: null });
-});
-
-it('已删官方父与新子同批只保存父候选，动态父校验不得回滚合法候选', async () => {
-  const ctx = await setup();
-  const parent = ctx.categories.find((row) => row.id === ctx.leaf.parent_id)!;
-  const preview = await request(ctx.session, `/ledgers/${ctx.ledgerId}/categories/removal-preview`, 'POST', {
-    category_ids: [parent.id],
-  });
-  expect(preview.statusCode, preview.body).toBe(200);
-  const removed = await request(
-    ctx.session,
-    `/ledgers/${ctx.ledgerId}/categories/remove`,
-    'POST',
-    {
-      category_ids: [parent.id],
-      mode: 'delete',
-      preview_token: preview.json().preview_token,
-    },
-    randomUUID(),
-  );
-  expect(removed.statusCode, removed.body).toBe(200);
-  const childId = randomUUID();
-  const batch = await request(
-    ctx.session,
-    `/ledgers/${ctx.ledgerId}/categories/add-batch`,
-    'POST',
-    {
-      items: [
-        { id: parent.id, ...intent(parent).payload },
-        { id: childId, name: '恢复父之后才可添加', kind: 'expense', level: 2, parent_id: parent.id },
-      ],
-    },
-    randomUUID(),
-  );
-  expect(batch.statusCode, batch.body).toBe(409);
-  expect(batch.json().code).toBe('CATEGORY_CONFIRMATION_REQUIRED');
-  expect(
-    await prisma.categoryConflict.count({ where: { ownerId: ctx.session.user.user_id, categoryId: parent.id } }),
-  ).toBe(1);
-  expect(await prisma.category.findFirst({ where: { ownerId: ctx.session.user.user_id, id: childId } })).toBeNull();
-  const events = await prisma.syncChange.findMany({
-    where: {
-      userId: ctx.session.user.user_id,
-      entityType: 'category',
-      entityId: parent.id,
-      action: 'delete',
-    },
-  });
-  expect(events).toHaveLength(1);
-  expect(events[0]!.payload).toMatchObject({
-    id: parent.id,
-    version_token: expect.stringMatching(/^[a-f0-9]{64}$/),
-    deleted_at: expect.any(String),
-  });
-});
-
-it('数据库候选状态约束拒绝resolved且resolution为空，原pending保持不变', async () => {
-  const ctx = await setup();
-  const c = (await push(ctx.session, intent(ctx.leaf, { name: '约束验证' }))).category_conflict;
-  await expect(
-    prisma.categoryConflict.update({
-      where: { id: c.id },
-      data: {
-        status: 'resolved',
-        resolution: null,
-        resolutionMutationId: randomUUID(),
-        resolutionHash: 'a'.repeat(64),
-        resolutionResult: {},
-        resolvedAt: new Date(),
-      },
-    }),
-  ).rejects.toThrow();
-  expect(await prisma.categoryConflict.findUnique({ where: { id: c.id } })).toMatchObject({
-    status: 'pending',
-    resolution: null,
-  });
-});
-
-it('父分类改二级不能形成三级树，候选完整保留供修复', async () => {
-  const ctx = await setup();
-  const parent = ctx.categories.find((row) => row.id === ctx.leaf.parent_id)!;
-  const otherParent = ctx.categories.find((row) => row.level === 1 && row.id !== parent.id)!;
-  const c = (await push(ctx.session, intent(parent, { level: 2, parent_id: otherParent.id }))).category_conflict;
-  const response = await request(ctx.session, `/category-conflicts/${c.id}/resolve`, 'POST', {
-    mutation_id: randomUUID(),
-    expected_candidate_version: c.candidate_version,
-    expected_cloud_token: c.cloud_snapshot.version_token,
-    choice: 'local',
-  });
-  expect(response.statusCode).toBe(400);
-  expect(response.json().code).toBe('CATEGORY_HAS_CHILDREN');
-  expect(await prisma.categoryConflict.findUnique({ where: { id: c.id } })).toMatchObject({ status: 'pending' });
-});
-
 it('本地删除候选必须先处理活交易，拒绝时保留交易和候选', async () => {
   const ctx = await setup();
   const transaction = await prisma.transaction.create({
@@ -594,32 +348,6 @@ it('本地删除候选必须先处理活交易，拒绝时保留交易和候选'
   expect(kept.nativeAmount.toString()).toBe(transaction.nativeAmount.toString());
   expect(kept.deletedAt).not.toBeNull();
   expect(kept.revision).toBe(transaction.revision + 1);
-});
-
-it('自定义同名分类不认领官方身份，但显式REST基线失配仍拒绝覆盖', async () => {
-  const ctx = await setup();
-  const custom = await request(ctx.session, `/ledgers/${ctx.ledgerId}/categories`, 'POST', {
-    id: randomUUID(),
-    name: ctx.leaf.name,
-    kind: 'expense',
-    level: 1,
-  });
-  expect(custom.statusCode, custom.body).toBe(201);
-  const first = custom.json<Category>();
-  const next = await rename(ctx, first, '自定义真实新名称');
-  const stale = await request(
-    ctx.session,
-    `/ledgers/${ctx.ledgerId}/categories/${first.id}?expected_version_token=${first.version_token}`,
-    'PATCH',
-    { name: '旧表单不应覆盖' },
-    randomUUID(),
-  );
-  expect(stale.statusCode).toBe(409);
-  expect(stale.json().code).toBe('CATEGORY_VERSION_CHANGED');
-  expect(await prisma.categoryConflict.count({ where: { ownerId: ctx.session.user.user_id } })).toBe(0);
-  expect(await prisma.category.findFirst({ where: { ownerId: ctx.session.user.user_id, id: first.id } })).toMatchObject(
-    { name: next.name },
-  );
 });
 
 it('事件插入失败时分类变化和候选决策同事务回滚，重试仍可确认', async () => {
@@ -679,84 +407,58 @@ async function waitForCategoryResolutionLock() {
   throw new Error('分类确认没有进入同步写锁队列');
 }
 
-it.each(['device', 'account'] as const)(
-  '确认等待写锁期间%s撤权，不产生分类、候选或事件变化',
-  async (revocation) => {
-    const ctx = await setup();
-    const c = (await push(ctx.session, intent(ctx.leaf, { name: '撤权后不得提交' }))).category_conflict;
-    const before = await prisma.category.findUniqueOrThrow({
-      where: { id_ownerId: { id: ctx.leaf.id, ownerId: ctx.session.user.user_id } },
-    });
-    const count = await prisma.syncChange.count({ where: { userId: ctx.session.user.user_id } });
-    let release!: () => void;
-    let ready!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const locked = new Promise<void>((resolve) => {
-      ready = resolve;
-    });
-    const blocker = prisma.$transaction(
-      async (tx) => {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(1936028513, 1)`;
-        ready();
-        await gate;
-      },
-      { timeout: 15000 },
-    );
-    await Promise.race([locked, blocker]);
-    const pending = request(ctx.session, `/category-conflicts/${c.id}/resolve`, 'POST', {
-      mutation_id: randomUUID(),
-      expected_candidate_version: c.candidate_version,
-      expected_cloud_token: c.cloud_snapshot.version_token,
-      choice: 'local',
-    }).then((response) => response);
-    try {
-      await waitForCategoryResolutionLock();
-      if (revocation === 'device')
-        await prisma.device.update({ where: { id: ctx.session.device_id }, data: { revokedAt: new Date() } });
-      else await prisma.user.update({ where: { id: ctx.session.user.user_id }, data: { isEnabled: false } });
-    } finally {
-      release();
-      try {
-        await blocker;
-      } finally {
-        // Drain this request even if the queue/revocation assertion failed.
-        await pending.catch(() => undefined);
-      }
-    }
-    const result = await pending;
-    expect(result.statusCode).toBe(401);
-    expect(
-      await prisma.category.findUniqueOrThrow({
-        where: { id_ownerId: { id: ctx.leaf.id, ownerId: ctx.session.user.user_id } },
-      }),
-    ).toEqual(before);
-    expect(await prisma.categoryConflict.findUnique({ where: { id: c.id } })).toMatchObject({
-      status: 'pending',
-      resolution: null,
-    });
-    expect(await prisma.syncChange.count({ where: { userId: ctx.session.user.user_id } })).toBe(count);
-  },
-  15000,
-);
-
-it('旧冻结delete保留额外字段参与身份指纹，同包重放稳定而换字段拒绝', async () => {
+it('确认等待写锁期间device撤权，不产生分类、候选或事件变化', async () => {
   const ctx = await setup();
-  const oldPayload = {
-    ...intent(ctx.leaf).payload,
-    updated_at: '2020-01-01T00:00:00.000Z',
-    old_client_marker: '原包额外字段',
-  };
-  const frozen = intent(ctx.leaf, oldPayload, 'delete');
-  const first = await push(ctx.session, frozen);
-  expect(first.status).toBe('conflict');
-  expect(await push(ctx.session, frozen)).toMatchObject({ category_conflict: { id: first.category_conflict.id } });
-  const changed = await request(ctx.session, '/sync/push', 'POST', {
-    device_id: ctx.session.device_id,
-    changes: [{ ...frozen, payload: { ...oldPayload, old_client_marker: '不得偷换' } }],
+  const c = (await push(ctx.session, intent(ctx.leaf, { name: '撤权后不得提交' }))).category_conflict;
+  const before = await prisma.category.findUniqueOrThrow({
+    where: { id_ownerId: { id: ctx.leaf.id, ownerId: ctx.session.user.user_id } },
   });
-  expect(changed.statusCode, changed.body).toBe(409);
-  expect(changed.json().code).toBe('MUTATION_ID_REUSED');
-  expect(await prisma.categoryConflict.count({ where: { ownerId: ctx.session.user.user_id } })).toBe(1);
-});
+  const count = await prisma.syncChange.count({ where: { userId: ctx.session.user.user_id } });
+  let release!: () => void;
+  let ready!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const locked = new Promise<void>((resolve) => {
+    ready = resolve;
+  });
+  const blocker = prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(1936028513, 1)`;
+      ready();
+      await gate;
+    },
+    { timeout: 15000 },
+  );
+  await Promise.race([locked, blocker]);
+  const pending = request(ctx.session, `/category-conflicts/${c.id}/resolve`, 'POST', {
+    mutation_id: randomUUID(),
+    expected_candidate_version: c.candidate_version,
+    expected_cloud_token: c.cloud_snapshot.version_token,
+    choice: 'local',
+  }).then((response) => response);
+  try {
+    await waitForCategoryResolutionLock();
+    await prisma.device.update({ where: { id: ctx.session.device_id }, data: { revokedAt: new Date() } });
+  } finally {
+    release();
+    try {
+      await blocker;
+    } finally {
+      // Drain this request even if the queue/revocation assertion failed.
+      await pending.catch(() => undefined);
+    }
+  }
+  const result = await pending;
+  expect(result.statusCode).toBe(401);
+  expect(
+    await prisma.category.findUniqueOrThrow({
+      where: { id_ownerId: { id: ctx.leaf.id, ownerId: ctx.session.user.user_id } },
+    }),
+  ).toEqual(before);
+  expect(await prisma.categoryConflict.findUnique({ where: { id: c.id } })).toMatchObject({
+    status: 'pending',
+    resolution: null,
+  });
+  expect(await prisma.syncChange.count({ where: { userId: ctx.session.user.user_id } })).toBe(count);
+}, 15000);

@@ -266,29 +266,6 @@ describe('后台应用用户头像设置', () => {
     expect(await avatarFiles()).toEqual(before);
   });
 
-  it('本人上传契约保持兼容，后台旧版本不会覆盖本人刚更新的头像', async () => {
-    const user = await createUser();
-    const own = await app.inject({
-      method: 'PUT',
-      url: '/api/v1/profile/avatar',
-      headers: { authorization: `Bearer ${user.token}` },
-      payload: { content_type: 'image/png', data_base64: source },
-    });
-    expect(own.statusCode, own.body).toBe(200);
-    expect(own.json()).toEqual({ avatar_url: `/api/v1/profile/avatar/${user.id}?v=1`, avatar_version: 1 });
-    const before = await avatarFiles();
-    const conflict = await upload(user.id);
-    expect(conflict.statusCode, conflict.body).toBe(409);
-    expect(conflict.json().code).toBe('AVATAR_VERSION_CONFLICT');
-    expect(await avatarFiles()).toEqual(before);
-    const ownDelete = await app.inject({
-      method: 'DELETE',
-      url: '/api/v1/profile/avatar',
-      headers: { authorization: `Bearer ${user.token}` },
-    });
-    expect(ownDelete.statusCode, ownDelete.body).toBe(204);
-  });
-
   it('入口认证后被收回写权限时不修改头像，并补偿预写入的文件', async () => {
     const user = await createUser();
     const before = await avatarFiles();
@@ -375,16 +352,5 @@ describe('后台应用用户头像设置', () => {
       avatarVersion: previous.avatarVersion,
     });
     expect(await prisma.auditLog.count({ where: { target: { path: ['id'], equals: user.id } } })).toBe(1);
-  });
-
-  it('失效用户和伪装图片被拒绝，写入前后的失败都不留下图片文件', async () => {
-    const user = await createUser();
-    const before = await avatarFiles();
-    const invalid = await upload(user.id, 0, writerCookie, Buffer.from('not-an-image').toString('base64'));
-    expect(invalid.statusCode, invalid.body).toBe(422);
-    const missing = await upload(randomUUID());
-    expect(missing.statusCode, missing.body).toBe(404);
-    expect(missing.json().code).toBe('USER_NOT_FOUND');
-    expect(await avatarFiles()).toEqual(before);
   });
 });

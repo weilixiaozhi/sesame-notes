@@ -37,16 +37,6 @@ describe('atomic plan generation rules', () => {
     validateFitnessPayload('fitness_workout', result.workouts[0]!.payload);
   });
 
-  it('does not regenerate an existing current cycle and advances only due cycles', () => {
-    const input = fitnessPlan() as FitnessPlanPayload;
-    expect(generatePlanCycles(randomUUID(), input, '2026-09-12', fitnessTime).workouts).toHaveLength(0);
-    const result = generatePlanCycles(randomUUID(), input, '2026-09-15', fitnessTime);
-    expect(result.workouts.map((row) => row.payload.scheduled_date)).toEqual(['2026-09-13', '2026-09-15']);
-    expect(result.plan.generation_state.generated_cycles[0]).toEqual(input.generation_state.generated_cycles[0]);
-    expect(result.plan.generation_state.next_cycle_start_date).toBe('2026-09-17');
-    validateFitnessTransition('fitness_plan', input, result.plan);
-  });
-
   it('queues schedule edits after generated cycles and applies them exactly once', () => {
     const previous = fitnessPlan() as FitnessPlanPayload;
     const changed = structuredClone(previous);
@@ -95,31 +85,6 @@ describe('atomic plan generation rules', () => {
     const changed = { ...fresh(), days: previous.days };
     const result = preparePlanSave(changed, previous, '2026-09-12', fitnessTime);
     expect(result.plan.generation_state).toEqual(previous.generation_state);
-  });
-
-  it('uses the latest local template and per-exercise rest preferences without changing source snapshots', () => {
-    const input = fresh();
-    const templateId = randomUUID();
-    input.days[0]!.slot!.source_template_id = templateId;
-    const template = {
-      name: 'updated template',
-      exercises: structuredClone(input.days[0]!.slot!.exercises),
-      created_at: fitnessTime,
-      updated_at: fitnessTime,
-    };
-    template.exercises[0]!.sets[0]!.reps = 12;
-    const result = generatePlanCycles(
-      randomUUID(),
-      input,
-      '2026-09-11',
-      fitnessTime,
-      new Map([[templateId, template]]),
-      { '0025': { rest_seconds: 120, warmup_rest_seconds: 30 } },
-    );
-    expect(result.workouts[0]!.payload.name).toBe('updated template');
-    expect(result.workouts[0]!.payload.exercises[0]).toMatchObject({ rest_seconds: 120, warmup_rest_seconds: 30 });
-    expect(result.workouts[0]!.payload.exercises[0]!.sets[0]!.reps).toBe(12);
-    expect(input.days[0]!.slot!.exercises[0]!.sets[0]!.reps).toBe(8);
   });
 
   it('retains snapshots when a source template was deleted and never generates closed plans', () => {

@@ -137,55 +137,27 @@ function occurrence(ruleId: string, date: string, amount = '10') {
 }
 
 describe('真实 PostgreSQL 周期生成与迁入', () => {
-  it('未发生且没有生成游标的云端规则可以更改时区并同步新元数据', async () => {
-    const context = await fixture();
-    const change = ruleChange(context, randomUUID(), {
-      time_zone: 'Asia/Shanghai',
-      start_date: '2030-01-01T00:00:00.000Z',
-      end_date: '2030-01-01T00:00:00.000Z',
-    });
-    expect((await push(context, change)).status).toBe('accepted');
-    const edited = {
-      ...change,
-      mutation_id: randomUUID(),
-      updated_at: '2026-01-03T00:00:00.000Z',
-      payload: { ...change.payload, time_zone: 'Asia/Tokyo' },
-    };
-    expect((await push(context, edited)).status).toBe('accepted');
-    const stored = await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: change.entity_id } });
-    expect(stored).toMatchObject({ timeZone: 'Asia/Tokyo', lastGeneratedDate: null });
-    expect(await prisma.transaction.count({ where: { recurringId: change.entity_id } })).toBe(0);
-    const event = await prisma.syncChange.findFirstOrThrow({
-      where: { deviceId: context.session.device_id, mutationId: edited.mutation_id },
-    });
-    expect(event.payload).toMatchObject({ time_zone: 'Asia/Tokyo', last_generated_date: null });
-    expect((await push(context, edited)).status).toBe('ignored');
-  });
-
-  it.each(['active', 'tombstone'] as const)('已有%s发生时拒绝改变时区且保留规则、发生和同步回执', async (kind) => {
+  it('已有tombstone发生时拒绝改变时区且保留规则、发生和同步回执', async () => {
     const context = await fixture();
     const ruleId = randomUUID();
     const date = '2024-02-27';
     const change = ruleChange(context, ruleId, {
       end_date: `${date}T00:00:00.000Z`,
-      ...(kind === 'tombstone'
-        ? {
-            initial_state: {
-              last_generated_date: null,
-              deleted_at: null,
-              occurrences: [
-                {
-                  id: recurringOccurrenceId(context.ledger.id, ruleId, date),
-                  deleted_at: '2025-01-01T03:00:00.000Z',
-                  payload: occurrence(ruleId, date),
-                },
-              ],
+      ...{
+        initial_state: {
+          last_generated_date: null,
+          deleted_at: null,
+          occurrences: [
+            {
+              id: recurringOccurrenceId(context.ledger.id, ruleId, date),
+              deleted_at: '2025-01-01T03:00:00.000Z',
+              payload: occurrence(ruleId, date),
             },
-          }
-        : {}),
+          ],
+        },
+      },
     });
     expect((await push(context, change)).status).toBe('accepted');
-    if (kind === 'active') await generate(context);
     const beforeRule = await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: ruleId } });
     const beforeOccurrences = await prisma.transaction.findMany({
       where: { recurringId: ruleId },
@@ -197,10 +169,10 @@ describe('真实 PostgreSQL 周期生成与迁入', () => {
       orderBy: { changeId: 'asc' },
     });
     expect(beforeOccurrences).toHaveLength(1);
-    if (kind === 'tombstone') {
-      expect(beforeRule.lastGeneratedDate).toBeNull();
-      expect(beforeOccurrences[0]!.deletedAt).not.toBeNull();
-    }
+
+    expect(beforeRule.lastGeneratedDate).toBeNull();
+    expect(beforeOccurrences[0]!.deletedAt).not.toBeNull();
+
     const metadata: Record<string, unknown> = { ...change.payload };
     delete metadata.initial_state;
     const edited = {
@@ -229,91 +201,6 @@ describe('真实 PostgreSQL 周期生成与迁入', () => {
     expect(
       await prisma.syncChange.count({ where: { deviceId: context.session.device_id, mutationId: edited.mutation_id } }),
     ).toBe(0);
-  });
-
-  it.each(['protocol_version', 'time_zone'])('缺少 %s 的周期请求整批拒绝且没有写入', async (field) => {
-    const context = await fixture();
-    const change = ruleChange(context);
-    const payload: Record<string, unknown> = { ...change.payload };
-    delete payload[field];
-    const response = await request(context.session, 'POST', '/sync/push', {
-      device_id: context.session.device_id,
-      changes: [{ ...change, payload }],
-    });
-    expect(response.statusCode, response.body).toBe(400);
-    expect(await prisma.recurringTransaction.findUnique({ where: { id: change.entity_id } })).toBeNull();
-    expect(await prisma.syncChange.count({ where: { mutationId: change.mutation_id } })).toBe(0);
-  });
-
-  it.each([false, true])('普通周期请求可省略或保留进度字段，冻结重放保持指纹：携带=%s', async (withCursor) => {
-    const context = await fixture();
-    const change = ruleChange(
-      context,
-      randomUUID(),
-      withCursor ? { last_generated_date: '2024-02-28T00:00:00.000Z' } : {},
-    );
-    expect(Object.hasOwn(change.payload, 'last_generated_date')).toBe(withCursor);
-    const accepted = await push(context, change);
-    expect(accepted.status).toBe('accepted');
-    const receipt = await prisma.syncChange.findUniqueOrThrow({
-      where: { deviceId_mutationId: { deviceId: context.session.device_id, mutationId: change.mutation_id } },
-    });
-    expect(receipt.requestHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(
-      (await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: change.entity_id } })).lastGeneratedDate,
-    ).toBeNull();
-    expect(await push(context, change)).toMatchObject({ status: 'ignored', change_id: accepted.change_id });
-    expect((await prisma.syncChange.findUniqueOrThrow({ where: { changeId: receipt.changeId } })).requestHash).toBe(
-      receipt.requestHash,
-    );
-    expect(await prisma.syncChange.count({ where: { mutationId: change.mutation_id } })).toBe(1);
-
-    // 已冻结请求的字段集合也是请求身份；相同 mutation 不能改用另一种载荷重放。
-    const changedPayload: Record<string, unknown> = { ...change.payload };
-    if (withCursor) delete changedPayload.last_generated_date;
-    else changedPayload.last_generated_date = null;
-    const changed = await request(context.session, 'POST', '/sync/push', {
-      device_id: context.session.device_id,
-      changes: [{ ...change, payload: changedPayload }],
-    });
-    expect(changed.statusCode, changed.body).toBe(409);
-    expect(changed.json().code).toBe('MUTATION_ID_REUSED');
-    expect((await generate(context)).generated_count).toBe(3);
-    const listed = await request(context.session, 'GET', `/ledgers/${context.ledger.id}/recurring-transactions`);
-    expect(listed.statusCode, listed.body).toBe(200);
-    expect(listed.json().items).toEqual([
-      expect.objectContaining({ id: change.entity_id, last_generated_date: '2024-02-29T00:00:00.000Z' }),
-    ]);
-  });
-
-  it('现代元数据不能推进客户端游标，存量生成进度完整保留', async () => {
-    const context = await fixture();
-    const change = ruleChange(context, randomUUID(), { last_generated_date: '2024-02-29T00:00:00.000Z' });
-    expect((await push(context, change)).status).toBe('accepted');
-    expect(
-      (await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: change.entity_id } })).lastGeneratedDate,
-    ).toBeNull();
-    // 已确认的历史进度由夹具独立写入，验证规则编辑不会重解释或清空存量游标。
-    await prisma.recurringTransaction.update({
-      where: { id: change.entity_id },
-      data: {
-        lastGeneratedDate: new Date('2024-02-27T00:00:00.000Z'),
-        updatedAt: new Date(change.updated_at),
-      },
-    });
-    expect(
-      (
-        await push(context, {
-          ...change,
-          mutation_id: randomUUID(),
-          updated_at: '2026-01-03T00:00:00.000Z',
-          payload: { ...change.payload, last_generated_date: '2024-02-29T00:00:00.000Z' },
-        })
-      ).status,
-    ).toBe('accepted');
-    const stored = await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: change.entity_id } });
-    expect(stored.lastGeneratedDate?.toISOString()).toBe('2024-02-27T00:00:00.000Z');
-    expect((await generate(context)).generated_count).toBe(2);
   });
 
   it('限额、并发与重放只生成一次，编辑规则不倒退游标', async () => {

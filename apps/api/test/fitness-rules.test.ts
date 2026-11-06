@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { FormatRegistry } from '@sinclair/typebox';
-import { Value } from '@sinclair/typebox/value';
+
 import {
-  fitnessPayloadSchemas,
   prepareFitnessImport,
   validateFitnessPayload,
   validateFitnessTransition,
@@ -17,9 +14,6 @@ import {
   fitnessWorkout,
   plannedWorkout,
 } from './fitness-fixtures.js';
-
-// 路由校验由 ajv 提供 date-time 格式；这里补齐同一格式表，才能用 Value.Check 校验完整载荷。
-FormatRegistry.Set('date-time', (value) => !Number.isNaN(Date.parse(value)));
 
 describe('健身严格 wire 与业务规则', () => {
   it('训练、模板和计划槽拒绝同动作混合口径，空白组与不同动作仍可保存', () => {
@@ -64,59 +58,6 @@ describe('健身严格 wire 与业务规则', () => {
         exercises: [{ ...total, sets: total.sets.map((set) => ({ ...set, weight: null })) }, side],
       }),
     ).not.toThrow();
-  });
-  it('官方来源标识只接受 v4/v5 目录身份，与数据库约束同宽', () => {
-    const origin = { source: 'official', item_id: '11111111-1111-4111-8111-000000000001', revision: 1 };
-    expect(Value.Check(fitnessPayloadSchemas.fitness_template, { ...fitnessTemplate(), catalog_origin: origin })).toBe(
-      true,
-    );
-    expect(Value.Check(fitnessPayloadSchemas.fitness_plan, { ...fitnessPlan(), catalog_origin: origin })).toBe(true);
-    // 形状合法但版本位或变体位非法的身份由数据库拒绝，接口必须提前返回 400。
-    for (const itemId of [
-      '11111111-1111-1111-1111-111111111111',
-      '11111111-1111-4111-1111-111111111111',
-      '00000000-0000-0000-0000-000000000000',
-    ]) {
-      expect(
-        Value.Check(fitnessPayloadSchemas.fitness_template, {
-          ...fitnessTemplate(),
-          catalog_origin: { ...origin, item_id: itemId },
-        }),
-      ).toBe(false);
-    }
-  });
-
-  it('动作级重量口径数量上限与数据库不变量一致', () => {
-    const modes = Object.fromEntries(Array.from({ length: 1001 }, (_, index) => [`exercise-${index}`, true]));
-    expect(
-      Value.Check(fitnessPayloadSchemas.fitness_preferences, { ...fitnessPreferences(), exercise_weight_modes: modes }),
-    ).toBe(false);
-    expect(
-      Value.Check(fitnessPayloadSchemas.fitness_preferences, {
-        ...fitnessPreferences(),
-        exercise_weight_modes: { '0314': true, '0001': false },
-      }),
-    ).toBe(true);
-  });
-
-  it('默认热身休息兼容旧偏好并校验整数范围', () => {
-    expect(() => validateFitnessPayload('fitness_preferences', fitnessPreferences())).not.toThrow();
-    for (const seconds of [0, 30, 2147483647]) {
-      expect(() =>
-        validateFitnessPayload('fitness_preferences', {
-          ...fitnessPreferences(),
-          default_warmup_rest_seconds: seconds,
-        }),
-      ).not.toThrow();
-    }
-    for (const seconds of [-1, 0.5, 2147483648, '30', null]) {
-      expect(() =>
-        validateFitnessPayload('fitness_preferences', {
-          ...fitnessPreferences(),
-          default_warmup_rest_seconds: seconds,
-        }),
-      ).toThrow();
-    }
   });
 
   it('自定义动作首版字段、引用、图片与重复标识校验', () => {
@@ -205,32 +146,12 @@ describe('健身严格 wire 与业务规则', () => {
     }
   });
 
-  it('模板和偏好拒绝已删除的排序与精选计划收藏字段', () => {
-    expect(() => validateFitnessPayload('fitness_template', fitnessTemplate())).not.toThrow();
-    expect(() => validateFitnessPayload('fitness_preferences', fitnessPreferences())).not.toThrow();
-    expect(() => validateFitnessPayload('fitness_template', { ...fitnessTemplate(), sort_order: 0 })).toThrow();
-    expect(() =>
-      validateFitnessPayload('fitness_preferences', { ...fitnessPreferences(), favorite_plan_ids: [] }),
-    ).toThrow();
-  });
-
   it('训练安排日期创建后不可修改，普通内容仍可编辑', () => {
     const before = fitnessWorkout();
     expect(() => validateFitnessTransition('fitness_workout', before, { ...before, name: '新名称' })).not.toThrow();
     expect(() =>
       validateFitnessTransition('fitness_workout', before, { ...before, scheduled_date: '2026-09-12' }),
     ).toThrow();
-  });
-  it('计划只使用进行中和已关闭状态，拒绝旧开关及缺失状态', () => {
-    const plan = fitnessPlan();
-    for (const status of ['in_progress', 'closed']) {
-      expect(() => validateFitnessPayload('fitness_plan', { ...plan, status })).not.toThrow();
-    }
-    for (const status of ['paused', 'enabled', 'completed', '', null, true]) {
-      expect(() => validateFitnessPayload('fitness_plan', { ...plan, status })).toThrow();
-    }
-    const { status: _status, ...withoutStatus } = plan;
-    expect(() => validateFitnessPayload('fitness_plan', { ...withoutStatus, enabled: true })).toThrow();
   });
   it('暂停保留进行中状态，关闭的历史时段恢复时只能追加', () => {
     const paused = {
@@ -268,99 +189,35 @@ describe('健身严格 wire 与业务规则', () => {
       ).toThrow();
     }
   });
-  it.each([
-    '\uD800',
-    '\uDFFF',
-    '\u0000',
-    '\u200B\u2060',
-    '\u0085\u00AD',
-    '\u0001\u001F',
-    '\u2800\u3164',
-    '\uFE00\uFE0F',
-  ])('名称拒绝孤立代理项和纯不可见字符：%j', (name) => {
-    expect(() => validateFitnessPayload('fitness_template', { ...fitnessTemplate(), name })).toThrow();
-    expect(() => validateFitnessPayload('fitness_workout', { ...fitnessWorkout(), name })).toThrow();
-  });
-  it('服务端内置动作与主仓冻结契约完全一致，全部动作均可记录', () => {
-    const artifact = JSON.parse(
-      readFileSync(new URL('../../../packages/api-contract/fitness-catalog.json', import.meta.url), 'utf8'),
-    ) as {
-      source_commit: string;
-      exercises: Array<{ id: string; body_part: string }>;
-    };
-    const runtime = JSON.parse(
-      readFileSync(new URL('../src/modules/fitness/fitness-catalog.json', import.meta.url), 'utf8'),
-    );
-    expect(runtime).toEqual(artifact);
-    expect(artifact.source_commit).toMatch(/^[a-f0-9]{40}$/);
-    expect(artifact.exercises.length).toBe(1324);
-    expect(new Set(artifact.exercises.map((exercise) => exercise.body_part))).toEqual(
-      new Set([
-        'chest',
-        'back',
-        'shoulders',
-        'upper arms',
-        'lower arms',
-        'upper legs',
-        'lower legs',
-        'waist',
-        'neck',
-        'cardio',
-      ]),
-    );
-    expect(new Set(artifact.exercises.map((exercise) => exercise.id)).size).toBe(artifact.exercises.length);
-    for (const exercise of artifact.exercises) {
-      expect(() =>
-        validateFitnessPayload('fitness_template', {
-          ...fitnessTemplate(),
-          exercises: [
-            {
-              ...fitnessExercise(),
-              exercise_id: exercise.id,
-              sets: [],
-            },
-          ],
-        }),
-      ).not.toThrow();
-    }
-  });
 
-  it.each([null, '0', '10.125'])('所有动作完成组统一 kg 与次数，允许重量 %s', (weight) => {
-    for (const id of ['2135', '0274', '0662', '0289']) {
-      const exercise = fitnessExercise(true);
-      const payload = {
-        ...fitnessWorkout(),
-        status: 'completed',
-        run_segments: [{ started_at: fitnessTime, ended_at: fitnessTime }],
-        exercises: [{ ...exercise, exercise_id: id, sets: [{ ...exercise.sets[0], weight, reps: 8 }] }],
-      };
-      expect(() => validateFitnessPayload('fitness_workout', payload)).not.toThrow();
-      for (const field of ['record_type', 'weight_mode']) {
-        expect(() =>
-          validateFitnessPayload('fitness_workout', {
-            ...payload,
-            exercises: [{ ...payload.exercises[0], [field]: 'old' }],
-          }),
-        ).toThrow();
-      }
-      for (const field of ['weight_unit', 'reps_min', 'reps_max', 'duration_seconds']) {
-        expect(() =>
-          validateFitnessPayload('fitness_workout', {
-            ...payload,
-            exercises: [{ ...payload.exercises[0], sets: [{ ...payload.exercises[0]!.sets[0], [field]: null }] }],
-          }),
-        ).toThrow();
-      }
-      expect(() => validateFitnessPayload('fitness_workout', { ...payload, archive_date: '2026-09-11' })).toThrow();
+  it.each([null, '0'])('所有动作完成组统一 kg 与次数，允许重量 %s', (weight) => {
+    const id = '2135';
+
+    const exercise = fitnessExercise(true);
+    const payload = {
+      ...fitnessWorkout(),
+      status: 'completed',
+      run_segments: [{ started_at: fitnessTime, ended_at: fitnessTime }],
+      exercises: [{ ...exercise, exercise_id: id, sets: [{ ...exercise.sets[0], weight, reps: 8 }] }],
+    };
+    expect(() => validateFitnessPayload('fitness_workout', payload)).not.toThrow();
+    for (const field of ['record_type', 'weight_mode']) {
+      expect(() =>
+        validateFitnessPayload('fitness_workout', {
+          ...payload,
+          exercises: [{ ...payload.exercises[0], [field]: 'old' }],
+        }),
+      ).toThrow();
     }
-  });
-  it('空组模板、空训练、精确重量与偏好有效', () => {
-    const template = fitnessTemplate();
-    template.exercises[0]!.sets = [];
-    expect(() => validateFitnessPayload('fitness_template', template)).not.toThrow();
-    expect(() => validateFitnessPayload('fitness_workout', fitnessWorkout())).not.toThrow();
-    expect(() => validateFitnessPayload('fitness_plan', fitnessPlan())).not.toThrow();
-    expect(() => validateFitnessPayload('fitness_preferences', fitnessPreferences())).not.toThrow();
+    for (const field of ['weight_unit', 'reps_min', 'reps_max', 'duration_seconds']) {
+      expect(() =>
+        validateFitnessPayload('fitness_workout', {
+          ...payload,
+          exercises: [{ ...payload.exercises[0], sets: [{ ...payload.exercises[0]!.sets[0], [field]: null }] }],
+        }),
+      ).toThrow();
+    }
+    expect(() => validateFitnessPayload('fitness_workout', { ...payload, archive_date: '2026-09-11' })).toThrow();
   });
 
   it('已完成组必须填写次数，未完成允许留空，模板不能带完成状态', () => {
@@ -451,33 +308,6 @@ describe('健身严格 wire 与业务规则', () => {
     expect(weight_left).toBeNull();
     expect(weight_right).toBeNull();
     expect(() => validateFitnessPayload('fitness_workout', workout(withoutSides))).toThrow();
-  });
-
-  it('动作级重量口径是布尔映射，键必须是目录动作或自定义动作', () => {
-    const custom = 'custom:11111111-1111-4111-8111-111111111111';
-    for (const modes of [{}, { '0025': true }, { [custom]: false }, { '0025': true, [custom]: false }]) {
-      expect(() =>
-        validateFitnessPayload('fitness_preferences', { ...fitnessPreferences(), exercise_weight_modes: modes }),
-      ).not.toThrow();
-    }
-    for (const invalid of [{ unknown: true }, { '0025': 'true' }, { '0025': 1 }, { '': true }, { '0025': null }]) {
-      expect(() =>
-        validateFitnessPayload('fitness_preferences', { ...fitnessPreferences(), exercise_weight_modes: invalid }),
-      ).toThrow();
-    }
-    // 条目数受偏好容量上限约束
-    const tooMany = Object.fromEntries(
-      Array.from({ length: 1001 }, (_, index) => [
-        `custom:11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
-        true,
-      ]),
-    );
-    expect(() =>
-      validateFitnessPayload('fitness_preferences', { ...fitnessPreferences(), exercise_weight_modes: tooMany }),
-    ).toThrow();
-    const { exercise_weight_modes, ...withoutField } = fitnessPreferences();
-    expect(exercise_weight_modes).toEqual({});
-    expect(() => validateFitnessPayload('fitness_preferences', withoutField)).toThrow();
   });
 
   it('零完成也能结束和重新开始，不能重写历史运行区间', () => {

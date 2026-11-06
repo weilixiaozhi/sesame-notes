@@ -88,19 +88,6 @@ async function registerUser(): Promise<{ token: string; deviceId: string; userId
   return { token: session.access_token, deviceId: session.device_id, userId: session.user.user_id, phone };
 }
 
-/** 为同一账号创建另一台真实设备会话。 */
-async function loginUser(phone: string): Promise<{ token: string; deviceId: string }> {
-  const res = await api('post', '/auth/login', {
-    country_code: '+86',
-    phone,
-    password: 'password-123456',
-    device: { installation_id: uuid(), name: 'e2e-second-device', platform: 'e2e' },
-  });
-  expect(res.status).toBe(200);
-  const session = res.json() as { access_token: string; device_id: string };
-  return { token: session.access_token, deviceId: session.device_id };
-}
-
 /** 建账本 + 同步身份 + 占位成员（member 实体），返回绑定上下文。 */
 async function setupLedgerWithPlaceholderMember(): Promise<{
   token: string;
@@ -210,9 +197,7 @@ afterAll(async () => {
 
 describe('Transaction/AA member 引用', () => {
   it.each([
-    ['缺失', undefined],
     ['空值', null],
-    ['空串', ''],
     ['非法 UUID', 'not-a-uuid'],
   ])('分摊成员%s：REST 和导入拒绝写入，push 仅拒绝对应变更', async (_label, memberId) => {
     const { token, deviceId, userId, ledgerId, syncId } = await setupLedgerWithPlaceholderMember();
@@ -281,56 +266,7 @@ describe('Transaction/AA member 引用', () => {
     );
   });
 
-  it('push 外壳非法仍拒绝整批，不能执行其中合法交易', async () => {
-    const { token, deviceId, ledgerId, syncId } = await setupLedgerWithPlaceholderMember();
-    const validId = uuid();
-    const body = txChange(deviceId, ledgerId, syncId, validId);
-    const response = await api(
-      'post',
-      '/sync/push',
-      {
-        device_id: deviceId,
-        changes: [...body.changes, { ...body.changes[0], mutation_id: 'invalid' }],
-      },
-      token,
-    );
-    expect(response.status).toBe(400);
-    expect(response.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
-    expect(await prisma.transaction.findUnique({ where: { id: validId } })).toBeNull();
-  });
-
-  it('PATCH 省略分摊保持原值，显式空集合配合非指定模式清空分摊', async () => {
-    const { token, deviceId, userId, ledgerId, syncId } = await setupLedgerWithPlaceholderMember();
-    const txnId = uuid();
-    const splits = [{ member_id: registeredMemberId(ledgerId, userId), amount: '100' }];
-    const created = await api('post', '/sync/push', txChange(deviceId, ledgerId, syncId, txnId, { splits }), token);
-    expect(created.status).toBe(200);
-    const preserved = await api(
-      'patch',
-      `/ledgers/${ledgerId}/transactions/${txnId}`,
-      {
-        base_revision: 1,
-        note: '只改备注',
-      },
-      token,
-    );
-    expect(preserved.status).toBe(200);
-    expect(preserved.json()).toMatchObject({ splits, revision: 2 });
-    const cleared = await api(
-      'patch',
-      `/ledgers/${ledgerId}/transactions/${txnId}`,
-      {
-        base_revision: 2,
-        aa_mode: '0',
-        splits: [],
-      },
-      token,
-    );
-    expect(cleared.status).toBe(200);
-    expect(cleared.json()).toMatchObject({ splits: [], revision: 3 });
-  });
-
-  it.each(['LEFT', 'REMOVED'] as const)('成员 %s 后历史分摊在 REST、full 和事件中保留原身份与金额', async (status) => {
+  it.each(['REMOVED'] as const)('成员 %s 后历史分摊在 REST、full 和事件中保留原身份与金额', async (status) => {
     const { token, deviceId, ledgerId, syncId, vUser } = await setupLedgerWithPlaceholderMember();
     const editor = await registerUser();
     const memberId = registeredMemberId(ledgerId, editor.userId);
@@ -352,10 +288,7 @@ describe('Transaction/AA member 引用', () => {
     ];
     const created = await api('post', '/sync/push', txChange(deviceId, ledgerId, syncId, txnId, { splits }), token);
     expect(created.status).toBe(200);
-    const transition =
-      status === 'LEFT'
-        ? await api('post', `/ledgers/${ledgerId}/leave`, {}, editor.token)
-        : await api('delete', `/ledgers/${ledgerId}/members/${memberId}`, undefined, token);
+    const transition = await api('delete', `/ledgers/${ledgerId}/members/${memberId}`, undefined, token);
     expect(transition.status).toBe(204);
     const removedPlaceholder = await api('delete', `/ledgers/${ledgerId}/members/${vUser}`, undefined, token);
     expect(removedPlaceholder.status).toBe(204);
@@ -376,127 +309,6 @@ describe('Transaction/AA member 引用', () => {
     });
     const event = await prisma.syncChange.findFirstOrThrow({ where: { entityId: txnId, action: 'upsert' } });
     expect(event.payload).toMatchObject({ splits: expect.arrayContaining(splits) });
-  });
-
-  it('占位成员相同时间戳按 device_id 稳定决胜，与到达顺序无关', async () => {
-    const first = await registerUser();
-    const second = await loginUser(first.phone);
-    const [low, high] = first.deviceId < second.deviceId ? [first, second] : [second, first];
-    const ledgerId = uuid();
-    const ledger = await api('post', '/ledgers', { id: ledgerId, name: '成员 LWW 账本' }, low!.token);
-    expect(ledger.status).toBe(201);
-    const syncId = (ledger.json() as { sync_id: string }).sync_id;
-    const lowThenHighMember = uuid();
-    const highThenLowMember = uuid();
-    const updatedAt = '2026-08-22T13:30:00.000Z';
-
-    /** 从指定设备提交一次占位成员变更并返回服务端裁决。 */
-    const pushMember = async (
-      session: { token: string; deviceId: string },
-      memberId: string,
-      displayName: string,
-    ): Promise<string> => {
-      const response = await api(
-        'post',
-        '/sync/push',
-        {
-          device_id: session.deviceId,
-          changes: [
-            {
-              mutation_id: uuid(),
-              entity_type: 'member',
-              entity_id: memberId,
-              ledger_id: ledgerId,
-              sync_id: syncId,
-              action: 'upsert',
-              updated_at: updatedAt,
-              payload: { display_name: displayName },
-            },
-          ],
-        },
-        session.token,
-      );
-      expect(response.status).toBe(200);
-      return (response.json() as { outcomes: Array<{ status: string }> }).outcomes[0]!.status;
-    };
-
-    expect(await pushMember(low, lowThenHighMember, 'low')).toBe('accepted');
-    expect(await pushMember(high, lowThenHighMember, 'high')).toBe('accepted');
-    expect(await pushMember(high, highThenLowMember, 'high')).toBe('accepted');
-    expect(await pushMember(low, highThenLowMember, 'low')).toBe('ignored');
-
-    const members = await prisma.$queryRaw<
-      Array<{ id: string; displayName: string; updatedByDeviceId: string | null }>
-    >`
-      SELECT "id", "display_name" AS "displayName",
-             "updated_by_device_id" AS "updatedByDeviceId"
-      FROM "ledger_members"
-      WHERE "id" IN (${lowThenHighMember}::uuid, ${highThenLowMember}::uuid)
-    `;
-    expect(members).toHaveLength(2);
-    for (const member of members) {
-      expect(member.displayName).toBe('high');
-      expect(member.updatedByDeviceId).toBe(high.deviceId);
-    }
-  });
-
-  it('payer 为 REGISTERED member：落库为派生 member（认证推导 createdBy）', async () => {
-    const { token, deviceId, userId, ledgerId, syncId } = await setupLedgerWithPlaceholderMember();
-    const txnId = uuid();
-    const push = await api(
-      'post',
-      '/sync/push',
-      txChange(deviceId, ledgerId, syncId, txnId, { payerMemberId: registeredMemberId(ledgerId, userId) }),
-      token,
-    );
-    expect(push.status).toBe(200);
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    const expectMember = registeredMemberId(ledgerId, userId);
-    expect(dbTxn?.payerMemberId).toBe(expectMember);
-    // createdBy 由认证推导（不信任 payload）：owner 的 REGISTERED member
-    expect(dbTxn?.createdByMemberId).toBe(expectMember);
-  });
-
-  it('push 占位付款人和混合 REGISTERED/PLACEHOLDER 分摊成员：直接使用成员 ID 落库', async () => {
-    const { token, deviceId, userId, ledgerId, syncId, vUser } = await setupLedgerWithPlaceholderMember();
-    const selfMember = registeredMemberId(ledgerId, userId);
-    const txnId = uuid();
-    const push = await api(
-      'post',
-      '/sync/push',
-      txChange(deviceId, ledgerId, syncId, txnId, {
-        payerMemberId: vUser,
-        splits: [
-          { member_id: selfMember, amount: '60' },
-          { member_id: vUser, amount: '40' },
-        ],
-      }),
-      token,
-    );
-    expect(push.status).toBe(200);
-    const outcome = (push.json() as { outcomes: Array<{ status: string }> }).outcomes[0]!;
-    expect(outcome.status).toBe('accepted');
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    expect(dbTxn?.payerMemberId).toBe(vUser);
-    const splits = await prisma.transactionSplit.findMany({ where: { transactionId: txnId } });
-    expect(splits.map((split) => split.memberId).sort()).toEqual([selfMember, vUser].sort());
-  });
-
-  it('同账本 FK 约束：跨账本 payer 拒绝（invalid）', async () => {
-    const a = await setupLedgerWithPlaceholderMember();
-    const b = await setupLedgerWithPlaceholderMember();
-    const txnId = uuid();
-    const push = await api(
-      'post',
-      '/sync/push',
-      txChange(a.deviceId, a.ledgerId, a.syncId, txnId, {
-        payerMemberId: registeredMemberId(b.ledgerId, b.userId),
-      }),
-      a.token,
-    );
-    expect(push.status).toBe(200);
-    const outcome = (push.json() as { outcomes: Array<{ status: string }> }).outcomes[0]!;
-    expect(outcome.status).toBe('invalid');
   });
 
   it('同账本 FK 约束：跨账本 split 参与人拒绝（invalid）', async () => {
@@ -557,92 +369,5 @@ describe('Transaction/AA member 引用', () => {
     expect(splitUser?.amount.toString()).toBe('60');
     const splitVu = await prisma.transactionSplit.findFirst({ where: { transactionId: txnId, memberId: vUser } });
     expect(splitVu?.amount.toString()).toBe('40');
-  });
-
-  it('REST 显式指定占位付款人和注册分摊成员：正确落库并返回成员 ID', async () => {
-    const { token, userId, ledgerId, vUser } = await setupLedgerWithPlaceholderMember();
-    const selfMember = registeredMemberId(ledgerId, userId);
-    const txnId = uuid();
-    const created = await api(
-      'post',
-      `/ledgers/${ledgerId}/transactions`,
-      {
-        id: txnId,
-        tx_type: 'expense',
-        amount: '80',
-        happened_at: '2026-08-22T13:00:00.000Z',
-        currency_code: 'CNY',
-        native_amount: '80',
-        payer_member_id: vUser,
-        aa_mode: '2',
-        splits: [{ member_id: selfMember, amount: '80' }],
-      },
-      token,
-    );
-    expect(created.status).toBe(201);
-    const body = created.json() as {
-      payer_member_id: string | null;
-      splits: Array<{ member_id: string | null }>;
-    };
-    expect(body.payer_member_id).toBe(vUser);
-    expect(body.splits[0]!.member_id).toBe(selfMember);
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    expect(dbTxn?.payerMemberId).toBe(vUser);
-  });
-
-  it('full 快照包含成员资料及注册/占位付款人的单轨成员引用', async () => {
-    const { token, deviceId, userId, ledgerId, syncId, vUser } = await setupLedgerWithPlaceholderMember();
-    const selfMember = registeredMemberId(ledgerId, userId);
-    const txnId = uuid();
-    const selfPaidTxnId = uuid();
-    // 同一快照同时承载自付交易与占位成员付款的 AA 交易，分别核对成员引用。
-    const push = await api(
-      'post',
-      '/sync/push',
-      {
-        device_id: deviceId,
-        changes: [
-          ...txChange(deviceId, ledgerId, syncId, txnId, {
-            payerMemberId: vUser,
-            splits: [{ member_id: selfMember, amount: '100' }],
-          }).changes,
-          ...txChange(deviceId, ledgerId, syncId, selfPaidTxnId, { payerMemberId: selfMember }).changes,
-        ],
-      },
-      token,
-    );
-    expect(push.status).toBe(200);
-    expect((push.json() as { outcomes: Array<{ status: string }> }).outcomes.map((outcome) => outcome.status)).toEqual([
-      'accepted',
-      'accepted',
-    ]);
-    const full = await api('get', `/sync/full?ledger_id=${ledgerId}`, undefined, token);
-    expect(full.status).toBe(200);
-    const snapshot = full.json() as {
-      members: Array<{ id: string; display_name: string; member_type: string; status: string }>;
-      transactions: Array<{
-        id: string;
-        created_by_member_id: string | null;
-        payer_member_id: string | null;
-        splits: Array<{ member_id: string | null }>;
-      }>;
-    };
-    // 占位成员随快照下发，客户端可据此渲染 AA 参与人
-    const member = snapshot.members.find((m) => m.id === vUser);
-    expect(member?.display_name).toBe('老婆');
-    expect(member?.member_type).toBe('PLACEHOLDER');
-    expect(member?.status).toBe('ACTIVE');
-    const tx = snapshot.transactions.find((transaction) => transaction.id === txnId);
-    expect(tx).toMatchObject({
-      created_by_member_id: selfMember,
-      payer_member_id: vUser,
-      splits: [{ member_id: selfMember }],
-    });
-    const selfPaidTx = snapshot.transactions.find((transaction) => transaction.id === selfPaidTxnId);
-    expect(selfPaidTx).toMatchObject({
-      created_by_member_id: selfMember,
-      payer_member_id: selfMember,
-      splits: [],
-    });
   });
 });

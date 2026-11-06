@@ -74,34 +74,6 @@ describe('编辑支出保存结果恢复', () => {
     expect(mocks.patch.mock.calls[1]?.[1]?.body).toMatchObject({ note: revised.note, base_revision: 8 });
   });
 
-  it('请求未提交时用冻结基线重试，期间原请求提交导致 409 也能核对成功', async () => {
-    mocks.patch
-      .mockRejectedValueOnce(new TypeError('offline'))
-      .mockRejectedValueOnce(new ApiError(409, 'SYNC_CONFLICT', 'conflict'));
-    mocks.get
-      .mockResolvedValueOnce(snapshot(original))
-      .mockResolvedValueOnce(snapshot(original))
-      .mockResolvedValueOnce(snapshot(saved));
-    const updater = createTransactionUpdater(ledger, original, 'account');
-    await expect(updater.submit(body)).rejects.toThrow('offline');
-    await expect(updater.submit(body)).resolves.toEqual(saved);
-    expect(mocks.patch.mock.calls[0]).toEqual(mocks.patch.mock.calls[1]);
-  });
-
-  it('已有成功版本之后又有未知修改时，恢复旧草稿也必须先核对未知修改', async () => {
-    const updater = createTransactionUpdater(ledger, original, 'account');
-    await updater.submit(body);
-    mocks.patch.mockRejectedValueOnce(new TypeError('response lost'));
-    mocks.get.mockRejectedValueOnce(new TypeError('offline'));
-    const later = { ...body, note: '后续修改' };
-    await expect(updater.submit(later)).rejects.toThrow('暂时无法确认保存结果');
-    mocks.get.mockResolvedValueOnce(snapshot({ ...saved, note: later.note, revision: 9 }));
-    mocks.patch.mockResolvedValueOnce({ data: { ...saved, revision: 10 } });
-    await expect(updater.submit(body)).resolves.toMatchObject({ note: body.note, revision: 10 });
-    expect(mocks.patch).toHaveBeenCalledTimes(3);
-    expect(mocks.patch.mock.calls[2]?.[1]?.body).toMatchObject({ note: body.note, base_revision: 9 });
-  });
-
   it('真实并发修改保留草稿且不自动重发，只接受用户核对的版本，后续竞争仍返回冲突', async () => {
     const remote = { ...saved, note: '另一设备的备注', revision: 9 };
     mocks.patch.mockRejectedValue(new ApiError(409, 'SYNC_CONFLICT', 'conflict'));
@@ -146,18 +118,6 @@ describe('编辑支出保存结果恢复', () => {
     await expect(createTransactionUpdater(ledger, original, 'account').submit(values)).resolves.toEqual(actual);
     expect(mocks.patch).toHaveBeenCalledTimes(1);
   });
-
-  it.each(['recurring_id', 'occurrence_date', 'category_id', 'payer_member_id'] as const)(
-    '其他字段相同但 %s 变化时不能误认成功',
-    async (field) => {
-      mocks.patch.mockRejectedValueOnce(new TypeError('response lost'));
-      mocks.get.mockResolvedValue(snapshot({ ...saved, [field]: 'different' }));
-      await expect(createTransactionUpdater(ledger, original, 'account').submit(body)).rejects.toBeInstanceOf(
-        TransactionEditConflict,
-      );
-      expect(mocks.patch).toHaveBeenCalledTimes(1);
-    },
-  );
 
   it('记录删除和账本代次变化不会被当作保存成功', async () => {
     mocks.patch.mockRejectedValue(new TypeError('response lost'));

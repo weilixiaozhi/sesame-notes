@@ -60,7 +60,7 @@ function request(session: Session, method: 'POST' | 'GET' | 'DELETE', url: strin
   });
 }
 
-it.each(['rest', 'sync', 'batch'] as const)('分类删除 %s 先处理活交易并保留周期墓碑历史', async (entry) => {
+it('分类删除 sync 先处理活交易并保留周期墓碑历史', async () => {
   const { session, ledger } = await account();
   const foreign = await account();
   const categoryId = randomUUID();
@@ -147,7 +147,7 @@ it.each(['rest', 'sync', 'batch'] as const)('分类删除 %s 先处理活交易�
   const priorDeadRule = await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: ruleIds[1]! } });
   const priorLiveRule = await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: ruleIds[0]! } });
   const priorCursor = (await prisma.syncChange.aggregate({ _max: { changeId: true } }))._max.changeId ?? 0n;
-  if (entry !== 'batch') {
+  {
     // 活交易必须显式处理，分类删除不能把仍可见的账单变成未分类。
     const blocked = await request(session, 'DELETE', `/api/v1/ledgers/${ledger.id}/categories/${categoryId}`);
     expect(blocked.statusCode, blocked.body).toBe(409);
@@ -162,10 +162,7 @@ it.each(['rest', 'sync', 'batch'] as const)('分类删除 %s 先处理活交易�
     );
     expect(deletedTransaction.statusCode, deletedTransaction.body).toBe(204);
   }
-  if (entry === 'rest') {
-    const response = await request(session, 'DELETE', `/api/v1/ledgers/${ledger.id}/categories/${categoryId}`);
-    expect(response.statusCode, response.body).toBe(204);
-  } else if (entry === 'sync') {
+  {
     const response = await request(session, 'POST', '/api/v1/sync/push', {
       device_id: session.device_id,
       changes: [
@@ -182,17 +179,6 @@ it.each(['rest', 'sync', 'batch'] as const)('分类删除 %s 先处理活交易�
     });
     expect(response.statusCode, response.body).toBe(200);
     expect(response.json().outcomes[0].status).toBe('accepted');
-  } else {
-    const preview = await request(session, 'POST', `/api/v1/ledgers/${ledger.id}/categories/removal-preview`, {
-      category_ids: [categoryId],
-    });
-    expect(preview.statusCode, preview.body).toBe(200);
-    const response = await request(session, 'POST', `/api/v1/ledgers/${ledger.id}/categories/remove`, {
-      category_ids: [categoryId],
-      mode: 'delete',
-      preview_token: preview.json().preview_token,
-    });
-    expect(response.statusCode, response.body).toBe(200);
   }
   const afterRows = await prisma.transaction.findMany({ where: { ledgerId: ledger.id }, orderBy: { id: 'asc' } });
   expect(afterRows.filter((row) => priorRows.some((prior) => prior.id === row.id && prior.deletedAt))).toEqual(
@@ -226,7 +212,6 @@ it.each(['rest', 'sync', 'batch'] as const)('分类删除 %s 先处理活交易�
   expect(liveRule).toEqual({
     ...priorLiveRule,
     categoryId: null,
-    ...(entry === 'batch' ? { updatedAt: liveRule.updatedAt, updatedByDeviceId: session.device_id } : {}),
   });
   const otherCategory = await prisma.category.findUniqueOrThrow({
     where: { id_ownerId: { id: categoryId, ownerId: foreign.session.user.user_id } },

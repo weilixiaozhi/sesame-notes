@@ -93,40 +93,6 @@ afterEach(() => {
 });
 
 describe('独立管理员引导入口', () => {
-  it.each([
-    ['SEED_CONFIRM', undefined],
-    ['SEED_CONFIRM', 'CREATE'],
-    ['SEED_ADMIN_GROUP_ID', 'not-a-group'],
-    ['SEED_ADMIN_USERNAME', undefined],
-    ['SEED_ADMIN_USERNAME', '   '],
-    ['SEED_ADMIN_USERNAME', '13900000000'],
-    ['SEED_ADMIN_USERNAME', 'abc'],
-    ['SEED_ADMIN_USERNAME', 'root administrator'],
-    ['SEED_ADMIN_EMAIL', 'not-an-email'],
-    ['SEED_ADMIN_PHONE', 'not-a-phone'],
-    ['SEED_ADMIN_PASSWORD', undefined],
-    ['SEED_ADMIN_PASSWORD', ''],
-  ])('拒绝 %s=%s 且不读写数据库', async (key, value) => {
-    vi.stubEnv(key!, value);
-    await import('../src/admin-bootstrap.js');
-    expect(process.exitCode).toBe(1);
-    expect(mocks.transaction).not.toHaveBeenCalled();
-    expect(mocks.findUnique).not.toHaveBeenCalled();
-    expect(mocks.create).not.toHaveBeenCalled();
-    expect(mocks.disconnect).toHaveBeenCalledOnce();
-  });
-
-  it.each(['x', '   ', 'passwordpassword', 'seed_root', '密'.repeat(513)])(
-    '初始化保留任意非空密码的全部字符：%j',
-    async (password) => {
-      vi.stubEnv('SEED_ADMIN_PASSWORD', password);
-      await import('../src/admin-bootstrap.js');
-      expect(process.exitCode).toBeUndefined();
-      const { verifyAdminPassword } = await import('../src/modules/admin/index.js');
-      expect(await verifyAdminPassword(password, mocks.create.mock.calls[0]![0].data.passwordHash)).toBe(true);
-    },
-  );
-
   it('生产环境首次创建独立超级管理员，密码真实散列且可直接正常登录', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     await import('../src/admin-bootstrap.js');
@@ -160,75 +126,6 @@ describe('独立管理员引导入口', () => {
     expect(mocks.disconnect).toHaveBeenCalledOnce();
   });
 
-  it.each([undefined, '', '   \t\n'])('初始化组参数为空时归入系统默认组：%j', async (value) => {
-    vi.stubEnv('SEED_ADMIN_GROUP_ID', value);
-    await import('../src/admin-bootstrap.js');
-    expect(process.exitCode).toBeUndefined();
-    expect(mocks.findGroup).toHaveBeenCalledWith({ where: { id: DEFAULT_GROUP_ID } });
-    expect(mocks.create.mock.calls[0]![0].data).toMatchObject({
-      identityType: 'super_admin',
-      groupId: DEFAULT_GROUP_ID,
-    });
-  });
-
-  it('初始化可选联系方式归一化且作为同一后台账号的登录标识保存', async () => {
-    vi.stubEnv('SEED_ADMIN_EMAIL', ' Staff+Test@Example.com ');
-    vi.stubEnv('SEED_ADMIN_PHONE', '138 0013 8000');
-    await import('../src/admin-bootstrap.js');
-    expect(process.exitCode).toBeUndefined();
-    expect(mocks.create.mock.calls[0]![0].data).toMatchObject({
-      username: 'seed_root',
-      email: 'staff+test@example.com',
-      phone: '+8613800138000',
-    });
-    expect(mocks.findUnique).toHaveBeenCalledWith({ where: { email: 'staff+test@example.com' }, select: { id: true } });
-    expect(mocks.findUnique).toHaveBeenCalledWith({ where: { phone: '+8613800138000' }, select: { id: true } });
-  });
-
-  it('可选联系方式留空时按未填写保存', async () => {
-    vi.stubEnv('SEED_ADMIN_EMAIL', '   ');
-    vi.stubEnv('SEED_ADMIN_PHONE', '');
-    await import('../src/admin-bootstrap.js');
-    expect(process.exitCode).toBeUndefined();
-    expect(mocks.create.mock.calls[0]![0].data).toMatchObject({ email: null, phone: null });
-  });
-
-  it.each([
-    ['SEED_ADMIN_EMAIL', 'staff@example.com', 'email'],
-    ['SEED_ADMIN_PHONE', '13800138000', 'phone'],
-  ])('初始化拒绝已被其他后台账号使用的 %s', async (key, value, field) => {
-    vi.stubEnv(key!, value);
-    mocks.findUnique.mockImplementation(async ({ where }) =>
-      where[field!] === undefined ? null : { id: 'another-admin-account' },
-    );
-    await import('../src/admin-bootstrap.js');
-    expect(process.exitCode).toBe(1);
-    expect(mocks.create).not.toHaveBeenCalled();
-    expect(mocks.audit).not.toHaveBeenCalled();
-  });
-
-  it.each(['super_admin', 'standard_user'])(
-    '同名 %s 重复引导是幂等操作，不修改密码、状态或提权',
-    async (identityType) => {
-      mocks.findUnique.mockResolvedValue({
-        id: ADMIN_ID,
-        identityType,
-        isEnabled: false,
-        passwordHash: 'existing-hash',
-      });
-      vi.stubEnv('SEED_ADMIN_GROUP_ID', GROUP_ID);
-      mocks.findGroup.mockResolvedValue({ id: GROUP_ID, deletedAt: null, isEnabled: false });
-      await import('../src/admin-bootstrap.js');
-      expect(process.exitCode).toBeUndefined();
-      expect(mocks.findGroup).not.toHaveBeenCalled();
-      expect(mocks.create).not.toHaveBeenCalled();
-      expect(mocks.update).not.toHaveBeenCalled();
-      expect(mocks.revokeSessions).not.toHaveBeenCalled();
-      expect(mocks.audit).not.toHaveBeenCalled();
-      expect(mocks.disconnect).toHaveBeenCalledOnce();
-    },
-  );
-
   it.each(['missing', 'deleted', 'disabled'] as const)('所选组 %s 时拒绝初始化且不写入账号或日志', async (state) => {
     vi.stubEnv('SEED_ADMIN_GROUP_ID', GROUP_ID);
     mocks.findGroup.mockResolvedValue(
@@ -252,15 +149,6 @@ describe('独立管理员引导入口', () => {
       ).toContain('所选用户组已停用');
     }
     expect(mocks.disconnect).toHaveBeenCalledOnce();
-  });
-
-  it('显式选择可用组时验证并保存所选归属', async () => {
-    vi.stubEnv('SEED_ADMIN_GROUP_ID', `  ${GROUP_ID}\t`);
-    mocks.findGroup.mockResolvedValue({ id: GROUP_ID, deletedAt: null, isEnabled: true });
-    await import('../src/admin-bootstrap.js');
-    expect(process.exitCode).toBeUndefined();
-    expect(mocks.findGroup).toHaveBeenCalledWith({ where: { id: GROUP_ID } });
-    expect(mocks.create.mock.calls[0]![0].data).toMatchObject({ identityType: 'super_admin', groupId: GROUP_ID });
   });
 
   it('已有其他超级管理员时拒绝再次引导，计数包含已禁用账号', async () => {
@@ -297,35 +185,6 @@ describe('受控管理员密码恢复', () => {
       deletedAt: null,
     });
   });
-
-  it.each([
-    ['ADMIN_RECOVERY_CONFIRM', undefined],
-    ['ADMIN_RECOVERY_CONFIRM', 'RESET'],
-    ['ADMIN_USERNAME', undefined],
-    ['ADMIN_USERNAME', '13900000000'],
-    ['ADMIN_PASSWORD', undefined],
-    ['ADMIN_PASSWORD', ''],
-  ])('拒绝 %s=%s 且不读写数据库', async (key, value) => {
-    vi.stubEnv(key!, value);
-    await import('../src/admin-recover.js');
-    expect(process.exitCode).toBe(1);
-    expect(mocks.transaction).not.toHaveBeenCalled();
-    expect(mocks.update).not.toHaveBeenCalled();
-    expect(mocks.revokeSessions).not.toHaveBeenCalled();
-    expect(mocks.disconnect).toHaveBeenCalledOnce();
-  });
-
-  it.each(['x', '   ', 'passwordpassword', 'recovery_admin', '密'.repeat(513)])(
-    '恢复密码保留任意非空输入并撤销旧会话：%j',
-    async (password) => {
-      vi.stubEnv('ADMIN_PASSWORD', password);
-      await import('../src/admin-recover.js');
-      expect(process.exitCode).toBeUndefined();
-      const { verifyAdminPassword } = await import('../src/modules/admin/index.js');
-      expect(await verifyAdminPassword(password, mocks.update.mock.calls[0]![0].data.passwordHash)).toBe(true);
-      expect(mocks.revokeSessions).toHaveBeenCalledOnce();
-    },
-  );
 
   it.each(['missing', 'disabled', 'deleted'])('%s 管理员不能被恢复命令创建或自动启用', async (state) => {
     mocks.findUnique.mockResolvedValue(

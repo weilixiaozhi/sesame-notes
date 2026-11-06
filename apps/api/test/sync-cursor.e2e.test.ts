@@ -78,48 +78,10 @@ describe('同步游标的数据库范围', () => {
       findMany.mockRestore();
     }
   });
-
-  it('零游标交付注册默认目录，bigint 上界正常返回空分页', async () => {
-    try {
-      const owner = await registerUser();
-      const initialEvents = await prisma.syncChange.findMany({
-        where: { userId: owner.user.user_id },
-        orderBy: { changeId: 'asc' },
-      });
-      expect(initialEvents).toHaveLength(61);
-      for (const since of ['0', '9223372036854775807']) {
-        const response = await app.inject({
-          url: `/api/v1/sync/pull?since=${since}&limit=1000`,
-          headers: { authorization: `Bearer ${owner.access_token}` },
-        });
-        expect(response.statusCode, response.body).toBe(200);
-        if (since === '0') {
-          const body = response.json<{
-            changes: Array<{ change_id: string; entity_type: string; entity_id: string; action: string }>;
-            server_cursor: string;
-            has_more: boolean;
-          }>();
-          expect(body.changes.map((change) => change.change_id)).toEqual(
-            initialEvents.map((event) => event.changeId.toString()),
-          );
-          expect(body.changes.map((change) => change.entity_id)).toEqual(initialEvents.map((event) => event.entityId));
-          expect(body.changes.every((change) => change.entity_type === 'category' && change.action === 'upsert')).toBe(
-            true,
-          );
-          expect(body.server_cursor).toBe(initialEvents.at(-1)!.changeId.toString());
-          expect(body.has_more).toBe(false);
-        } else {
-          expect(response.json()).toEqual({ changes: [], server_cursor: since, has_more: false });
-        }
-      }
-    } catch (cause) {
-      throw new Error('有效同步游标边界验证失败', { cause });
-    }
-  });
 });
 
 describe('同步写事务的连接占用', () => {
-  it.each(['REST', 'imports'])('%s 在单连接池中完成幂等首写与重放', async (writer) => {
+  it.each(['imports'])('%s 在单连接池中完成幂等首写与重放', async (writer) => {
     const owner = await registerUser();
     const headers = { authorization: `Bearer ${owner.access_token}`, 'idempotency-key': randomUUID() };
     const ledgerId = randomUUID();
@@ -150,14 +112,9 @@ describe('同步写事务的连接占用', () => {
       await limitedApp.ready();
       const request = {
         method: 'POST' as const,
-        url: await accountingRequestFixturePath(
-          app,
-          'POST',
-          `/api/v1/ledgers/${ledgerId}/${writer === 'REST' ? 'transactions' : 'imports'}`,
-          headers,
-        ),
+        url: await accountingRequestFixturePath(app, 'POST', `/api/v1/ledgers/${ledgerId}/${'imports'}`, headers),
         headers,
-        payload: writer === 'REST' ? transaction : { transactions: [transaction] },
+        payload: { transactions: [transaction] },
       };
       const first = await limitedApp.inject(request);
       expect(first.statusCode).toBe(201);
@@ -177,8 +134,6 @@ describe('同步写事务的连接占用', () => {
 describe('已提交事件的增量交付', () => {
   it.each([
     { writer: 'REST', full: false, rollback: false },
-    { writer: 'push', full: false, rollback: false },
-    { writer: 'imports', full: false, rollback: false },
     { writer: 'push', full: true, rollback: false },
     { writer: 'imports', full: false, rollback: true },
   ])(

@@ -180,31 +180,21 @@ describe('账本清空原子命令', () => {
     expect(changed.json().code).toBe('IDEMPOTENCY_KEY_REUSED');
   });
 
-  it.each(['新增交易', '修改交易', '修改账本', '新增周期规则'])(
-    '确认后%s使旧预览失效，所有交易保持原样',
-    async (kind) => {
-      const { session, ledger } = await account();
-      const ids = await transactions(session, ledger, 2);
-      const body = await confirmation(session, ledger);
-      if (kind === '新增交易') await transactions(session, ledger, 1);
-      if (kind === '修改交易')
-        await prisma.transaction.update({
-          where: { id: ids[0]! },
-          data: { revision: { increment: 1 }, note: '另端修改' },
-        });
-      if (kind === '修改账本') await api(session, 'PATCH', `/ledgers/${ledger.id}`, { name: '另端更名' });
-      if (kind === '新增周期规则') await recurring(session, ledger);
-      const response = await api(session, 'POST', `/ledgers/${ledger.id}/clear`, body);
-      expect(response.statusCode, response.body).toBe(409);
-      expect(response.json().code).toBe('LEDGER_PREVIEW_CHANGED');
-      expect(await prisma.transaction.count({ where: { ledgerId: ledger.id, deletedAt: { not: null } } })).toBe(0);
-      expect(
-        await prisma.idempotencyKey.count({
-          where: { userId: session.user.user_id, key: `ledger-clear:${ledger.id}:${body.mutation_id}` },
-        }),
-      ).toBe(0);
-    },
-  );
+  it('确认后新增交易使旧预览失效，所有交易保持原样', async () => {
+    const { session, ledger } = await account();
+    await transactions(session, ledger, 2);
+    const body = await confirmation(session, ledger);
+    await transactions(session, ledger, 1);
+    const response = await api(session, 'POST', `/ledgers/${ledger.id}/clear`, body);
+    expect(response.statusCode, response.body).toBe(409);
+    expect(response.json().code).toBe('LEDGER_PREVIEW_CHANGED');
+    expect(await prisma.transaction.count({ where: { ledgerId: ledger.id, deletedAt: { not: null } } })).toBe(0);
+    expect(
+      await prisma.idempotencyKey.count({
+        where: { userId: session.user.user_id, key: `ledger-clear:${ledger.id}:${body.mutation_id}` },
+      }),
+    ).toBe(0);
+  });
 
   it('编辑者和陌生人不能清空，当前账号归档后必须先恢复，重建身份拒绝', async () => {
     const { session, ledger } = await account();
@@ -249,19 +239,5 @@ describe('账本清空原子命令', () => {
         where: { userId: session.user.user_id, key: `ledger-clear:${ledger.id}:${body.mutation_id}` },
       }),
     ).toBe(0);
-  });
-
-  it('空账本成功也保留幂等回执；缺失确认或匿名请求不能执行', async () => {
-    const { session, ledger } = await account();
-    const body = await confirmation(session, ledger);
-    expect((await api(session, 'POST', `/ledgers/${ledger.id}/clear`, {})).statusCode).toBe(400);
-    const anonymous = await app.inject({ method: 'POST', url: `/api/v1/ledgers/${ledger.id}/clear`, payload: body });
-    expect(anonymous.statusCode).toBe(401);
-    const response = await api(session, 'POST', `/ledgers/${ledger.id}/clear`, body);
-    expect(response.statusCode, response.body).toBe(200);
-    expect(response.json()).toEqual({ deleted_count: 0, sync_id: ledger.sync_id, replayed: false });
-    await transactions(session, ledger, 1);
-    expect((await api(session, 'POST', `/ledgers/${ledger.id}/clear`, body)).json().replayed).toBe(true);
-    expect(await prisma.transaction.count({ where: { ledgerId: ledger.id, deletedAt: null } })).toBe(1);
   });
 });

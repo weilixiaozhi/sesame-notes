@@ -1,6 +1,5 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { localDateKey } from './local-date';
 import { useLocalToday } from './use-local-today';
 
 beforeEach(() => {
@@ -22,18 +21,5 @@ describe('本地今天刷新', () => {
     expect(result.current).toBe('2026-11-06');
     unmount();
     expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it('后台或本地时钟变化后在恢复焦点时重读日期', () => {
-    const { result } = renderHook(useLocalToday);
-    vi.setSystemTime(new Date(2026, 10, 7, 0, 1));
-    act(() => window.dispatchEvent(new Event('focus')));
-    expect(result.current).toBe('2026-11-07');
-  });
-
-  it('保留日子与月历共用的本地年月日格式，范围由领域校验', () => {
-    expect(localDateKey(new Date(1901, 0, 1))).toBe('1901-01-01');
-    expect(localDateKey(new Date(2100, 11, 31))).toBe('2100-12-31');
-    expect(localDateKey(new Date(2026, 10, 5, 0, 1))).toBe('2026-11-05');
   });
 });

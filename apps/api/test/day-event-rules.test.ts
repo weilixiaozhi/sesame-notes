@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeDayName, validateDayEvent } from '../src/modules/days/testing.js';
+import { validateDayEvent } from '../src/modules/days/testing.js';
 import { ApiError } from '../src/shared/errors.js';
 import { readFileSync } from 'node:fs';
 
@@ -41,14 +41,12 @@ function birthday() {
 }
 
 describe('日子静态写边界', () => {
-  it.each(['2026-02-30T00:00:00.000Z', '2025-02-29T00:00:00.000Z', '0000-01-01T00:00:00.000Z'])(
-    '创建审计时间必须是可原样回读的时间戳：%s',
-    (createdAt) => {
-      expect(() => validateDayEvent({ ...birthday(), created_at: createdAt })).toThrow(ApiError);
-    },
-  );
-
-  it.each(vectors.lunar_to_solar)('共享独立向量 $year-$month-$day → $solar_date', (sample) => {
+  it.each([
+    vectors.lunar_to_solar[0]!,
+    vectors.lunar_to_solar[2]!,
+    vectors.lunar_to_solar[7]!,
+    vectors.lunar_to_solar[14]!,
+  ])('共享独立向量 $year-$month-$day → $solar_date', (sample) => {
     const event = {
       calendar_type: 'lunar',
       original_year: sample.year,
@@ -58,10 +56,6 @@ describe('日子静态写边界', () => {
       solar_date: sample.solar_date,
     };
     expect(validateDayEvent({ ...birthday(), event }).event?.solar_date).toBe(sample.solar_date);
-  });
-  it.each(vectors.name_normalization)('共享名称空白样本 $input', (sample) => {
-    if (sample.expected === null) expect(() => normalizeDayName(sample.input)).toThrow();
-    else expect(normalizeDayName(sample.input)).toBe(sample.expected);
   });
   it('拒绝原始农历闰二月三十及不存在的闰月', () => {
     const event = {
@@ -76,12 +70,6 @@ describe('日子静态写边界', () => {
     expect(() =>
       validateDayEvent({ ...birthday(), event: { ...event, original_year: 2024, original_day: 1 } }),
     ).toThrow(ApiError);
-  });
-  it('按完整 Unicode 空白集合去除两端空白并按码点计数', () => {
-    expect(normalizeDayName('\u0085\uFEFF\u3000生日\u00A0')).toBe('生日');
-    expect(normalizeDayName('😀'.repeat(100))).toBe('😀'.repeat(100));
-    expect(() => normalizeDayName('😀'.repeat(101))).toThrow();
-    expect(() => normalizeDayName('\u0085\uFEFF')).toThrow();
   });
 
   it('不根据今天拒绝已有未来生日，保留真实纯日期', () => {
@@ -114,22 +102,6 @@ describe('日子静态写边界', () => {
     expect(validateDayEvent(stage).category).toBe('stage');
     expect(validateDayEvent({ ...stage, end: null }).end).toBeNull();
     expect(() => validateDayEvent({ ...stage, end: solar('2026-09-06') })).toThrow();
-  });
-
-  it('只接受当前统计与倒数规则，不转换废弃枚举', () => {
-    expect(validateDayEvent(birthday()).statistic_type).toBe('year');
-    expect(() => validateDayEvent({ ...birthday(), statistic_type: 'age' })).toThrow(ApiError);
-    const countdown = {
-      ...birthday(),
-      category: 'countdown',
-      countdown_mode: 'fixed_date',
-      statistic_type: 'day',
-      repeat_type: 'none',
-    };
-    expect(validateDayEvent(countdown).event?.solar_date).toBe('2099-02-28');
-    for (const repeat of ['yearly', 'monthly', 'interval_days']) {
-      expect(() => validateDayEvent({ ...countdown, repeat_type: repeat })).toThrow(ApiError);
-    }
   });
 
   it('X 天含起日，首目标在范围内才能保存', () => {

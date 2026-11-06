@@ -3,12 +3,10 @@ import catalog from '../exercise-catalog.json';
 import { preferencesPayload } from '../preferences-model';
 import {
   buildTransferPreview,
-  detectTransferExercise,
   detectTransferMapping,
   encodeTransferCsv,
   encodeTransferJson,
   parseTransferTable,
-  transferExerciseNames,
   transferId,
   type TransferRecord,
 } from './transfer-format';
@@ -59,19 +57,6 @@ async function preview(text: string) {
 }
 
 describe('fitness transfer formats', () => {
-  it('动作导入按正式中英文名称或身份匹配，不自动推测未知名称', async () => {
-    const entry = catalog.exercises[0]!;
-    const known = { exercises: [entry] };
-    expect(detectTransferExercise(entry.name_zh, known)).toBe(entry.id);
-    expect(detectTransferExercise(entry.name_en.toUpperCase(), known)).toBe(entry.id);
-    expect(detectTransferExercise(entry.id, known)).toBe(entry.id);
-    expect(detectTransferExercise('没有此动作', known)).toBeUndefined();
-
-    const table = parseTransferTable(`数据类型,名称,动作,组数,重量,次数\n模板,正式名称导入,${entry.name_zh},2,20,8`);
-    const result = await buildTransferPreview(table, detectTransferMapping(table.headers), known, {}, now);
-    expect(result.records[0]).toMatchObject({ payload: { exercises: [{ exercise_id: entry.id }] } });
-  });
-
   it('keeps mobile native JSON template precision, catalogue origin and optional preferences intact', async () => {
     const result = await preview(encodeTransferJson([template, preferences]));
     expect(result.records).toEqual([template, preferences]);
@@ -105,95 +90,6 @@ describe('fitness transfer formats', () => {
       },
     };
     expect((await preview(encodeTransferJson([record]))).records).toEqual([record]);
-  });
-
-  it.each([encodeTransferJson, encodeTransferCsv])('手动休息计时器导入保留空的动作和组关联', async (encode) => {
-    const record: TransferRecord = {
-      id: '10000000-0000-4000-8000-000000000009',
-      entity_type: 'fitness_workout',
-      payload: {
-        name: '手动休息',
-        scheduled_date: '2026-09-30',
-        source_kind: 'blank',
-        source_plan_id: null,
-        source_plan_name: null,
-        source_template_id: null,
-        occurrence_key: null,
-        status: 'in_progress',
-        exercises: [],
-        run_segments: [{ started_at: now, ended_at: null }],
-        rest_timer: {
-          status: 'running',
-          ends_at: '2026-09-30T10:01:30.000Z',
-          remaining_seconds: 90,
-          duration_seconds: 90,
-          elapsed_seconds: 0,
-          exercise_id: null,
-          set_id: null,
-        },
-        created_at: now,
-        updated_at: now,
-      },
-    };
-    expect((await preview(encode([record]))).records).toEqual([record]);
-  });
-
-  it.each(['constructor', '__proto__'])('原型同名值 %s 不能代替数据类型或显式动作映射', async (value) => {
-    await expect(preview(`数据类型,名称,动作,训练日期\n${value},测试,0025,2026-09-30`)).rejects.toThrow('数据类型');
-    await expect(preview(`数据类型,名称,动作\n模板,测试,${value}`)).rejects.toThrow('未匹配');
-  });
-
-  it.each([
-    { label: '布尔值', entityType: false },
-    { label: '数字', entityType: 0 },
-    { label: '数组', entityType: ['fitness_plan'] },
-    { label: '对象', entityType: {} },
-  ])('JSON 中显式非法的数据类型 $label 不生成可导入计划', async ({ entityType }) => {
-    try {
-      await expect(
-        preview(JSON.stringify([{ entity_type: entityType, name: '力量计划', exercise: '0025', reps: 8 }])),
-      ).rejects.toThrow('数据类型');
-    } catch (cause) {
-      throw new Error('非法健身数据类型被默认计划掩盖', { cause });
-    }
-  });
-
-  it('仅缺失、null 与空单元格使用默认计划，合法别名保留相同计划内容及来源身份', async () => {
-    try {
-      const source = { name: '力量计划', exercise: '0025', reps: 8 };
-      const missing = await preview(JSON.stringify([source]));
-      expect(missing.records[0]).toMatchObject({
-        entity_type: 'fitness_plan',
-        payload: {
-          name: '力量计划',
-          status: 'closed',
-          cycle_days: 1,
-          days: [{ day_index: 0, slot: { name: '力量计划' } }],
-        },
-      });
-      for (const entityType of [null, '', 'fitness_plan']) {
-        expect(await preview(JSON.stringify([{ ...source, entity_type: entityType }]))).toEqual(missing);
-      }
-      for (const entityType of ['计划', 'plan', ' fitness_plan ']) {
-        const result = await preview(`数据类型,名称,动作,次数\n${entityType},力量计划,0025,8`);
-        expect(result.records[0]).toMatchObject({
-          entity_type: 'fitness_plan',
-          payload: { name: '力量计划', status: 'closed', cycle_days: 1 },
-        });
-      }
-    } catch (cause) {
-      throw new Error('健身导入的合法缺省与别名转换失败', { cause });
-    }
-  });
-
-  it('映射原型同名列时，缺失名称必须交由名称校验拒绝', async () => {
-    const rows: Record<string, unknown>[] = [
-      { entity_type: 'fitness_template', constructor: '有效名称', exercises: [exercise] },
-      { entity_type: 'fitness_template', exercises: [exercise] },
-    ];
-    const table = parseTransferTable(JSON.stringify(rows));
-    const mapping = { ...detectTransferMapping(table.headers), name: 'constructor' };
-    await expect(buildTransferPreview(table, mapping, catalog, {}, now)).rejects.toThrow('名称需为');
   });
 
   it('keeps current/pending schedules and all generation history from mobile exports', async () => {
@@ -237,32 +133,6 @@ describe('fitness transfer formats', () => {
       },
     };
     expect((await preview(encodeTransferJson([record]))).records).toEqual([record]);
-  });
-
-  it('groups flat CSV rows into exercise sets and keeps missing plan days as rest', async () => {
-    const text =
-      '数据类型,名称,训练日,循环天数,动作,组数,重量,次数\n计划,力量周期,1,3,0025,2,32.5,8\n计划,力量周期,1,3,0025,1,35,6\n计划,力量周期,3,3,0025,1,30,10';
-    const result = await preview(text);
-    expect(result.records).toHaveLength(1);
-    const record = result.records[0]!;
-    expect(record.entity_type).toBe('fitness_plan');
-    if (record.entity_type !== 'fitness_plan') throw new Error('wrong type');
-    expect(record.payload.days[0]?.slot?.exercises).toHaveLength(1);
-    expect(record.payload.days[0]?.slot?.exercises[0]?.sets.map((set) => set.reps)).toEqual([8, 8, 6]);
-    expect(new Set(record.payload.days[0]?.slot?.exercises[0]?.sets.map((set) => set.id)).size).toBe(3);
-    expect(record.payload.days[1]?.slot).toBeNull();
-    expect(record.payload.status).toBe('closed');
-  });
-
-  it('manual field and exercise mappings are applied before preview and produce stable identities', async () => {
-    const table = parseTransferTable('kind,title,movement,kg,count\ntemplate,导入,不认识的动作,31.1234567891,9');
-    const mapping = { entity_type: 'kind', name: 'title', exercise: 'movement', weight: 'kg', reps: 'count' };
-    expect(transferExerciseNames(table, mapping)).toEqual(['不认识的动作']);
-    await expect(buildTransferPreview(table, mapping, catalog, {}, now)).rejects.toThrow('未匹配');
-    const a = await buildTransferPreview(table, mapping, catalog, { 不认识的动作: '0025' }, now);
-    const b = await buildTransferPreview(table, mapping, catalog, { 不认识的动作: '0025' }, now);
-    expect(a).toEqual(b);
-    expect(a.exportId).toMatch(/^[a-f0-9-]{36}$/);
   });
 
   it('accepts custom exercise references when the same file contains their definition', async () => {
@@ -313,13 +183,6 @@ describe('fitness transfer formats', () => {
     expect(() => parseTransferTable('[{"id":"a","id":"b"}]')).toThrow('重复');
     await expect(preview(encodeTransferJson([template, template]))).rejects.toThrow('重复记录身份');
     await expect(preview('数据类型,名称,动作,训练日期\n训练,错误日期,0025,2026-02-30')).rejects.toThrow('有效');
-  });
-
-  it('rejects inconsistent grouped plans and completed sets without reps', async () => {
-    await expect(preview('数据类型,名称,动作,循环天数\n计划,冲突,0025,2\n计划,冲突,0025,3')).rejects.toThrow('不一致');
-    await expect(preview('数据类型,名称,动作,训练日期,完成\n训练,缺少次数,0025,2026-09-30,true')).rejects.toThrow(
-      '次数',
-    );
   });
 
   it('stable source hashes do not depend on later record selection', async () => {

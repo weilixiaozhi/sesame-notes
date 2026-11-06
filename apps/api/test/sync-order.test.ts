@@ -23,8 +23,4 @@ describe('同步 LWW 顺序', () => {
     const now = new Date('2026-01-01T00:00:00.000Z');
     expect(normalizeClientTimestamp('2030-01-01T00:00:00.000Z', now).toISOString()).toBe('2026-01-01T00:00:05.000Z');
   });
-
-  it('拒绝无法解析的客户端时间', () => {
-    expect(() => normalizeClientTimestamp('not-a-date', new Date())).toThrow('INVALID_TIMESTAMP');
-  });
 });

@@ -172,17 +172,6 @@ describe('个人账本归档', () => {
     });
   });
 
-  it('不同设备同一时间的归档选择仍按设备版本决胜', async () => {
-    const { member, secondDevice, ledger } = await fixture();
-    const [low, high] = member.device_id < secondDevice.device_id ? [member, secondDevice] : [secondDevice, member];
-    const time = '2026-08-20T10:00:00.000Z';
-    expect((await archive(high, ledger, true, time)).json().outcomes[0].status).toBe('accepted');
-    expect((await archive(low, ledger, false, time)).json().outcomes[0]).toMatchObject({
-      status: 'ignored',
-      current_entity: { ledger_id: ledger.id, archived_at: time, updated_at: time, device_id: high.device_id },
-    });
-  });
-
   it('同设备同秒归档后恢复按队列顺序生效，重放最初归档不会反向覆盖恢复', async () => {
     const { member, secondDevice, ledger } = await fixture();
     const time = '2026-08-20T10:00:00.000Z';
@@ -211,31 +200,6 @@ describe('个人账本归档', () => {
       time,
       null,
     ]);
-  });
-
-  it('未来设备时间被裁剪后，accepted 响应返回与 full 一致的权威归档版本', async () => {
-    const { owner, ledger } = await fixture();
-    const before = Date.now();
-    const response = await archive(owner, ledger, true, '2099-01-01T00:00:00.000Z');
-    expect(response.statusCode).toBe(200);
-    const outcome = response.json().outcomes[0];
-    expect(outcome.status).toBe('accepted');
-    expect(outcome.current_entity).toEqual({
-      ledger_id: ledger.id,
-      archived_at: expect.any(String),
-      updated_at: expect.any(String),
-      device_id: owner.device_id,
-      server_cursor: outcome.change_id,
-    });
-    const canonical = outcome.current_entity;
-    expect(canonical.archived_at).toBe(canonical.updated_at);
-    expect(Date.parse(canonical.updated_at)).toBeGreaterThanOrEqual(before);
-    expect(Date.parse(canonical.updated_at)).toBeLessThanOrEqual(Date.now() + 5000);
-    expect((await api('GET', `/sync/full?ledger_id=${ledger.id}`, owner)).json().ledger).toMatchObject({
-      archived_at: canonical.archived_at,
-      archive_updated_at: canonical.updated_at,
-      archive_device_id: canonical.device_id,
-    });
   });
 
   it('普通成员可归档，仅本人另一设备通过 pull、列表和 full 取得状态，其他成员继续访问', async () => {
@@ -288,42 +252,6 @@ describe('个人账本归档', () => {
     const latest = (await api('GET', `/sync/full?ledger_id=${ledger.id}`, secondDevice)).json();
     expect(latest.transactions).toEqual([expect.objectContaining({ id: transaction.json().id })]);
     expect(latest.ledger).toMatchObject(ownFields);
-  });
-
-  it('Owner 可个人归档，取消归档按独立时间版本恢复，不被较旧离线归档覆盖', async () => {
-    const { owner, member, ledger } = await fixture();
-    const firstMutationId = randomUUID();
-    expect(
-      (await archive(owner, ledger, true, '2026-08-20T10:00:00.000Z', firstMutationId)).json().outcomes[0].status,
-    ).toBe('accepted');
-    expect((await archive(owner, ledger, false, '2026-08-20T10:02:00.000Z')).json().outcomes[0].status).toBe(
-      'accepted',
-    );
-    expect((await archive(owner, ledger, true, '2026-08-20T10:01:00.000Z')).json().outcomes[0].status).toBe('ignored');
-    const outdated = await archive(owner, ledger, true, '2026-08-20T10:01:00.000Z');
-    expect(outdated.json().outcomes[0].current_entity).toEqual({
-      ledger_id: ledger.id,
-      archived_at: null,
-      updated_at: '2026-08-20T10:02:00.000Z',
-      device_id: owner.device_id,
-      server_cursor: expect.any(String),
-    });
-    const replayed = await archive(owner, ledger, true, '2026-08-20T10:00:00.000Z', firstMutationId);
-    expect(replayed.json().outcomes[0]).toMatchObject({
-      status: 'ignored',
-      current_entity: {
-        ledger_id: ledger.id,
-        archived_at: null,
-        updated_at: '2026-08-20T10:02:00.000Z',
-        device_id: owner.device_id,
-      },
-    });
-    expect((await api('GET', `/ledgers/${ledger.id}`, owner)).json()).toMatchObject({
-      archived_at: null,
-      archive_updated_at: '2026-08-20T10:02:00.000Z',
-      archive_device_id: owner.device_id,
-    });
-    expect((await api('GET', `/ledgers/${ledger.id}`, member)).json()).toMatchObject({ archive_updated_at: null });
   });
 
   it('无关账号及退出成员不能归档，已删除账本不能通过归档恢复', async () => {

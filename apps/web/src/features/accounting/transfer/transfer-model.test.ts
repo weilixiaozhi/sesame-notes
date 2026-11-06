@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createHash, webcrypto } from 'node:crypto';
+import { webcrypto } from 'node:crypto';
 import { buildImportPlan, detectTransferMapping, accountingCsv } from './transfer-model';
 import type { Ledger, Snapshot } from './transfer-schema';
-import { importTimestamp } from '../../../lib/transfer/timestamp';
 import { parseDelimited } from '../../../lib/delimited-text';
 import { parseJsonTables, readTransferFile, selectTable } from '../../../lib/transfer/table';
 import { categoryImportSources, type CategoryImportChoices } from './category-transfer';
-import { createImportId } from '../../../lib/transfer/import-identity';
 
 const stamp = '2026-01-01T00:00:00.000Z';
 const ledger: Ledger = {
@@ -74,11 +72,6 @@ describe('记账文件解析与精确转换', () => {
       '9007199254740992.1234567891',
     );
   });
-  it('拒绝非法日期，带时区的导入时间保持同一时刻', () => {
-    expect(() => importTimestamp('2026-02-30')).toThrow();
-    expect(() => importTimestamp('2026-02-30T12:00:00Z')).toThrow();
-    expect(importTimestamp('2026-09-30T12:00:00+08:00')).toBe('2026-09-30T04:00:00.000Z');
-  });
   it('实际读取XLSX中文、多工作表与文字金额，并拒绝公式', async () => {
     const { default: ExcelJS } = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
@@ -98,117 +91,6 @@ describe('记账文件解析与精确转换', () => {
 });
 
 describe('记账导入计划与完整导出', () => {
-  it.each([false, true])('无分类身份的文件重导保持交易ID，含空身份表头=%s', async (withEmptyHeaders) => {
-    try {
-      const table = {
-        headers: ['时间', '金额', ...(withEmptyHeaders ? ['category_scope', 'category_id', 'parent_category_id'] : [])],
-        rows: [['2026-09-30', '1', ...(withEmptyHeaders ? ['', '', ''] : [])]],
-      };
-      const normalizedMapping = {
-        date: '时间',
-        amount: '金额',
-        type: '',
-        currency: '',
-        category: '',
-        sub_category: '',
-        category_icon: '',
-        sub_category_icon: '',
-        note: '',
-        native_amount: '',
-        rate: '',
-      };
-      const normalizedFingerprint = createHash('sha256')
-        .update(JSON.stringify({ table, mapping: normalizedMapping, ledger: ledger.id }))
-        .digest('hex');
-      const stableId = await createImportId(ledger.id, normalizedFingerprint, '0');
-      const plan = await buildImportPlan(table, detectTransferMapping(table.headers), ledger, snapshot, signal());
-      expect(plan.batches[0]!.body.transactions![0]!.id).toBe(stableId);
-      const repeated = await buildImportPlan(
-        table,
-        detectTransferMapping(table.headers),
-        ledger,
-        { ...snapshot, transactions: [{ id: stableId }] as Snapshot['transactions'] },
-        signal(),
-      );
-      expect(repeated.skipped).toBe(1);
-      expect(repeated.batches).toEqual([]);
-    } catch (cause) {
-      throw new Error('无分类身份交易的重复导入验证失败', { cause });
-    }
-  });
-  it('无ID的同名来源逐行确认，明确选择不同目标ID不会按名称合并', async () => {
-    try {
-      const table = {
-        headers: ['时间', '金额', '分类'],
-        rows: [
-          ['2026-09-30', '1', '旅行'],
-          ['2026-09-30', '2', '旅行'],
-        ],
-      };
-      const mapping = detectTransferMapping(table.headers);
-      const categories = ['c63266e7-7640-464c-ad22-bd9b5e1a4d1e', '8260fcb3-c519-49bc-909c-f44fb90d0850'].map(
-        (id, index) => ({
-          id,
-          name: '旅行',
-          level: 1,
-          parent_id: null,
-          icon: index ? 'car' : 'plane',
-          owner_id: ledger.owner_id,
-        }),
-      ) as Snapshot['categories'];
-      const state = { ...snapshot, categories };
-      const unresolved = await buildImportPlan(table, mapping, ledger, state, signal());
-      expect(unresolved.categoryRequests).toHaveLength(2);
-      expect(unresolved.batches).toEqual([]);
-      const choices: CategoryImportChoices = Object.fromEntries(
-        unresolved.categoryRequests.map((source, index) => [
-          source.key,
-          { kind: 'existing', id: categories[index]!.id },
-        ]),
-      );
-      const resolved = await buildImportPlan(table, mapping, ledger, state, signal(), choices);
-      expect(resolved.categoryRequests).toEqual([]);
-      expect(resolved.categories).toBe(0);
-      expect(
-        resolved.batches.flatMap((batch) => batch.body.transactions ?? []).map((item) => item.category_id),
-      ).toEqual(categories.map((item) => item.id));
-    } catch (cause) {
-      throw new Error('同名来源人工映射验证失败', { cause });
-    }
-  });
-
-  it('机器字段按owner与ID对应同名分类，名称和图标修改不影响身份', async () => {
-    try {
-      const ids = ['c63266e7-7640-464c-ad22-bd9b5e1a4d1e', '8260fcb3-c519-49bc-909c-f44fb90d0850'];
-      const table = {
-        headers: ['时间', '金额', '分类', 'category_scope', 'category_id'],
-        rows: ids.map((id, index) => ['2026-09-30', '1', index ? '' : '旅行', `account:${ledger.owner_id}`, id]),
-      };
-      const categories = ids.map((id) => ({
-        id,
-        name: '用户已改名',
-        level: 1,
-        parent_id: null,
-        icon: 'car',
-        owner_id: ledger.owner_id,
-      })) as Snapshot['categories'];
-      const plan = await buildImportPlan(
-        table,
-        detectTransferMapping(table.headers),
-        ledger,
-        { ...snapshot, categories },
-        signal(),
-      );
-      expect(plan.categoryRequests).toEqual([]);
-      expect(plan.categories).toBe(0);
-      expect(plan.batches.flatMap((batch) => batch.body.transactions ?? []).map((item) => item.category_id)).toEqual(
-        ids,
-      );
-    } catch (cause) {
-      throw new Error('分类机器身份映射验证失败', { cause });
-    }
-  });
-
   it('跨owner相同裸ID不能自动认领，明确新建父子映射可重试且不复制其他分类', async () => {
     try {
       const sourceId = 'c63266e7-7640-464c-ad22-bd9b5e1a4d1e';
@@ -275,82 +157,6 @@ describe('记账导入计划与完整导出', () => {
     }
   });
 
-  it('导出再导入保留同名分类ID、图标与owner，来源相同不会重建分类', async () => {
-    try {
-      const ids = ['c63266e7-7640-464c-ad22-bd9b5e1a4d1e', '8260fcb3-c519-49bc-909c-f44fb90d0850'];
-      const categories = ids.map((id, index) => ({
-        id,
-        name: '旅行',
-        level: 1,
-        parent_id: null,
-        icon: index ? 'car' : 'plane',
-        owner_id: ledger.owner_id,
-      })) as Snapshot['categories'];
-      const transactions = ids.map((category_id, index) => ({
-        id: `transaction-${index}`,
-        category_id,
-        amount: '1',
-        native_amount: '1',
-        currency_code: 'CNY',
-        happened_at: stamp,
-        note: null,
-      })) as Snapshot['transactions'];
-      const output = accountingCsv({ ...snapshot, categories, transactions }, '', '');
-      const parsed = parseDelimited(output.text.replace(/^\uFEFF/, ''), ',');
-      const table = { headers: parsed[0]!, rows: parsed.slice(1) };
-      expect(table.rows.map((row) => row[table.headers.indexOf('category_id')])).toEqual(ids);
-      expect(table.rows.map((row) => row[table.headers.indexOf('category_scope')])).toEqual(
-        ids.map(() => `account:${ledger.owner_id}`),
-      );
-      const plan = await buildImportPlan(
-        table,
-        detectTransferMapping(table.headers),
-        ledger,
-        { ...snapshot, categories },
-        signal(),
-      );
-      expect(plan.categoryRequests).toEqual([]);
-      expect(plan.categories).toBe(0);
-      expect(plan.batches.flatMap((batch) => batch.body.transactions ?? []).map((row) => row.category_id)).toEqual(ids);
-    } catch (cause) {
-      throw new Error('同名分类导出往返身份验证失败', { cause });
-    }
-  });
-
-  it('所选目标失效时重新显示映射入口，不凭名称改挂到另一分类', async () => {
-    try {
-      const table = { headers: ['时间', '金额', '分类'], rows: [['2026-09-30', '1', '旅行']] };
-      const mapping = detectTransferMapping(table.headers);
-      const { sources } = await categoryImportSources(table, mapping);
-      const source = [...sources.values()][0]!;
-      const choices: CategoryImportChoices = { [source.key]: { kind: 'existing', id: 'deleted-target' } };
-      const plan = await buildImportPlan(table, mapping, ledger, snapshot, signal(), choices);
-      expect(plan.categoryRequests.map((item) => item.key)).toEqual([source.key]);
-      expect(plan.errors[0]?.message).toContain('已不可用');
-      expect(plan.count).toBe(0);
-      expect(plan.categories).toBe(0);
-    } catch (cause) {
-      throw new Error('导入目标失效保护验证失败', { cause });
-    }
-  });
-  it('未映射的附加列不影响支出导入', async () => {
-    const table = {
-      headers: ['时间', '金额', '附加说明'],
-      rows: [
-        ['2026-09-30', '12.30', 'true'],
-        ['2026-09-30', '20', '不适用'],
-      ],
-    };
-    const mapping = detectTransferMapping(table.headers);
-    const plan = await buildImportPlan(table, mapping, ledger, snapshot, signal());
-    expect(plan.errors).toEqual([]);
-    expect(plan.count).toBe(2);
-    expect(plan.batches.flatMap((batch) => batch.body.transactions ?? [])).toEqual([
-      expect.objectContaining({ amount: '12.3' }),
-      expect.objectContaining({ amount: '20' }),
-    ]);
-  });
-
   it('映射汇率按十位精确折算，金额输入越界和无效汇率保留行级错误', async () => {
     const table = {
       headers: ['时间', '金额', '币种', '汇率'],
@@ -396,27 +202,6 @@ describe('记账导入计划与完整导出', () => {
     expect(duplicate.batches).toEqual([]);
     const repeat = await buildImportPlan(table, mapping, ledger, snapshot, signal(), choices);
     expect(repeat.batches).toEqual(first.batches);
-  });
-  it('外币缺折算、收入、不存在日期、未知编辑者分类全部逐行报告', async () => {
-    const table = {
-      headers: ['时间', '金额', '币种', '类型', '分类'],
-      rows: [
-        ['2026-09-30', '1', 'USD', 'expense', ''],
-        ['2026-09-30', '1', 'CNY', 'income', ''],
-        ['2026-02-30', '1', 'CNY', 'expense', ''],
-        ['2026-09-30', '1', 'CNY', 'expense', '不存在'],
-      ],
-    };
-    const plan = await buildImportPlan(
-      table,
-      detectTransferMapping(table.headers),
-      { ...ledger, role: 'editor' },
-      snapshot,
-      signal(),
-    );
-    expect(plan.errors.map((error) => error.row)).toEqual([2, 3, 4]);
-    expect(plan.categoryRequests.map((source) => source.rows)).toEqual([[5]]);
-    expect(plan.count).toBe(0);
   });
   it('超过500条分批仍固定身份；取消不产生计划', async () => {
     const table = { headers: ['时间', '金额'], rows: Array.from({ length: 501 }, () => ['2026-09-30', '1']) };

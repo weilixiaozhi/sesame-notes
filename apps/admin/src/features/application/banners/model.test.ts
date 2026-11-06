@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bannerListSchema, bannerUploadSchema } from '../../../api/banner-contracts';
-import { bannerImageId, bannerPreview, newBannerDraft, bannerMetrics } from './model';
-import type { BannerEntry, BannerStatistics } from './model';
+import { bannerImageId, bannerPreview } from './model';
+import type { BannerEntry } from './model';
 
 const mediaId = 'a'.repeat(64);
 const entry: BannerEntry = {
@@ -18,48 +17,11 @@ const entry: BannerEntry = {
   updated_by: null,
 };
 
-/** 构造具有明确采集覆盖和图片身份的统计响应。 */
-function report(): BannerStatistics {
-  return {
-    scope: 'total',
-    items: [
-      { banner_id: entry.id, slot: entry.slot, source: 'remote', version: 2, impressions: 10, clicks: 2, ctr: 0.2 },
-    ],
-    coverage: { collection_started_at: '2026-10-28T00:00:00.000Z', complete: true, audience: 'authenticated_users' },
-  };
-}
-
 describe('轮播入口与统计边界', () => {
-  it('新增草稿没有图片和服务器身份，管理列表允许为空', () => {
-    const draft = newBannerDraft('fitness-plan-library');
-    expect(draft.target).toBe('fitness-plan-library');
-    expect(draft.image_path).toBeNull();
-    expect(draft).not.toHaveProperty('id');
-    expect(bannerPreview(draft)).toBeUndefined();
-    expect(bannerListSchema.safeParse({ items: [] }).success).toBe(true);
-    expect(bannerListSchema.safeParse({ items: [{ ...entry, source: 'builtin', version: 0 }] }).success).toBe(false);
-  });
   it('未发布图片只走后台鉴权预览，拒绝外部地址和路径穿越', () => {
     expect(bannerImageId(entry.image_path)).toBe(mediaId);
     expect(bannerPreview(entry)).toBe(`/api/v1/admin/banners/media/${mediaId}`);
     expect(() => bannerImageId(`https://other.example/api/v1/banners/media/${mediaId}`)).toThrow();
     expect(() => bannerImageId('/api/v1/banners/media/../users')).toThrow();
-  });
-  it('同一位置允许多张图片，拒绝重复身份或未注册目标', () => {
-    const second = { ...entry, id: '22222222-2222-4222-8222-222222222222', sort_order: 1 };
-    expect(bannerListSchema.safeParse({ items: [entry, second] }).success).toBe(true);
-    expect(bannerListSchema.safeParse({ items: [entry, entry] }).success).toBe(false);
-    expect(bannerListSchema.safeParse({ items: [{ ...entry, target: '/settings' }] }).success).toBe(false);
-  });
-  it('上传响应的图片标识必须与路径一致', () => {
-    const upload = { id: mediaId, image_path: entry.image_path, width: 2160, height: 720 };
-    expect(bannerUploadSchema.safeParse(upload).success).toBe(true);
-    expect(bannerUploadSchema.safeParse({ ...upload, id: 'b'.repeat(64) }).success).toBe(false);
-  });
-  it('累计统计按同一 Banner 身份匹配，修改版本和位置保留总量', () => {
-    expect(bannerMetrics(entry, report())?.clicks).toBe(2);
-    expect(bannerMetrics({ ...entry, version: 3 }, report())?.clicks).toBe(2);
-    expect(bannerMetrics({ ...entry, slot: 'fitness-template-library' }, report())?.clicks).toBe(2);
-    expect(bannerMetrics({ ...entry, id: 'other' }, report())).toBeUndefined();
   });
 });

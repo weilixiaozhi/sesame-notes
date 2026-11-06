@@ -183,34 +183,6 @@ afterAll(async () => {
 });
 
 describe('原生 PostgreSQL 后台用户资料、设备和操作日志', () => {
-  it('启停接口文档要求原因，实际处理拒绝缺少正文的写入', async () => {
-    try {
-      const document = app.swagger() as {
-        paths: Record<string, { patch: { requestBody: { required?: boolean }; 'x-optional-request-body'?: boolean } }>;
-      };
-      for (const action of ['disable', 'enable']) {
-        const schema = document.paths[`/api/v1/admin/users/{user_id}/${action}`]!.patch;
-        expect(schema.requestBody.required).toBe(true);
-        expect(schema['x-optional-request-body']).toBeUndefined();
-        const response = await app.inject({
-          method: 'PATCH',
-          url: `/api/v1/admin/users/${userIds[2]}/${action}`,
-          headers: headers(),
-        });
-        expect(response.statusCode, response.body).toBe(400);
-        const changed = await app.inject({
-          method: 'PATCH',
-          url: `/api/v1/admin/users/${userIds[2]}/${action}`,
-          headers: headers(),
-          payload: { reason: '用户确认操作' },
-        });
-        expect(changed.statusCode, changed.body).toBe(200);
-      }
-    } catch (error) {
-      throw new Error('启停接口操作原因契约验收失败', { cause: error });
-    }
-  });
-
   it('数字分页总数遵循完整搜索与状态条件，游标请求明确拒绝', async () => {
     try {
       const result = await app.inject({

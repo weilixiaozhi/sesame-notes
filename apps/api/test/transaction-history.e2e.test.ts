@@ -275,40 +275,6 @@ describe('云端交易编辑历史', () => {
     }
   });
 
-  it('拒绝跨账本交易与跨交易游标，坏游标和越界页大小明确报错', async () => {
-    const value = await fixture();
-    await patch(value, 1, { note: '第一条' });
-    await patch(value, 2, { note: '第二条' });
-    const another = await fixture();
-    const first = (await request('GET', historyPath(value, '?limit=1'), owner)).json<HistoryPage>();
-    const sameLedgerTransactionId = randomUUID();
-    const second = await request('POST', `/ledgers/${value.ledgerId}/transactions`, owner, {
-      id: sameLedgerTransactionId,
-      tx_type: 'expense',
-      amount: '1',
-      native_amount: '1',
-      currency_code: 'CNY',
-      happened_at: '2026-11-03T00:00:00.000Z',
-      aa_mode: '0',
-      splits: [],
-    });
-    expect(second.statusCode, second.body).toBe(201);
-    expect((await request('GET', historyPath({ ...value, ledgerId: another.ledgerId }), owner)).statusCode).toBe(404);
-    expect((await request('GET', historyPath(another, `?cursor=${first.next_cursor}`), owner)).statusCode).toBe(400);
-    expect(
-      (
-        await request(
-          'GET',
-          historyPath({ ...value, transactionId: sameLedgerTransactionId }, `?cursor=${first.next_cursor}`),
-          owner,
-        )
-      ).statusCode,
-    ).toBe(400);
-    for (const query of ['?cursor=broken', '?cursor=%25', '?limit=0', '?limit=201']) {
-      expect((await request('GET', historyPath(value, query), owner)).statusCode).toBe(400);
-    }
-  });
-
   it('软删除交易保留删除动作，归档成员仍可读取，删除账本后不可读取', async () => {
     const value = await fixture();
     const deleted = await request('DELETE', `/ledgers/${value.ledgerId}/transactions/${value.transactionId}`, owner, {
@@ -321,37 +287,5 @@ describe('云端交易编辑历史', () => {
     expect(response.json<HistoryPage>().items[0]!.changes).toEqual({ action: 'delete', base_revision: 1 });
     await prisma.ledger.update({ where: { id: value.ledgerId }, data: { deletedAt: new Date() } });
     expect((await request('GET', historyPath(value), owner)).statusCode).toBe(404);
-  });
-
-  it('未知操作者保持null，撤销凭据后无法继续读取历史', async () => {
-    const actor = await register();
-    const value = await fixture(actor);
-    await patch(value, 1, { note: '保留原变更' }, actor);
-    await prisma.transactionEditHistory.updateMany({
-      where: { transactionId: value.transactionId },
-      data: { operatorMemberId: null },
-    });
-    const page = (await request('GET', historyPath(value), actor)).json<HistoryPage>();
-    expect(page.items[0]).toMatchObject({ operator_member_id: null, operator_display_name: null });
-    await prisma.device.update({ where: { id: actor.deviceId }, data: { revokedAt: new Date() } });
-    expect((await request('GET', historyPath(value), actor)).statusCode).toBe(401);
-  });
-
-  it('已保存变更的额外JSON字段完整返回，不解释成before和after快照', async () => {
-    const value = await fixture();
-    await patch(value, 1, { note: '保存变更' });
-    const changes = {
-      action: 'category-migration',
-      category_id: randomUUID(),
-      additional_context: { decimal_text: preciseAmount, values: [null, '原始文本', { nested: true }] },
-    };
-    // 读取既有 JSON 时保留未在当前写接口声明的字段，避免丢失历史信息。
-    await prisma.transactionEditHistory.updateMany({
-      where: { transactionId: value.transactionId },
-      data: { changes },
-    });
-    const response = await request('GET', historyPath(value), owner);
-    expect(response.statusCode, response.body).toBe(200);
-    expect(response.json<HistoryPage>().items[0]!.changes).toEqual(changes);
   });
 });

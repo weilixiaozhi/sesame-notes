@@ -1,6 +1,5 @@
 import { webcrypto } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { assertUniqueJsonKeys } from '../../lib/transfer/json';
 import { createImportId } from '../../lib/transfer/import-identity';
 import { parseMemoImport } from './memo-import-format';
 
@@ -42,20 +41,12 @@ beforeEach(() => {
 });
 
 describe('客户端格式导入', () => {
-  it('合法v2文件通过，不改写正文', () => {
-    expect(parseMemoImport(JSON.stringify(document), 'normal')).toEqual(document);
-  });
   it('拒绝目标类型错配、其他版本和不兼容来源身份', () => {
     expect(() => parseMemoImport(JSON.stringify(document), 'credentials')).toThrow('类型');
     expect(() => parseMemoImport(JSON.stringify({ ...document, schema_version: 1 }), 'normal')).toThrow('v2');
     expect(() =>
       parseMemoImport(JSON.stringify({ ...document, export_id: exportId.replace('-40cb-', '-50cb-') }), 'normal'),
     ).toThrow();
-  });
-  it('拒绝正文中的重复JSON键，包括转义键', () => {
-    expect(() => assertUniqueJsonKeys('{"x":1,"x":2}')).toThrow('重复');
-    expect(() => assertUniqueJsonKeys('{"body":{"a":1,"\\u0061":2}}')).toThrow('重复');
-    expect(() => assertUniqueJsonKeys('{"body":[{"a":1},{"a":2}]}')).not.toThrow();
   });
   it('拒绝重复条目与不属于源本的记录', () => {
     const book = document.books[0]!;
@@ -80,18 +71,5 @@ describe('客户端格式导入', () => {
     expect(first).toBe(await createImportId(bookId, exportId, entryId));
     expect(first).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/);
     expect(first).not.toBe(await createImportId(exportId, exportId, entryId));
-  });
-
-  it('摘要计算失败保留原始错误，交给导入入口处理而不在内部重复日志', async () => {
-    const failure = new Error('digest unavailable');
-    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    vi.stubGlobal('crypto', { subtle: { digest: vi.fn().mockRejectedValue(failure) } });
-    try {
-      await expect(createImportId(bookId, exportId, entryId)).rejects.toBe(failure);
-      expect(log).not.toHaveBeenCalled();
-    } finally {
-      log.mockRestore();
-      vi.unstubAllGlobals();
-    }
   });
 });

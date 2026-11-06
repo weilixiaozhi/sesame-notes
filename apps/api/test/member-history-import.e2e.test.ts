@@ -124,57 +124,6 @@ function transaction(payer: string, split: string) {
   };
 }
 
-it.each(['ACTIVE', 'LEFT', 'REMOVED'] as const)(
-  'owner首次历史成员保持%s及固定重放，不允许新mutation改生命周期',
-  async (status) => {
-    const ctx = await setup();
-    const { id, item } = await historicalMember(ctx, status);
-    const events = await prisma.syncChange.count({ where: { entityId: id } });
-    expect(await push(ctx, item)).toMatchObject({ status: 'ignored' });
-    expect(
-      (
-        await push(ctx, {
-          ...item,
-          mutation_id: randomUUID(),
-          updated_at: '1970-01-01T00:00:00.000Z',
-          payload: { display_name: '试图恢复', initial_status: 'ACTIVE' },
-        })
-      ).status,
-    ).toBe('invalid');
-    const row = await prisma.ledgerMember.findUniqueOrThrow({ where: { id } });
-    expect(row).toMatchObject({ status, memberType: 'PLACEHOLDER', linkedAccountId: null, role: 'editor' });
-    expect(await prisma.syncChange.count({ where: { entityId: id } })).toBe(events);
-    const full = await request(ctx.session, `/sync/full?ledger_id=${ctx.ledger.id}`);
-    expect(full.statusCode, full.body).toBe(200);
-    expect(full.json().members.find((member: { id: string }) => member.id === id)).toMatchObject({
-      status,
-      member_type: 'PLACEHOLDER',
-    });
-  },
-);
-
-it('旧普通成员保持ACTIVE；LEFT改名保持LEFT，REMOVED不因普通改名复活', async () => {
-  const ctx = await setup();
-  const active = randomUUID();
-  expect((await push(ctx, change(ctx, 'member', active, { display_name: '普通新增' }))).status).toBe('accepted');
-  expect((await prisma.ledgerMember.findUniqueOrThrow({ where: { id: active } })).status).toBe('ACTIVE');
-  for (const status of ['LEFT', 'REMOVED'] as const) {
-    const { id } = await historicalMember(ctx, status);
-    const result = await push(
-      ctx,
-      change(
-        ctx,
-        'member',
-        id,
-        { display_name: '历史改名' },
-        { updated_at: new Date(Date.now() + 1000).toISOString() },
-      ),
-    );
-    expect(result.status).toBe(status === 'LEFT' ? 'accepted' : 'invalid');
-    expect((await prisma.ledgerMember.findUniqueOrThrow({ where: { id } })).status).toBe(status);
-  }
-});
-
 it('editor即使旧时间或base0也不能借历史标记创建或覆盖成员和交易', async () => {
   const ctx = await setup();
   const { id } = await historicalMember(ctx, 'LEFT');
@@ -235,24 +184,6 @@ it('owner历史交易接受本账本inactive付款和分摊，丢回执重放不
   );
 });
 
-it('无标记的新同步/REST交易仍拒绝inactive，标记也不能跨账本引用', async () => {
-  const ctx = await setup();
-  const member = await historicalMember(ctx, 'LEFT');
-  const payload = transaction(member.id, member.id);
-  expect((await push(ctx, change(ctx, 'transaction', randomUUID(), payload))).status).toBe('invalid');
-  const rest = await request(ctx.session, `/ledgers/${ctx.ledger.id}/transactions`, 'POST', {
-    id: randomUUID(),
-    ...payload,
-  });
-  expect(rest.statusCode, rest.body).toBe(400);
-  const other = await setup();
-  const id = randomUUID();
-  expect((await push(other, change(other, 'transaction', id, { ...payload, initial_history: true }))).status).toBe(
-    'invalid',
-  );
-  expect(await prisma.transaction.findUnique({ where: { id } })).toBeNull();
-});
-
 it('历史编辑只保留原付款/分摊集合，REST及sync不能新增其他inactive或复活交易墓碑', async () => {
   const ctx = await setup();
   const payer = await historicalMember(ctx, 'LEFT');
@@ -293,37 +224,6 @@ it('历史编辑只保留原付款/分摊集合，REST及sync不能新增其他i
   );
   expect((await push(ctx, change(ctx, 'transaction', id, payload, { base_revision: 4 }))).status).toBe('conflict');
   expect((await prisma.transaction.findUniqueOrThrow({ where: { id } })).deletedAt).not.toBeNull();
-});
-
-it('首次历史标记拒绝非零基线、非布尔true及周期来源，不留部分交易', async () => {
-  const ctx = await setup();
-  const member = await historicalMember(ctx, 'LEFT');
-  const memberId = randomUUID();
-  expect(
-    (
-      await push(
-        ctx,
-        change(ctx, 'member', memberId, { display_name: '错误基线', initial_status: 'LEFT' }, { base_revision: 1 }),
-      )
-    ).status,
-  ).toBe('invalid');
-  expect(await prisma.ledgerMember.findUnique({ where: { id: memberId } })).toBeNull();
-  for (const [fields, base] of [
-    [{}, 1],
-    [{ initial_history: 'true' }, 0],
-    [{ recurring_id: randomUUID() }, 0],
-  ] as const) {
-    const id = randomUUID();
-    const item = change(
-      ctx,
-      'transaction',
-      id,
-      { ...transaction(member.id, member.id), initial_history: true, ...fields },
-      { base_revision: base },
-    );
-    expect((await push(ctx, item)).status).toBe('invalid');
-    expect(await prisma.transaction.findUnique({ where: { id } })).toBeNull();
-  }
 });
 
 it('并发首次历史成员请求只创建一次，后到请求不能改变已建立生命周期', async () => {

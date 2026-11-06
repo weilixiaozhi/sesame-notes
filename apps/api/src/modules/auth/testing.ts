@@ -1,1 +1,1 @@
-export { dummyPasswordHash, signAccessToken, verifyAccessToken, verifyPassword } from './security.js';
+export { signAccessToken, verifyAccessToken } from './security.js';

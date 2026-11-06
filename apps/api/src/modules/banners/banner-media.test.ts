@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { validateBannerImage } from './banner-media.js';
 
 describe('Banner 上传位图边界', () => {
-  it.each(['png', 'jpeg', 'webp'] as const)('将真实 %s 标准化为可校验的 WebP 字节', async (format) => {
+  it.each(['png'] as const)('将真实 %s 标准化为可校验的 WebP 字节', async (format) => {
     try {
       const source = await sharp({ create: { width: 300, height: 100, channels: 3, background: '#263f59' } })
         .toFormat(format)

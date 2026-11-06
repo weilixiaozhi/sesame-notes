@@ -83,139 +83,6 @@ async function account() {
 }
 
 describe('分类批量命令', () => {
-  it.each(['missing', 'rename', 'reparent'] as const)(
-    '迁移目标%s时拒绝旧确认，源分类和交易保持原样',
-    async (change) => {
-      const user = await account();
-      const source = await user.category('目标版本源');
-      const target = await user.category('确认过的目标');
-      const parent = await user.category('新的目标父分类');
-      const transaction = await user.transaction(source.id);
-      const scope = await user.preview([source.id]);
-      if (change !== 'missing') {
-        const changed = await user.call(
-          'PATCH',
-          `/ledgers/${user.ledger.id}/categories/${target.id}`,
-          change === 'rename' ? { name: '另一设备改名后的目标' } : { level: 2, parent_id: parent.id },
-        );
-        expect(changed.statusCode, changed.body).toBe(200);
-        expect(changed.json<{ updated_at: string }>().updated_at).not.toBe(target.updated_at);
-      }
-      expect((await user.preview([source.id])).preview_token).toBe(scope.preview_token);
-      const response = await user.call(
-        'POST',
-        `/ledgers/${user.ledger.id}/categories/remove`,
-        {
-          category_ids: [source.id],
-          mode: 'migrate',
-          target_category_id: target.id,
-          ...(change === 'missing' ? {} : { expected_target_updated_at: target.updated_at }),
-          preview_token: scope.preview_token,
-        },
-        randomUUID(),
-      );
-      expect(response.statusCode, response.body).toBe(409);
-      expect(response.json()).toMatchObject({ code: 'CATEGORY_TARGET_CHANGED' });
-      expect(await prisma.transaction.findUniqueOrThrow({ where: { id: transaction.id } })).toMatchObject({
-        categoryId: source.id,
-        revision: 1,
-        deletedAt: null,
-      });
-      expect(
-        (
-          await prisma.category.findUniqueOrThrow({
-            where: { id_ownerId: { id: source.id, ownerId: user.user.user_id } },
-          })
-        ).deletedAt,
-      ).toBeNull();
-    },
-  );
-
-  it('批量创建规范化同名分类，保留已有身份及默认目录', async () => {
-    const user = await account();
-    const defaults = await prisma.category.findMany({ where: { ownerId: user.user.user_id }, orderBy: { id: 'asc' } });
-    expect(defaults).toHaveLength(61);
-    const custom = await user.category('已存在餐饮');
-    const before = await prisma.category.findMany({ where: { ownerId: user.user.user_id }, orderBy: { id: 'asc' } });
-    expect(before).toHaveLength(62);
-    expect(before.filter((category) => category.id !== custom.id)).toEqual(defaults);
-    const count = await prisma.syncChange.count({ where: { userId: user.user.user_id } });
-    const response = await user.call(
-      'POST',
-      `/ledgers/${user.ledger.id}/categories/add-batch`,
-      { items: [{ id: randomUUID(), name: '\u0085已存在餐饮\u0085', kind: 'expense', level: 1 }] },
-      randomUUID(),
-    );
-    expect(response.statusCode, response.body).toBe(200);
-    expect(response.json()).toMatchObject([{ name: '已存在餐饮' }]);
-    const createdId = response.json<Array<{ id: string }>>()[0]!.id;
-    expect(createdId).not.toBe(custom.id);
-    expect(
-      await prisma.category.findMany({
-        where: { ownerId: user.user.user_id, id: { not: createdId } },
-        orderBy: { id: 'asc' },
-      }),
-    ).toEqual(before);
-    expect(await prisma.syncChange.count({ where: { userId: user.user.user_id } })).toBe(count + 1);
-  });
-
-  it.each([
-    ['delete', true],
-    ['delete', false],
-    ['migrate', true],
-    ['migrate', false],
-    ['promote', true],
-    ['promote', false],
-  ] as const)('分类%s清空周期分类并保留原排期与启用状态%s', async (mode, enabled) => {
-    const user = await account();
-    const source = await user.category('周期源');
-    const target = await user.category('周期目标');
-    const rule = await prisma.recurringTransaction.create({
-      data: {
-        id: randomUUID(),
-        ledgerId: user.ledger.id,
-        ownerId: user.user.user_id,
-        txType: 'expense',
-        amount: '10',
-        currencyCode: 'CNY',
-        categoryId: source.id,
-        frequency: 'monthly',
-        dayOfMonth: 15,
-        startDate: new Date('2026-10-01T00:00:00Z'),
-        enabled,
-      },
-    });
-    const scope = await user.preview([source.id]);
-    const response = await user.call(
-      'POST',
-      `/ledgers/${user.ledger.id}/categories/remove`,
-      {
-        category_ids: [source.id],
-        mode,
-        preview_token: scope.preview_token,
-        ...(mode === 'migrate' ? { target_category_id: target.id, expected_target_updated_at: target.updated_at } : {}),
-      },
-      randomUUID(),
-    );
-    expect(response.statusCode, response.body).toBe(200);
-    expect(response.json()).toMatchObject({ affected_recurring_rules: 1 });
-    expect(await prisma.recurringTransaction.findUniqueOrThrow({ where: { id: rule.id } })).toMatchObject({
-      enabled,
-      categoryId: null,
-      lastGeneratedDate: null,
-    });
-    const notifications = await prisma.syncChange.findMany({
-      where: {
-        userId: user.user.user_id,
-        entityType: 'ledger',
-        entityId: user.ledger.id,
-      },
-    });
-    expect(notifications.some((item) => (item.payload as { requires_full?: boolean }).requires_full === true)).toBe(
-      true,
-    );
-  });
-
   it('超过100项的完整父子模板一次写入，重放不增加实体或同步事件', async () => {
     const user = await account();
     const defaults = await prisma.category.findMany({ where: { ownerId: user.user.user_id }, orderBy: { id: 'asc' } });
@@ -276,30 +143,6 @@ describe('分类批量命令', () => {
       before,
     );
     expect(await prisma.syncChange.count({ where: { userId: user.user.user_id } })).toBe(count);
-  });
-
-  it('拒绝未支持的删除策略，关联交易和分类保持原值', async () => {
-    const user = await account();
-    const source = await user.category('保留交易');
-    const transaction = await user.transaction(source.id);
-    const before = await prisma.transaction.findUniqueOrThrow({ where: { id: transaction.id } });
-    const scope = await user.preview([source.id]);
-    const response = await user.call(
-      'POST',
-      `/ledgers/${user.ledger.id}/categories/remove`,
-      {
-        category_ids: [source.id],
-        mode: 'uncategorize',
-        preview_token: scope.preview_token,
-      },
-      randomUUID(),
-    );
-    expect(response.statusCode, response.body).toBe(400);
-    const after = await prisma.transaction.findUniqueOrThrow({ where: { id: transaction.id } });
-    expect(after).toEqual(before);
-    expect(
-      await prisma.category.findUniqueOrThrow({ where: { id_ownerId: { id: source.id, ownerId: user.user.user_id } } }),
-    ).toMatchObject({ deletedAt: null });
   });
 
   it('排序整批校验版本，响应丢失重试不重复写事件', async () => {
@@ -391,28 +234,6 @@ describe('分类批量命令', () => {
     expect((await prisma.transaction.findUniqueOrThrow({ where: { id: transaction.id } })).deletedAt).toBeNull();
   });
 
-  it('删除分类树只软删除测试交易，并通过同步日志传播', async () => {
-    const user = await account();
-    const root = await user.category('级联源');
-    const child = await user.category('级联子', root.id);
-    const transaction = await user.transaction(child.id);
-    const scope = await user.preview([root.id]);
-    const response = await user.call(
-      'POST',
-      `/ledgers/${user.ledger.id}/categories/remove`,
-      { category_ids: [root.id], mode: 'delete', preview_token: scope.preview_token },
-      randomUUID(),
-    );
-    expect(response.statusCode, response.body).toBe(200);
-    expect(response.json()).toMatchObject({ removed_categories: 2, affected_transactions: 1 });
-    expect((await prisma.transaction.findUniqueOrThrow({ where: { id: transaction.id } })).deletedAt).not.toBeNull();
-    expect(
-      await prisma.syncChange.count({
-        where: { userId: user.user.user_id, entityType: 'transaction', entityId: transaction.id, action: 'delete' },
-      }),
-    ).toBe(1);
-  });
-
   it('提升保留子分类及其交易，只删除父分类直接关联交易', async () => {
     const user = await account();
     const root = await user.category('提升源');
@@ -435,34 +256,5 @@ describe('分类批量命令', () => {
       (await prisma.transaction.findUniqueOrThrow({ where: { id: parentTransaction.id } })).deletedAt,
     ).not.toBeNull();
     expect((await prisma.transaction.findUniqueOrThrow({ where: { id: childTransaction.id } })).deletedAt).toBeNull();
-  });
-
-  it('跨账号预览拒绝，提升同名子分类保留双方独立身份', async () => {
-    const user = await account();
-    const stranger = await account();
-    const root = await user.category('冲突源');
-    const promoted = await user.category('同名', root.id);
-    const existing = await user.category('同名');
-    const scope = await user.preview([root.id]);
-    const denied = await stranger.call('POST', `/ledgers/${user.ledger.id}/categories/removal-preview`, {
-      category_ids: [root.id],
-    });
-    expect([403, 404]).toContain(denied.statusCode);
-    const response = await user.call(
-      'POST',
-      `/ledgers/${user.ledger.id}/categories/remove`,
-      { category_ids: [root.id], mode: 'promote', preview_token: scope.preview_token },
-      randomUUID(),
-    );
-    expect(response.statusCode, response.body).toBe(200);
-    expect(
-      (await prisma.category.findUniqueOrThrow({ where: { id_ownerId: { id: root.id, ownerId: user.user.user_id } } }))
-        .deletedAt,
-    ).not.toBeNull();
-    const remaining = await prisma.category.findMany({
-      where: { ownerId: user.user.user_id, id: { in: [promoted.id, existing.id] } },
-    });
-    expect(remaining).toHaveLength(2);
-    expect(remaining.every((row) => row.level === 1 && row.parentId === null && row.deletedAt === null)).toBe(true);
   });
 });

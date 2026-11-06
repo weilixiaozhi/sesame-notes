@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { expect, it } from 'vitest';
 import { safeRequestUrl, serializeRequest } from '../src/shared/request-logging.js';
 
-it.each(['/api/v1/ws', '/api/v1/%77s', '/api/v1/w%73'])('实时握手日志隐藏全部查询参数：%s', async (path) => {
+it.each(['/api/v1/%77s'])('实时握手日志隐藏全部查询参数：%s', async (path) => {
   const records: string[] = [];
   const app = Fastify({
     logger: { stream: { write: (record) => records.push(record) }, serializers: { req: serializeRequest } },

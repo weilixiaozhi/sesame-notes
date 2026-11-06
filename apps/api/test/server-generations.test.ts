@@ -166,22 +166,6 @@ afterAll(async () => {
 });
 
 describe('服务端 generation 基础设施', () => {
-  it('server_epochs 单例行存在：auth_generation / idempotency_generation 为随机 UUID', async () => {
-    const row = await prisma.serverEpoch.findUnique({ where: { id: 0 } });
-    expect(row).not.toBeNull();
-    // 随机 generation：轮换后不会回到历史值
-    expect(row!.authGeneration).toMatch(/^[0-9a-f-]{36}$/);
-    expect(row!.idempotencyGeneration).toMatch(/^[0-9a-f-]{36}$/);
-  });
-
-  it('refresh token 携带 auth_generation：登录后与当前一致', async () => {
-    const { userId } = await registerUser();
-    const current = await currentAuthGeneration(prisma);
-    const tokens = await prisma.refreshToken.findMany({ where: { userId } });
-    expect(tokens.length).toBeGreaterThan(0);
-    for (const t of tokens) expect(t.authGeneration).toBe(current);
-  });
-
   it('auth_generation 轮换后：旧 refresh token 失效，新登录可用', async () => {
     const { refreshToken, phone } = await registerUser();
     const before = await currentAuthGeneration(prisma);

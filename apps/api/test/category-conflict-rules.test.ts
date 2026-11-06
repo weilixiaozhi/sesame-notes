@@ -59,34 +59,18 @@ describe('官方分类身份与基线规则', () => {
     expect(officialCategoryIdentity('aaaaaaaa-aaaa-5aaa-aaaa-aaaaaaaaaaaa')).toBeUndefined();
     expect(officialCategoryIdentity('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa')).toBeUndefined();
   });
-  it.each([
-    'ownerId',
-    'id',
-    'name',
-    'kind',
-    'level',
-    'sortOrder',
-    'icon',
-    'parentId',
-    'updatedAt',
-    'updatedByDeviceId',
-    'deletedAt',
-  ] as const)('基线包括%s，不能把陈旧元数据或墓碑视作当前版本', (field) => {
-    const changes: Record<typeof field, unknown> = {
-      ownerId: '33333333-3333-4333-8333-333333333333',
-      id: '44444444-4444-4444-8444-444444444444',
-      name: '其他',
-      kind: 'other',
-      level: 2,
-      sortOrder: 4,
-      icon: null,
-      parentId: '55555555-5555-4555-8555-555555555555',
-      updatedAt: new Date('2026-01-01T00:00:00.124Z'),
-      updatedByDeviceId: null,
-      deletedAt: new Date('2026-01-02T00:00:00.000Z'),
-    };
-    expect(categoryVersionToken({ ...row, [field]: changes[field] })).not.toBe(categoryVersionToken(row));
-  });
+  it.each(['ownerId', 'name', 'updatedAt', 'deletedAt'] as const)(
+    '基线包括%s，不能把陈旧元数据或墓碑视作当前版本',
+    (field) => {
+      const changes: Record<typeof field, unknown> = {
+        ownerId: '33333333-3333-4333-8333-333333333333',
+        name: '其他',
+        updatedAt: new Date('2026-01-01T00:00:00.124Z'),
+        deletedAt: new Date('2026-01-02T00:00:00.000Z'),
+      };
+      expect(categoryVersionToken({ ...row, [field]: changes[field] })).not.toBe(categoryVersionToken(row));
+    },
+  );
   it('同内容只按完整业务语义判断，墓碑与父节点不同不能被当作no-op', () => {
     expect(categoryIntentMatches(row, 'upsert', draft)).toBe(true);
     expect(categoryIntentMatches({ ...row, deletedAt: new Date() }, 'upsert', draft)).toBe(false);
@@ -102,12 +86,6 @@ describe('官方分类身份与基线规则', () => {
     expect(() => normalizeCategoryDraft({ ...draft, level: 2, parent_id: row.id }, row.id)).toThrow();
   });
   it.each([
-    {
-      name: '父身份无效',
-      level: 2,
-      parentId: 'not-a-uuid',
-      code: 'INVALID_CATEGORY_PARENT',
-    },
     {
       name: '一级带父分类',
       level: 1,

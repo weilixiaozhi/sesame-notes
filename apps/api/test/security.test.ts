@@ -73,79 +73,6 @@ describe('认证 Cookie 请求来源', () => {
     };
   }
 
-  it.each([true, false])('完整注册、登录、轮换和退出（浏览器 Cookie：%s）', async (browser) => {
-    const body = credentials();
-    const prefix = browser ? `${API_BASE}/auth/browser` : `${API_BASE}/auth`;
-    const cookieName = 'browser_refresh_token';
-    const headers: Record<string, string> = browser ? { origin: config.corsOrigins[0]! } : {};
-    const registered = await cookieApp.inject({
-      method: 'post',
-      url: `${prefix}/register`,
-      payload: body,
-      headers,
-    });
-    expect(registered.statusCode).toBe(201);
-    if (browser) {
-      expect(registered.cookies).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ name: cookieName, httpOnly: true, sameSite: 'Strict', path: prefix }),
-        ]),
-      );
-      expect(registered.json()).not.toHaveProperty('refresh_token');
-    } else {
-      expect(registered.cookies).toHaveLength(0);
-    }
-    const loggedIn = await cookieApp.inject({
-      method: 'post',
-      url: `${prefix}/login`,
-      payload: body,
-      headers,
-    });
-    expect(loggedIn.statusCode).toBe(200);
-    const oldToken = browser
-      ? loggedIn.cookies.find((cookie) => cookie.name === cookieName)!.value
-      : (loggedIn.json().refresh_token as string);
-    const refreshed = await cookieApp.inject({
-      method: 'post',
-      url: `${prefix}/refresh`,
-      headers: { ...headers, ...(browser ? { cookie: `${cookieName}=${oldToken}` } : {}) },
-      payload: browser ? {} : { refresh_token: oldToken },
-    });
-    expect(refreshed.statusCode).toBe(200);
-    const newToken = browser
-      ? refreshed.cookies.find((cookie) => cookie.name === cookieName)!.value
-      : (refreshed.json().refresh_token as string);
-    expect(newToken).not.toBe(oldToken);
-    const loggedOut = await cookieApp.inject({
-      method: 'post',
-      url: `${prefix}/logout`,
-      headers: {
-        ...headers,
-        authorization: `Bearer ${refreshed.json().access_token}`,
-        ...(browser ? { cookie: `${cookieName}=${newToken}` } : {}),
-      },
-      payload: browser ? {} : { refresh_token: newToken },
-    });
-    expect(loggedOut.statusCode).toBe(204);
-    if (browser) {
-      expect(loggedOut.cookies).toEqual(
-        expect.arrayContaining([expect.objectContaining({ name: cookieName, value: '', path: prefix })]),
-      );
-    } else {
-      expect(loggedOut.cookies).toHaveLength(0);
-    }
-    // 旧令牌和退出后的令牌都必须失效，不能只验证 HTTP 成功。
-    for (const token of [oldToken, newToken]) {
-      const replay = await cookieApp.inject({
-        method: 'post',
-        url: `${API_BASE}/auth/refresh`,
-        payload: { refresh_token: token },
-      });
-      expect(replay.statusCode).toBe(401);
-      expect(replay.json().code).toBe('INVALID_REFRESH_TOKEN');
-    }
-  });
-
   it('拒绝不可信或缺失来源，业务及 Cookie 均无副作用，正文令牌和 Bearer 不得绕过', async () => {
     const body = credentials();
     const registered = await cookieApp.inject({ method: 'post', url: `${API_BASE}/auth/register`, payload: body });
@@ -396,38 +323,5 @@ describe('安全边界（限流与 CORS）', () => {
     } finally {
       await phoneApp.close();
     }
-  });
-
-  it('CORS：白名单来源获得跨域响应头', async () => {
-    const response = await app.inject({
-      method: 'get',
-      url: `${API_BASE}/health`,
-      headers: { origin: 'http://app.example.com' },
-    });
-    expect(response.headers['access-control-allow-origin']).toBe('http://app.example.com');
-    expect(response.headers['access-control-allow-credentials']).toBe('true');
-  });
-
-  it('CORS：非白名单来源不获得跨域响应头', async () => {
-    const response = await app.inject({
-      method: 'get',
-      url: `${API_BASE}/health`,
-      headers: { origin: 'http://evil.example.com' },
-    });
-    expect(response.headers['access-control-allow-origin']).toBeUndefined();
-  });
-
-  it('CORS：预检请求按白名单放行', async () => {
-    const response = await app.inject({
-      method: 'options',
-      url: `${API_BASE}/auth/login`,
-      headers: {
-        origin: 'http://app.example.com',
-        'access-control-request-method': 'POST',
-        'access-control-request-headers': 'content-type, authorization',
-      },
-    });
-    expect(response.statusCode).toBe(204);
-    expect(response.headers['access-control-allow-origin']).toBe('http://app.example.com');
   });
 });

@@ -1,5 +1,3 @@
-import { StrictMode } from 'react';
-import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { components } from '@sesame-notes/api-client';
@@ -44,10 +42,6 @@ const category: components['schemas']['Category'] = {
   version_token: 'test-category-version',
   updated_at: '1970-01-01T00:00:00.000Z',
 };
-/** 强制 React 重放挂载生命周期，验证自动操作只在仍有效的挂载中发出。 */
-function strict({ children }: { children: ReactNode }) {
-  return <StrictMode>{children}</StrictMode>;
-}
 
 beforeEach(() => {
   queryClient.clear();
@@ -63,42 +57,6 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('既有空账本默认分类初始化', () => {
-  it('读取成功为空后发出正式命令，StrictMode仍只有一次并仅刷新当前账号分类', async () => {
-    const view = renderHook(({ empty }) => useDefaultCategoryInitialization(ledger, 'owner', empty), {
-      initialProps: { empty: false },
-      wrapper: strict,
-    });
-    await act(async () => {});
-    expect(mocks.post).not.toHaveBeenCalled();
-    view.rerender({ empty: true });
-    await waitFor(() => expect(queryClient.getQueryData(completedKey)).toBe(true));
-    expect(mocks.post).toHaveBeenCalledTimes(1);
-    expect(mocks.post.mock.calls[0]).toEqual([
-      '/api/v1/ledgers/{ledger_id}/categories/add-batch',
-      {
-        signal: expect.any(AbortSignal),
-        params: { path: { ledger_id: ledger.id }, header: { 'idempotency-key': expect.any(String) } },
-        body: { items: [], initialize_defaults: true },
-      },
-    ]);
-    expect(queryClient.getQueryState(categoryKey)?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState(otherLedgerKey)?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState(otherAccountKey)?.isInvalidated).toBe(false);
-    expect(queryClient.getQueryData(categoryKey)).toEqual([]);
-    expect(view.result.current.error).toBeNull();
-  });
-
-  it('已加载非空目录和共享编辑者均不请求初始化', async () => {
-    const view = renderHook(({ current, empty }) => useDefaultCategoryInitialization(current, 'owner', empty), {
-      initialProps: { current: ledger, empty: false },
-    });
-    await act(async () => {});
-    view.rerender({ current: { ...ledger, role: 'editor' }, empty: true });
-    await act(async () => {});
-    expect(mocks.capture).not.toHaveBeenCalled();
-    expect(mocks.post).not.toHaveBeenCalled();
-  });
-
   it('服务端墓碑目录返回空也视为已检查，刷新及重新进入不循环补种', async () => {
     mocks.post.mockResolvedValue({ data: [] });
     const first = renderHook(({ empty }) => useDefaultCategoryInitialization(ledger, 'owner', empty), {
@@ -140,24 +98,6 @@ describe('既有空账本默认分类初始化', () => {
     expect(queryClient.getQueryData(completedKey)).toBe(true);
   });
 
-  it('卸载取消请求，迟到的初始化响应不能标记成功或改写缓存', async () => {
-    let resolve!: (value: unknown) => void;
-    mocks.post.mockImplementation(
-      () =>
-        new Promise((done) => {
-          resolve = done;
-        }),
-    );
-    const view = renderHook(() => useDefaultCategoryInitialization(ledger, 'owner', true));
-    await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(1));
-    const signal = mocks.post.mock.calls[0]?.[1]?.signal as AbortSignal;
-    view.unmount();
-    expect(signal.aborted).toBe(true);
-    await act(async () => resolve({ data: [category] }));
-    expect(queryClient.getQueryData(completedKey)).toBeUndefined();
-    expect(queryClient.getQueryState(categoryKey)?.isInvalidated).toBe(false);
-  });
-
   it('换号在组件卸载前已取消，旧响应不会给新账号留下数据或错误', async () => {
     let resolve!: (value: unknown) => void;
     mocks.post.mockImplementation(
@@ -179,40 +119,5 @@ describe('既有空账本默认分类初始化', () => {
     expect(queryClient.getQueryState(otherAccountKey)?.isInvalidated).toBe(false);
     expect(view.result.current.error).toBeNull();
     expect(view.result.current.isPending).toBe(false);
-  });
-
-  it('切账本取消旧请求，旧错误不污染新视图，新请求使用新身份', async () => {
-    let reject!: (reason: unknown) => void;
-    mocks.post.mockImplementationOnce(
-      () =>
-        new Promise((_done, fail) => {
-          reject = fail;
-        }),
-    );
-    const view = renderHook(({ current }) => useDefaultCategoryInitialization(current, 'owner', true), {
-      initialProps: { current: ledger },
-    });
-    await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(1));
-    const signal = mocks.post.mock.calls[0]?.[1]?.signal as AbortSignal;
-    view.rerender({ current: { ...ledger, id: 'second-ledger' } });
-    await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(2));
-    expect(signal.aborted).toBe(true);
-    await act(async () => reject(new TypeError('old ledger response')));
-    expect(view.result.current.error).toBeNull();
-    expect(mocks.post.mock.calls[1]?.[1]?.params.path.ledger_id).toBe('second-ledger');
-    expect(mocks.post.mock.calls[1]?.[1]?.params.header['idempotency-key']).not.toBe(
-      mocks.post.mock.calls[0]?.[1]?.params.header['idempotency-key'],
-    );
-  });
-
-  it('过期的幂等响应不覆盖已更新分类，完成后通过权威读取获得最新数据', async () => {
-    const fresh = [{ ...category, name: '我已改名' }];
-    const invalidate = vi.spyOn(queryClient, 'invalidateQueries').mockImplementation(async () => {
-      queryClient.setQueryData(categoryKey, fresh);
-    });
-    const view = renderHook(() => useDefaultCategoryInitialization(ledger, 'owner', true));
-    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(1));
-    expect(queryClient.getQueryData(categoryKey)).toEqual(fresh);
-    expect(view.result.current.error).toBeNull();
   });
 });

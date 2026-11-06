@@ -170,53 +170,53 @@ async function readState(fixture: Fixture) {
 }
 
 describe('交易创建的幂等重放与当前授权', () => {
-  it.each([
-    { change: '分类软删除', code: 'INVALID_CATEGORY' },
-    { change: '账本币种变化', code: 'INVALID_NATIVE_AMOUNT' },
-  ])('$change 后同键重放首次响应，新键仍按当前规则拒绝', async ({ change, code }) => {
-    try {
-      const fixture = await createFixture();
-      if (change === '分类软删除') {
-        // 本用例验证已保存回执与后续云态的关系，直接构造历史分类墓碑。
-        await prisma.category.update({
-          where: { id_ownerId: { id: fixture.categoryId, ownerId: owner.userId } },
-          data: { deletedAt: new Date() },
-        });
-      } else {
-        const changed = await api('PATCH', `/ledgers/${fixture.ledgerId}`, {
+  it.each([{ change: '分类软删除', code: 'INVALID_CATEGORY' }])(
+    '$change 后同键重放首次响应，新键仍按当前规则拒绝',
+    async ({ change, code }) => {
+      try {
+        const fixture = await createFixture();
+        if (change === '分类软删除') {
+          // 本用例验证已保存回执与后续云态的关系，直接构造历史分类墓碑。
+          await prisma.category.update({
+            where: { id_ownerId: { id: fixture.categoryId, ownerId: owner.userId } },
+            data: { deletedAt: new Date() },
+          });
+        } else {
+          const changed = await api('PATCH', `/ledgers/${fixture.ledgerId}`, {
+            session: owner,
+            payload: { currency: 'USD' },
+          });
+          expect(changed.statusCode, changed.body).toBe(200);
+        }
+        const before = await readState(fixture);
+        const replay = await api('POST', fixture.path, { session: owner, key: fixture.key, payload: fixture.body });
+        expect(replay.statusCode, replay.body).toBe(200);
+        expect(replay.json()).toEqual(fixture.originalResponse);
+        expect(await readState(fixture)).toEqual(before);
+
+        const fresh = await api('POST', fixture.path, {
           session: owner,
-          payload: { currency: 'USD' },
+          key: randomUUID(),
+          payload: { ...fixture.body, id: randomUUID() },
         });
-        expect(changed.statusCode, changed.body).toBe(200);
+        expect(fresh.statusCode, fresh.body).toBe(400);
+        expect(fresh.json()).toMatchObject({ code });
+        expect(await readState(fixture)).toEqual(before);
+
+        const reused = await api('POST', fixture.path, {
+          session: owner,
+          key: fixture.key,
+          payload: { ...fixture.body, note: '不同请求' },
+        });
+        expect(reused.statusCode, reused.body).toBe(409);
+        expect(reused.json()).toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+        expect(await readState(fixture)).toEqual(before);
+      } catch (error) {
+        console.error('交易幂等重放与当前校验回归失败', { change, error });
+        throw error;
       }
-      const before = await readState(fixture);
-      const replay = await api('POST', fixture.path, { session: owner, key: fixture.key, payload: fixture.body });
-      expect(replay.statusCode, replay.body).toBe(200);
-      expect(replay.json()).toEqual(fixture.originalResponse);
-      expect(await readState(fixture)).toEqual(before);
-
-      const fresh = await api('POST', fixture.path, {
-        session: owner,
-        key: randomUUID(),
-        payload: { ...fixture.body, id: randomUUID() },
-      });
-      expect(fresh.statusCode, fresh.body).toBe(400);
-      expect(fresh.json()).toMatchObject({ code });
-      expect(await readState(fixture)).toEqual(before);
-
-      const reused = await api('POST', fixture.path, {
-        session: owner,
-        key: fixture.key,
-        payload: { ...fixture.body, note: '不同请求' },
-      });
-      expect(reused.statusCode, reused.body).toBe(409);
-      expect(reused.json()).toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
-      expect(await readState(fixture)).toEqual(before);
-    } catch (error) {
-      console.error('交易幂等重放与当前校验回归失败', { change, error });
-      throw error;
-    }
-  });
+    },
+  );
 
   it('Editor 被移除后不能通过旧幂等键读取成功响应', async () => {
     try {

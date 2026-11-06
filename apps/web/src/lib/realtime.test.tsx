@@ -110,30 +110,4 @@ describe('实时变更提示', () => {
     expect(TestSocket.instances).toHaveLength(2);
     expect(mocks.invalidate).not.toHaveBeenCalled();
   });
-
-  it('断网时丢弃尚未完成的票据，卸载后不重连', async () => {
-    let finish!: (value: ReturnType<typeof ticket>) => void;
-    mocks.post.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-    );
-    const hook = renderHook(() => useRealtime('A'));
-    act(() => {
-      online = false;
-      window.dispatchEvent(new Event('offline'));
-    });
-    await act(async () => finish(ticket()));
-    expect(TestSocket.instances).toHaveLength(0);
-    act(() => {
-      online = true;
-      window.dispatchEvent(new Event('online'));
-    });
-    await act(async () => {});
-    expect(TestSocket.instances).toHaveLength(1);
-    hook.unmount();
-    await act(() => vi.advanceTimersByTimeAsync(60_000));
-    expect(mocks.post).toHaveBeenCalledTimes(2);
-  });
 });

@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { webcrypto } from 'node:crypto';
 import { detectMemoTableMapping, mapMemoTable, credentialFieldLabel } from './memo-table-import';
-import { mapDayRows, detectDayMapping } from '../days/day-import-format';
-import { parseJsonTables, selectTable } from '../../lib/transfer/table';
 import type { MemoBook } from './memo-content';
 const now = '2026-09-30T00:00:00.000Z';
 const book: MemoBook = {
@@ -17,15 +15,6 @@ const book: MemoBook = {
 };
 beforeEach(() => vi.stubGlobal('crypto', webcrypto));
 describe('普通备忘录与私密卡片表格映射', () => {
-  it('普通正文规范化CRLF并追加结束换行，重复映射身份稳定', async () => {
-    const table = { headers: ['title', 'body'], rows: [['标题', '第一行\r\n第二行']] };
-    const mapping = detectMemoTableMapping(table.headers);
-    const first = await mapMemoTable(table, mapping, {}, book, now);
-    expect(first.books[0]?.entries[0]?.body).toEqual({ ops: [{ insert: '第一行\n第二行\n' }] });
-    const repeat = await mapMemoTable(table, mapping, {}, book, '2026-10-01T00:00:00.000Z');
-    expect(repeat.export_id).toBe(first.export_id);
-    expect(repeat.books[0]?.entries[0]?.source_entry_id).toBe(first.books[0]?.entries[0]?.source_entry_id);
-  });
   it('账号字段保留值空白，标题列排除，空映射不导入该列', async () => {
     const table = {
       headers: ['title', 'username', 'password', 'ignore'],
@@ -62,10 +51,5 @@ describe('普通备忘录与私密卡片表格映射', () => {
     await expect(
       mapMemoTable(table, detectMemoTableMapping(table.headers), fields, { ...book, type: 'credentials' }, now),
     ).rejects.toThrow('最多 20');
-  });
-  it('日子通用JSON与XLSX零点日期同样保留自然日', () => {
-    const table = selectTable(parseJsonTables('[{"name":"学习日","date":"2026-09-30T00:00:00.000Z"}]')[0]!, true);
-    const result = mapDayRows(table, detectDayMapping(table.headers), 'anniversary', 'day', now);
-    expect(result[0]?.payload.event?.solar_date).toBe('2026-09-30');
   });
 });

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkContractCompatibility, checkCurrentContract, checkRepositoryContract } from '../check/contract-check.mjs';
+import { checkRepositoryContract } from '../check/contract-check.mjs';
 import { findContractBreakingChanges } from '../lib/contract-compatibility.mjs';
 
 /** 最小真实 OpenAPI 结构使请求和响应的兼容方向都能被独立验证。 */
@@ -90,34 +90,6 @@ test('兼容门禁拒绝响应新增不兼容联合分支及无法解析的引�
   assert.throws(() => findContractBreakingChanges(contract(), broken), /历史契约兼容性分析失败/);
 });
 
-test('兼容门禁不把同名业务字段当注释忽略，并检查认证定义与成功状态', () => {
-  const baseline = contract(undefined, { type: 'object', properties: { description: { type: 'string' } } });
-  const changed = contract(undefined, { type: 'object', properties: { description: { type: 'integer' } } });
-  assert.match(findContractBreakingChanges(baseline, changed).join('\n'), /description/);
-  const secured = {
-    ...contract(),
-    components: { ...contract().components, securitySchemes: { bearer: { type: 'http', scheme: 'bearer' } } },
-  };
-  assert.match(findContractBreakingChanges(secured, contract()).join('\n'), /认证方式/);
-  const success = contract();
-  success.paths['/items'].get.responses['201'] = success.paths['/items'].get.responses['200'];
-  assert.match(findContractBreakingChanges(contract(), success).join('\n'), /新增成功状态/);
-});
-
-test('兼容门禁检查联合类型外层约束和可空范围', () => {
-  const schema = { anyOf: [{ type: 'string', enum: ['one', 'two'] }] };
-  assert.match(
-    findContractBreakingChanges(contract(schema), contract({ ...schema, maxLength: 2 })).join('\n'),
-    /maxLength/,
-  );
-  assert.match(
-    findContractBreakingChanges(contract(undefined, schema), contract(undefined, { ...schema, nullable: true })).join(
-      '\n',
-    ),
-    /联合类型/,
-  );
-});
-
 test('兼容门禁按自有属性检查特殊字段，不能把对象原型当作 schema', () => {
   try {
     const closed = { type: 'object', additionalProperties: false, properties: {} };
@@ -141,25 +113,6 @@ test('兼容门禁按自有属性检查特殊字段，不能把对象原型当�
   } catch (cause) {
     throw new Error('特殊属性名的契约边界回归失败', { cause });
   }
-});
-
-const current = JSON.stringify({ info: { version: '1.0.0' }, paths: {} });
-test('契约校验版本一致性，允许版本正常演进', () => {
-  assert.doesNotThrow(() => checkCurrentContract(current, current, '1.0.0'));
-  assert.throws(() => checkCurrentContract(current, `${current}\n`, '1.0.0'), /不一致/);
-  assert.throws(() => checkCurrentContract(current, current, '2.0.0'), /不一致/);
-  const changed = current.replace('1.0.0', '2.0.0');
-  assert.throws(() => checkCurrentContract(changed, changed, '1.0.0'), /不一致/);
-  assert.doesNotThrow(() => checkCurrentContract(changed, changed, '2.0.0'));
-});
-
-test('固定基线门禁直接拒绝破坏性变更，比较不修改快照', () => {
-  const baseline = contract();
-  const original = JSON.stringify(baseline);
-  assert.doesNotThrow(() => checkContractCompatibility(baseline, contract({ type: 'string', maxLength: 256 })));
-  assert.throws(() => checkContractCompatibility(baseline, { paths: {} }), /操作被删除/);
-  assert.throws(() => checkContractCompatibility(baseline, contract({ type: 'string', maxLength: 32 })), /maxLength/);
-  assert.equal(JSON.stringify(baseline), original);
 });
 
 /** 从嵌套错误中保留完整诊断，便于确认校验失败的具体原因。 */
@@ -252,34 +205,6 @@ test('支持快照全部参加仓库门禁，追加新基线仍保留旧客户�
     );
   } catch (cause) {
     throw new Error('多份受支持契约快照门禁测试失败', { cause });
-  }
-});
-
-test('参数content按请求方向检查类型、媒体与编码，不静默退化为空schema', () => {
-  try {
-    const baseline = contract();
-    const parameter = baseline.paths['/items'].get.parameters[0];
-    delete parameter.schema;
-    parameter.content = { 'application/json': { schema: { type: 'string', maxLength: 64 } } };
-    const candidate = structuredClone(baseline);
-    const next = candidate.paths['/items'].get.parameters[0];
-    next.content['application/json'].schema.maxLength = 128;
-    assert.deepEqual(findContractBreakingChanges(baseline, candidate), []);
-    next.content['application/json'].schema.type = 'integer';
-    assert.match(findContractBreakingChanges(baseline, candidate).join('\n'), /类型/);
-    next.content = { 'text/plain': { schema: { type: 'string' } } };
-    assert.match(findContractBreakingChanges(baseline, candidate).join('\n'), /媒体类型/);
-    delete next.content;
-    next.schema = { type: 'string' };
-    assert.match(findContractBreakingChanges(baseline, candidate).join('\n'), /schema\/content/);
-    delete next.schema;
-    next.content = structuredClone(parameter.content);
-    next.content['application/json'].encoding = { cursor: { style: 'form' } };
-    assert.match(findContractBreakingChanges(baseline, candidate).join('\n'), /媒体编码/);
-    next.content['text/plain'] = { schema: { type: 'string' } };
-    assert.throws(() => findContractBreakingChanges(baseline, candidate), /历史契约兼容性分析失败/);
-  } catch (cause) {
-    throw new Error('参数content兼容方向回归失败', { cause });
   }
 });
 

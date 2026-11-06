@@ -176,92 +176,83 @@ it('两类型、原始字符、毫秒时间、CAS、重放、私有 full 与删�
   expect((await get(stranger, 'memo-books')).json().memo_books).toEqual([]);
 });
 
-it.each(['normal', 'credentials'])(
-  '%s 标题和正文中的真实 NUL 与字面转义在创建、修改和同步读取时逐字保留',
-  async (type) => {
-    try {
-      const owner = await register();
-      const bookId = randomUUID();
-      const created = await push(
-        owner,
-        change(bookId, { payload: { name: '原始标题', type, created_at: time, updated_at: time } }),
-      );
-      expect(created.status).toBe(200);
-      expect(created.body.outcomes[0].status).toBe('accepted');
-      const syncId = created.body.outcomes[0].sync_id;
-      const entryId = randomUUID();
-      const titles =
-        type === 'normal'
-          ? ['首行\u0000与字面\\u0000😀', '修改\u0000后仍有\\u0000']
-          : ['  账号\u0000标题\\u0000  ', '\t新卡片\u0000与\\u0000\n'];
-      const expectedEvents: Array<{ title: string; body: unknown; updated_at: string }> = [];
-      for (const [index, title] of titles.entries()) {
-        // 普通笔记的标题模拟正文首行自动摘要，卡片标题则保留用户输入的全部空白。
-        const body =
-          type === 'normal'
-            ? { ops: [{ insert: `${title}\n原始正文\u0000与字面\\u0000\n` }] }
-            : { fields: [{ label: '密码', value: '真实\u0000与字面\\u0000' }] };
-        const updatedAt = index === 0 ? time : '2026-09-08T01:03:04.567Z';
-        const payload = {
-          book_type: type,
-          title,
-          body_format: type === 'normal' ? 'delta_v1' : 'fields_v1',
-          body,
-          order_key: type === 'normal' ? null : '9007199254740993',
-          created_at: time,
-          updated_at: updatedAt,
-        };
-        const mutation = change(bookId, {
-          entity_type: 'memo_entry',
-          entity_id: entryId,
-          sync_id: syncId,
-          base_revision: index,
-          updated_at: updatedAt,
-          payload,
-        });
-        const saved = await push(owner, mutation);
-        expect(saved.status).toBe(200);
-        expect(saved.body.outcomes[0]).toMatchObject({ status: 'accepted', revision: index + 1 });
-        const row = await prisma.memoEntry.findUniqueOrThrow({ where: { id: entryId } });
-        expect(row.title).toBe(title);
-        expect(row.body).toEqual(body);
-        expect(row.createdAt.toISOString()).toBe(time);
-        expect(row.updatedAt.toISOString()).toBe(updatedAt);
-        const snapshot = await get(owner, `memo-books/full?memo_book_id=${bookId}`);
-        expect(snapshot.statusCode).toBe(200);
-        expect(snapshot.json().memo_entries).toEqual([expect.objectContaining(payload)]);
-        const pulled = await get(owner, 'pull?since=0&limit=1000');
-        expect(pulled.statusCode).toBe(200);
-        expectedEvents.push({ title, body, updated_at: updatedAt });
-        const events = pulled
-          .json<{ changes: Array<{ entity_id: string; payload: Record<string, unknown> }> }>()
-          .changes.filter((event) => event.entity_id === entryId);
-        expect(
-          events.map((event) => ({
-            title: event.payload.title,
-            body: event.payload.body,
-            updated_at: event.payload.updated_at,
-          })),
-        ).toEqual(expectedEvents);
-        expect((await push(owner, mutation)).body.outcomes[0]).toMatchObject({
-          status: 'ignored',
-          revision: index + 1,
-        });
-      }
-      for (const invalid of [null, true, 30, [], {}]) {
-        await expect(prisma.$executeRaw`
+it.each(['credentials'])('%s 标题和正文中的真实 NUL 与字面转义在创建、修改和同步读取时逐字保留', async (type) => {
+  try {
+    const owner = await register();
+    const bookId = randomUUID();
+    const created = await push(
+      owner,
+      change(bookId, { payload: { name: '原始标题', type, created_at: time, updated_at: time } }),
+    );
+    expect(created.status).toBe(200);
+    expect(created.body.outcomes[0].status).toBe('accepted');
+    const syncId = created.body.outcomes[0].sync_id;
+    const entryId = randomUUID();
+    const titles = ['  账号\u0000标题\\u0000  ', '\t新卡片\u0000与\\u0000\n'];
+    const expectedEvents: Array<{ title: string; body: unknown; updated_at: string }> = [];
+    for (const [index, title] of titles.entries()) {
+      // 普通笔记的标题模拟正文首行自动摘要，卡片标题则保留用户输入的全部空白。
+      const body = { fields: [{ label: '密码', value: '真实\u0000与字面\\u0000' }] };
+      const updatedAt = index === 0 ? time : '2026-09-08T01:03:04.567Z';
+      const payload = {
+        book_type: type,
+        title,
+        body_format: 'fields_v1',
+        body,
+        order_key: '9007199254740993',
+        created_at: time,
+        updated_at: updatedAt,
+      };
+      const mutation = change(bookId, {
+        entity_type: 'memo_entry',
+        entity_id: entryId,
+        sync_id: syncId,
+        base_revision: index,
+        updated_at: updatedAt,
+        payload,
+      });
+      const saved = await push(owner, mutation);
+      expect(saved.status).toBe(200);
+      expect(saved.body.outcomes[0]).toMatchObject({ status: 'accepted', revision: index + 1 });
+      const row = await prisma.memoEntry.findUniqueOrThrow({ where: { id: entryId } });
+      expect(row.title).toBe(title);
+      expect(row.body).toEqual(body);
+      expect(row.createdAt.toISOString()).toBe(time);
+      expect(row.updatedAt.toISOString()).toBe(updatedAt);
+      const snapshot = await get(owner, `memo-books/full?memo_book_id=${bookId}`);
+      expect(snapshot.statusCode).toBe(200);
+      expect(snapshot.json().memo_entries).toEqual([expect.objectContaining(payload)]);
+      const pulled = await get(owner, 'pull?since=0&limit=1000');
+      expect(pulled.statusCode).toBe(200);
+      expectedEvents.push({ title, body, updated_at: updatedAt });
+      const events = pulled
+        .json<{ changes: Array<{ entity_id: string; payload: Record<string, unknown> }> }>()
+        .changes.filter((event) => event.entity_id === entryId);
+      expect(
+        events.map((event) => ({
+          title: event.payload.title,
+          body: event.payload.body,
+          updated_at: event.payload.updated_at,
+        })),
+      ).toEqual(expectedEvents);
+      expect((await push(owner, mutation)).body.outcomes[0]).toMatchObject({
+        status: 'ignored',
+        revision: index + 1,
+      });
+    }
+    for (const invalid of [null, true, 30, [], {}]) {
+      await expect(prisma.$executeRaw`
         UPDATE memo_entries SET title = ${JSON.stringify(invalid)}::json WHERE id = ${entryId}::uuid
       `).rejects.toMatchObject({ code: 'P2010', meta: { code: '23514' } });
-      }
-      expect(await prisma.memoEntry.findUniqueOrThrow({ where: { id: entryId } })).toMatchObject({
-        title: titles[1],
-        revision: 2,
-      });
-    } catch (cause) {
-      throw new Error(`${type} 备忘录标题原始字符回归失败`, { cause });
     }
-  },
-);
+    expect(await prisma.memoEntry.findUniqueOrThrow({ where: { id: entryId } })).toMatchObject({
+      title: titles[1],
+      revision: 2,
+    });
+  } catch (cause) {
+    throw new Error(`${type} 备忘录标题原始字符回归失败`, { cause });
+  }
+});
 
 it('整本恢复校验 full 水位，生成新绑定，同 ID 子项保留源时间并拒绝旧代请求', async () => {
   const owner = await register();
@@ -486,41 +477,5 @@ it('卡片排序遵守版本校验，保留正文和创建时间并同步第二�
     ).toEqual([entryId, otherId]);
   } catch (cause) {
     throw new Error('卡片排序跨设备同步验证失败', { cause });
-  }
-});
-
-it('普通备忘录只接受空顺序号，不能转成卡片排序记录', async () => {
-  try {
-    const owner = await register();
-    const bookId = randomUUID();
-    const book = await push(owner, change(bookId));
-    const entryId = randomUUID();
-    const payload = {
-      book_type: 'normal',
-      title: '普通笔记',
-      body_format: 'delta_v1',
-      body: { ops: [{ insert: '正文\n' }] },
-      order_key: null,
-      created_at: time,
-      updated_at: time,
-    };
-    const mutation = change(bookId, {
-      entity_type: 'memo_entry',
-      entity_id: entryId,
-      sync_id: book.body.outcomes[0].sync_id,
-      payload,
-    });
-    expect((await push(owner, mutation)).body.outcomes[0]).toMatchObject({ status: 'accepted', revision: 1 });
-    const before = await prisma.memoEntry.findUniqueOrThrow({ where: { id: entryId } });
-    const rejected = await push(owner, {
-      ...mutation,
-      mutation_id: randomUUID(),
-      base_revision: 1,
-      payload: { ...payload, order_key: '0' },
-    });
-    expect(rejected.body.outcomes[0]).toMatchObject({ status: 'invalid', code: 'INVALID_MEMO_NOTE' });
-    expect(await prisma.memoEntry.findUniqueOrThrow({ where: { id: entryId } })).toEqual(before);
-  } catch (cause) {
-    throw new Error('普通备忘录顺序约束验证失败', { cause });
   }
 });

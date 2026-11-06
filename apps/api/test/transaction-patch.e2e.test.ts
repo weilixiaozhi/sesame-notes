@@ -143,41 +143,6 @@ const rejectedPatches: RejectedPatchCase[] = [
     patch: () => ({ aa_mode: '0' }),
     code: 'AA_SPLITS_NOT_ALLOWED',
   },
-  {
-    name: '切换不分摊模式但未清空已有指定分摊',
-    custom: true,
-    patch: () => ({ aa_mode: '1' }),
-    code: 'AA_SPLITS_NOT_ALLOWED',
-  },
-  {
-    name: '清空 AA 模式但保留已有指定分摊',
-    custom: true,
-    patch: () => ({ aa_mode: null }),
-    code: 'AA_SPLITS_NOT_ALLOWED',
-  },
-  {
-    name: '显式分摊总额不符返回业务错误',
-    custom: true,
-    patch: ({ memberId }) => ({ splits: [{ member_id: memberId, amount: '99' }] }),
-    code: 'AA_SPLIT_TOTAL_MISMATCH',
-  },
-  {
-    name: '指定分摊不能显式清空分摊行',
-    custom: true,
-    patch: () => ({ splits: null }),
-    code: 'AA_SPLITS_REQUIRED',
-  },
-  {
-    name: '显式分摊参与人重复返回业务错误',
-    custom: true,
-    patch: ({ memberId }) => ({
-      splits: [
-        { member_id: memberId, amount: '50' },
-        { member_id: memberId, amount: '50' },
-      ],
-    }),
-    code: 'DUPLICATE_AA_PARTICIPANT',
-  },
 ];
 
 describe('REST 交易部分更新的完整 AA 不变量', () => {

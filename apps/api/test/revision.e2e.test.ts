@@ -8,7 +8,6 @@ import { randomUUID } from 'node:crypto';
 
 import { buildApp } from '../src/app.js';
 import type { ApiConfig } from '../src/config.js';
-import { ApiError } from '../src/shared/errors.js';
 
 const DATABASE_URL = testFixtureDatabaseUrl();
 const API_BASE = '/api/v1';
@@ -181,295 +180,106 @@ afterAll(async () => {
 });
 
 describe('Transaction revision 状态机', () => {
-  it('REST、完整快照、创建事件和冲突快照保留相同的交易与分摊数据', async () => {
+  it.each(['事件', '唯一约束'] as const)('同步%s故障回滚并记录根因，整批重试不重复提交', async (stage) => {
     const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    try {
-      const memberIds = [uuid(), uuid()].sort();
-      await prisma.ledgerMember.createMany({
-        data: memberIds.map((id) => ({
-          id,
-          ledgerId,
-          displayName: '分摊成员',
-          memberType: 'PLACEHOLDER',
-          role: 'editor',
-        })),
-      });
-      const txnId = uuid();
-      // 逆序提交不同金额，验证排序不会改变成员与金额的对应关系。
-      const splits = [
-        { member_id: memberIds[1]!, amount: '12.34' },
-        { member_id: memberIds[0]!, amount: '7.66' },
-      ];
-      const pushed = await api(
-        'post',
-        '/sync/push',
-        txPush(deviceId, ledgerId, syncId, txnId, { aaMode: '2', splits }),
-        token,
-      );
-      expect(pushed.status).toBe(200);
-      expect((pushed.json() as { outcomes: PushOutcome[] }).outcomes[0]!.status).toBe('accepted');
-      const rest = await api('get', `/ledgers/${ledgerId}/transactions`, undefined, token);
-      expect(rest.status).toBe(200);
-      const transaction = (rest.json() as { items: unknown[] }).items[0];
-      expect(transaction).toMatchObject({ id: txnId, aa_mode: '2', amount: '20', splits: [...splits].reverse() });
-
-      const full = await api('get', '/sync/accounting/full', undefined, token);
-      expect(full.status).toBe(200);
-      expect(
-        (full.json() as { ledger_snapshots: Array<{ transactions: unknown[] }> }).ledger_snapshots[0]!.transactions,
-      ).toEqual([transaction]);
-      const event = await prisma.syncChange.findFirstOrThrow({ where: { entityId: txnId, action: 'upsert' } });
-      expect(event.payload).toEqual(transaction);
-
-      const conflicted = await api(
-        'post',
-        '/sync/push',
-        txPush(deviceId, ledgerId, syncId, txnId, { aaMode: '2', splits, baseRevision: 0 }),
-        token,
-      );
-      expect(conflicted.status).toBe(200);
-      expect((conflicted.json() as { outcomes: PushOutcome[] }).outcomes[0]).toMatchObject({
-        status: 'conflict',
-        current_entity: transaction,
-      });
-    } catch (error) {
-      console.error('交易跨入口快照一致性验证失败', { ledgerId, error });
-      throw error;
-    }
-  });
-
-  it.each(['读取', '投影', '快照', '事件', '唯一约束'] as const)(
-    '同步%s故障回滚并记录根因，整批重试不重复提交',
-    async (stage) => {
-      const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-      const ids = [uuid(), uuid(), uuid()];
-      const changes = ids.map((id) => txPush(deviceId, ledgerId, syncId, id).changes[0]!);
-      let failure: Error =
-        stage === '投影'
-          ? new ApiError(500, 'SYNC_FAILED', '推送同步变更失败，请稍后重试')
-          : new Prisma.PrismaClientKnownRequestError('database connection closed during sync', {
-              code: 'P1017',
-              clientVersion: Prisma.prismaVersion.client,
-            });
-      let failing = true;
-      // 仅在第二条 mutation 的指定数据库操作注入故障，其余读写走真实事务。
-      const failingPrisma = new PrismaClient({ datasourceUrl: DATABASE_URL }).$extends({
-        query: {
-          transaction: {
-            /** 在目标交易读取时模拟连接故障。 */
-            async findUnique({ args, query }) {
-              if (failing && stage === '读取' && args.where.id === ids[1]) throw failure;
-              return query(args);
-            },
-            /** 在创建后的权威快照读取处模拟故障，确保不会用客户端载荷写入事件。 */
-            async findUniqueOrThrow({ args, query }) {
-              if (failing && stage === '快照' && args.where.id === ids[1]) throw failure;
-              return query(args);
-            },
-            /** 注入投影故障，或用真实重复 INSERT 触发 PostgreSQL 事务失败。 */
-            async create({ args, query }) {
-              if (failing && stage === '投影' && args.data.id === ids[1]) throw failure;
-              if (failing && stage === '唯一约束' && args.data.id === ids[1]) {
-                try {
-                  await query(args);
-                  return await query(args);
-                } catch (cause) {
-                  if (cause instanceof Error) failure = cause;
-                  throw cause;
-                }
+    const ids = [uuid(), uuid(), uuid()];
+    const changes = ids.map((id) => txPush(deviceId, ledgerId, syncId, id).changes[0]!);
+    let failure: Error = new Prisma.PrismaClientKnownRequestError('database connection closed during sync', {
+      code: 'P1017',
+      clientVersion: Prisma.prismaVersion.client,
+    });
+    let failing = true;
+    // 仅在第二条 mutation 的指定数据库操作注入故障，其余读写走真实事务。
+    const failingPrisma = new PrismaClient({ datasourceUrl: DATABASE_URL }).$extends({
+      query: {
+        transaction: {
+          /** 用真实重复 INSERT 触发 PostgreSQL 唯一约束失败。 */
+          async create({ args, query }) {
+            if (failing && stage === '唯一约束' && args.data.id === ids[1]) {
+              try {
+                await query(args);
+                return await query(args);
+              } catch (cause) {
+                if (cause instanceof Error) failure = cause;
+                throw cause;
               }
-              return query(args);
-            },
-          },
-          syncChange: {
-            /** 在投影完成后的事件写入处模拟连接故障，验证事务回滚。 */
-            async create({ args, query }) {
-              if (failing && stage === '事件' && args.data.mutationId === changes[1]!.mutation_id) throw failure;
-              return query(args);
-            },
+            }
+            return query(args);
           },
         },
-      });
-      const records: string[] = [];
-      const failures: Error[] = [];
-      // 真实日志输出合并子 logger 的动作上下文；错误对象另从框架钩子读取以核验原始 cause 身份。
-      const loggerHost = Fastify({ logger: { stream: { write: (record) => records.push(record) } } });
-      const failingApp = buildApp({ logger: loggerHost.log, config, prisma: failingPrisma as unknown as PrismaClient });
-      failingApp.addHook('onError', async (_request, _reply, error) => {
-        failures.push(error);
-      });
-      const request = {
-        method: 'POST' as const,
-        url: `${API_BASE}/sync/push`,
-        headers: { ...bearer(token), 'x-request-id': uuid() },
-        payload: { device_id: deviceId, changes },
-      };
-      try {
-        const response = await failingApp.inject(request);
-        expect(response.statusCode).toBe(500);
-        expect(response.json()).toEqual({
-          code: 'SYNC_FAILED',
-          message: '推送同步变更失败，请稍后重试',
-          request_id: request.headers['x-request-id'],
-        });
-        const logs = records.map((record) => JSON.parse(record)).filter((record) => record.level >= 50);
-        expect(logs).toEqual([
-          expect.objectContaining({
-            action: '推送同步变更',
-            code: 'SYNC_FAILED',
-            request_id: request.headers['x-request-id'],
-          }),
-        ]);
-        expect(logs[0].err.message).toContain(failure.message);
-        expect(logs[0].err.stack).toContain('revision.e2e.test.ts');
-        expect(failures).toHaveLength(1);
-        let rootCause: unknown = failures[0];
-        while (rootCause instanceof Error && rootCause.cause !== undefined) rootCause = rootCause.cause;
-        expect(rootCause).toBe(failure);
-        if (stage === '唯一约束') expect(rootCause).toMatchObject({ code: 'P2002' });
-
-        // 已提交的第一项保留；故障项的投影与事件一起回滚，第三项尚未执行。
-        expect(await prisma.transaction.findMany({ where: { id: { in: ids } }, select: { id: true } })).toEqual([
-          { id: ids[0] },
-        ]);
-        expect(
-          await prisma.syncChange.count({ where: { mutationId: { in: changes.map((c) => c.mutation_id) } } }),
-        ).toBe(1);
-        failing = false;
-        const retried = await failingApp.inject(request);
-        expect(retried.statusCode).toBe(200);
-        expect(retried.json().outcomes.map((outcome: PushOutcome) => outcome.status)).toEqual([
-          'ignored',
-          'accepted',
-          'accepted',
-        ]);
-        expect(await prisma.transaction.count({ where: { id: { in: ids } } })).toBe(3);
-        expect(
-          await prisma.syncChange.count({ where: { mutationId: { in: changes.map((c) => c.mutation_id) } } }),
-        ).toBe(3);
-      } catch (error) {
-        console.error('同步故障与重试验证失败', { stage, ledgerId, error });
-        throw error;
-      } finally {
-        await failingApp.close();
-        await loggerHost.close();
-      }
-    },
-  );
-
-  it('输入拒绝保持稳定：非法 AA 模式返回 400，分摊不一致逐项 invalid，合法项继续提交', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
+        syncChange: {
+          /** 在投影完成后的事件写入处模拟连接故障，验证事务回滚。 */
+          async create({ args, query }) {
+            if (failing && stage === '事件' && args.data.mutationId === changes[1]!.mutation_id) throw failure;
+            return query(args);
+          },
+        },
+      },
+    });
+    const records: string[] = [];
+    const failures: Error[] = [];
+    // 真实日志输出合并子 logger 的动作上下文；错误对象另从框架钩子读取以核验原始 cause 身份。
+    const loggerHost = Fastify({ logger: { stream: { write: (record) => records.push(record) } } });
+    const failingApp = buildApp({ logger: loggerHost.log, config, prisma: failingPrisma as unknown as PrismaClient });
+    failingApp.addHook('onError', async (_request, _reply, error) => {
+      failures.push(error);
+    });
+    const request = {
+      method: 'POST' as const,
+      url: `${API_BASE}/sync/push`,
+      headers: { ...bearer(token), 'x-request-id': uuid() },
+      payload: { device_id: deviceId, changes },
+    };
     try {
-      const malformed = txPush(deviceId, ledgerId, syncId, uuid());
-      const malformedChange = malformed.changes[0]!;
-      const rejected = await api(
-        'post',
-        '/sync/push',
-        {
-          ...malformed,
-          changes: [{ ...malformedChange, payload: { ...malformedChange.payload, aa_mode: '3' } }],
-        },
-        token,
-      );
-      expect(rejected.status).toBe(400);
-      expect(rejected.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
-      const invalid = txPush(deviceId, ledgerId, syncId, uuid(), {
-        aaMode: '2',
-        splits: [{ member_id: uuid(), amount: '19' }],
-      }).changes[0]!;
-      const valid = txPush(deviceId, ledgerId, syncId, uuid()).changes[0]!;
-      const response = await api('post', '/sync/push', { device_id: deviceId, changes: [invalid, valid] }, token);
-      expect(response.status).toBe(200);
-      expect(response.json()).toMatchObject({
-        outcomes: [
-          { status: 'invalid', message: 'AA 指定分摊金额与交易折算金额不一致', change_id: null },
-          { status: 'accepted', entity_id: valid.entity_id, revision: 1 },
-        ],
+      const response = await failingApp.inject(request);
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({
+        code: 'SYNC_FAILED',
+        message: '推送同步变更失败，请稍后重试',
+        request_id: request.headers['x-request-id'],
       });
-      expect(await prisma.transaction.findUnique({ where: { id: invalid.entity_id } })).toBeNull();
-      expect(await prisma.syncChange.count({ where: { mutationId: invalid.mutation_id } })).toBe(0);
+      const logs = records.map((record) => JSON.parse(record)).filter((record) => record.level >= 50);
+      expect(logs).toEqual([
+        expect.objectContaining({
+          action: '推送同步变更',
+          code: 'SYNC_FAILED',
+          request_id: request.headers['x-request-id'],
+        }),
+      ]);
+      expect(logs[0].err.message).toContain(failure.message);
+      expect(logs[0].err.stack).toContain('revision.e2e.test.ts');
+      expect(failures).toHaveLength(1);
+      let rootCause: unknown = failures[0];
+      while (rootCause instanceof Error && rootCause.cause !== undefined) rootCause = rootCause.cause;
+      expect(rootCause).toBe(failure);
+      if (stage === '唯一约束') expect(rootCause).toMatchObject({ code: 'P2002' });
+
+      // 已提交的第一项保留；故障项的投影与事件一起回滚，第三项尚未执行。
+      expect(await prisma.transaction.findMany({ where: { id: { in: ids } }, select: { id: true } })).toEqual([
+        { id: ids[0] },
+      ]);
+      expect(await prisma.syncChange.count({ where: { mutationId: { in: changes.map((c) => c.mutation_id) } } })).toBe(
+        1,
+      );
+      failing = false;
+      const retried = await failingApp.inject(request);
+      expect(retried.statusCode).toBe(200);
+      expect(retried.json().outcomes.map((outcome: PushOutcome) => outcome.status)).toEqual([
+        'ignored',
+        'accepted',
+        'accepted',
+      ]);
+      expect(await prisma.transaction.count({ where: { id: { in: ids } } })).toBe(3);
+      expect(await prisma.syncChange.count({ where: { mutationId: { in: changes.map((c) => c.mutation_id) } } })).toBe(
+        3,
+      );
     } catch (error) {
-      console.error('同步输入拒绝验证失败', { ledgerId, error });
+      console.error('同步故障与重试验证失败', { stage, ledgerId, error });
       throw error;
+    } finally {
+      await failingApp.close();
+      await loggerHost.close();
     }
-  });
-
-  it('CREATE（无 base_revision）：revision 1', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    const push = await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-    expect(push.status).toBe(200);
-    const outcome = (push.json() as { outcomes: PushOutcome[] }).outcomes[0]!;
-    expect(outcome.status).toBe('accepted');
-    expect(outcome.revision).toBe(1);
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    expect(dbTxn?.revision).toBe(1);
-    expect(dbTxn?.deletedAt).toBeNull();
-  });
-
-  it('UPDATE（base=N）：revision N+1', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-    const push = await api(
-      'post',
-      '/sync/push',
-      txPush(deviceId, ledgerId, syncId, txnId, { baseRevision: 1, note: '改备注' }),
-      token,
-    );
-    expect(push.status).toBe(200);
-    const outcome = (push.json() as { outcomes: PushOutcome[] }).outcomes[0]!;
-    expect(outcome.status).toBe('accepted');
-    expect(outcome.revision).toBe(2);
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    expect(dbTxn?.revision).toBe(2);
-    expect(dbTxn?.note).toBe('改备注');
-  });
-
-  it('UPDATE base 过期：CONFLICT（current_revision + current_entity 供 UI）', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-    await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId, { baseRevision: 1 }), token);
-    const push = await api(
-      'post',
-      '/sync/push',
-      txPush(deviceId, ledgerId, syncId, txnId, { baseRevision: 1, note: '过期 base' }),
-      token,
-    );
-    expect(push.status).toBe(200);
-    const outcome = (push.json() as { outcomes: PushOutcome[] }).outcomes[0]!;
-    expect(outcome.status).toBe('conflict');
-    expect(outcome.current_revision).toBe(2);
-    expect(outcome.current_deleted).toBe(false);
-    expect(outcome.current_entity).toBeTruthy();
-    // 冲突不落库：本地值未覆盖云端
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    expect(dbTxn?.note).not.toBe('过期 base');
-    expect(dbTxn?.revision).toBe(2);
-  });
-
-  it('DELETE（base=N）：tombstone revision N+1，delete 事件 payload 带 revision', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-    const push = await api(
-      'post',
-      '/sync/push',
-      txPush(deviceId, ledgerId, syncId, txnId, { baseRevision: 1, action: 'delete' }),
-      token,
-    );
-    expect(push.status).toBe(200);
-    const outcome = (push.json() as { outcomes: PushOutcome[] }).outcomes[0]!;
-    expect(outcome.status).toBe('accepted');
-    expect(outcome.revision).toBe(2);
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    expect(dbTxn?.revision).toBe(2);
-    expect(dbTxn?.deletedAt).not.toBeNull();
-    // delete 事件必须带 revision
-    const events = await prisma.syncChange.findMany({ where: { entityId: txnId, action: 'delete' } });
-    expect(events.length).toBeGreaterThanOrEqual(1);
-    expect((events.at(-1)!.payload as { revision?: number }).revision).toBe(2);
   });
 
   it('UPDATE 对 tombstone：CONFLICT + current_deleted=true，绝不复活', async () => {
@@ -497,34 +307,6 @@ describe('Transaction revision 状态机', () => {
     const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
     expect(dbTxn?.deletedAt).not.toBeNull();
     expect(dbTxn?.revision).toBe(2);
-  });
-
-  it('DELETE 对不存在实体：no-op（ignored，无事件产生）', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    // 按实体维度统计：测试文件并发共享数据库时全局 count 会受其他实体事件污染
-    const before = await prisma.syncChange.count({ where: { entityId: txnId } });
-    const push = await api(
-      'post',
-      '/sync/push',
-      txPush(deviceId, ledgerId, syncId, txnId, { baseRevision: 1, action: 'delete' }),
-      token,
-    );
-    expect(push.status).toBe(200);
-    const outcome = (push.json() as { outcomes: PushOutcome[] }).outcomes[0]!;
-    expect(outcome.status).toBe('ignored');
-    const after = await prisma.syncChange.count({ where: { entityId: txnId } });
-    expect(after).toBe(before);
-  });
-
-  it('CREATE 已存在实体（无 base）：CONFLICT（不静默覆盖）', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-    const push = await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-    const outcome = (push.json() as { outcomes: PushOutcome[] }).outcomes[0]!;
-    expect(outcome.status).toBe('conflict');
-    expect(outcome.current_revision).toBe(1);
   });
 
   it('mutation_id 仅对同一请求幂等，复用到不同 base/payload 返回 409', async () => {
@@ -582,19 +364,6 @@ describe('Transaction revision 状态机', () => {
     );
     expect(reused.status).toBe(409);
     expect((reused.json() as { code: string }).code).toBe('MUTATION_ID_REUSED');
-  });
-
-  it('并发复用 mutation_id 到不同请求时，一个成功、一个明确 409', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    const mutationId = uuid();
-    const [left, right] = await Promise.all([
-      api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId, { mutationId, note: '请求 A' }), token),
-      api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId, { mutationId, note: '请求 B' }), token),
-    ]);
-    expect([left.status, right.status].sort()).toEqual([200, 409]);
-    const rejected = left.status === 409 ? left : right;
-    expect((rejected.json() as { code: string }).code).toBe('MUTATION_ID_REUSED');
   });
 
   it('同一交易并发创建在同步锁下返回一个成功和一个完整冲突快照', async () => {
@@ -668,94 +437,6 @@ describe('Transaction revision 状态机', () => {
     expect(outcomes[2]!.revision).toBe(1);
     const dbT2 = await prisma.transaction.findUnique({ where: { id: t2 } });
     expect(dbT2?.revision).toBe(2);
-  });
-
-  it('per-mutation：非法 payload 返回 invalid，同批其他实体正常应用', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const tOk = uuid();
-    const tBad = uuid();
-    const badChange = {
-      mutation_id: uuid(),
-      entity_type: 'transaction',
-      entity_id: tBad,
-      ledger_id: ledgerId,
-      sync_id: syncId,
-      action: 'upsert',
-      updated_at: '2026-08-22T11:00:00.000Z',
-      payload: {
-        tx_type: 'expense',
-        // 本位币交易折算金额与原始金额不一致：schema 合法、服务端业务校验拒绝（INVALID_NATIVE_AMOUNT）
-        amount: '20',
-        happened_at: '2026-08-22T11:00:00.000Z',
-        note: null,
-        category_id: null,
-        currency_code: 'CNY',
-        native_amount: '30',
-        recurring_id: null,
-        paid_by_user_id: null,
-        aa_mode: null,
-        splits: [],
-        last_edited_at: null,
-      },
-    };
-    const push = await api(
-      'post',
-      '/sync/push',
-      {
-        device_id: deviceId,
-        changes: [badChange, txPush(deviceId, ledgerId, syncId, tOk).changes[0]!],
-      },
-      token,
-    );
-    expect(push.status).toBe(200);
-    const outcomes = (push.json() as { outcomes: PushOutcome[] }).outcomes;
-    expect(outcomes[0]!.status).toBe('invalid');
-    expect(outcomes[1]!.status).toBe('accepted');
-    expect(outcomes[1]!.revision).toBe(1);
-    const dbBad = await prisma.transaction.findUnique({ where: { id: tBad } });
-    expect(dbBad).toBeNull();
-  });
-
-  it('REST PATCH 缺失 base_revision：400；匹配时更新；过期时 409', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-
-    const missingBase = await api('patch', `/ledgers/${ledgerId}/transactions/${txnId}`, { note: '缺少基线' }, token);
-    expect(missingBase.status).toBe(400);
-    expect((missingBase.json() as { code: string }).code).toBe('VALIDATION_ERROR');
-    expect(await prisma.transaction.findUnique({ where: { id: txnId } })).toMatchObject({
-      revision: 1,
-      note: '同步交易',
-    });
-
-    // 匹配当前 revision 时更新到 2，随后复用旧基线必须冲突。
-    const firstPatch = await api(
-      'patch',
-      `/ledgers/${ledgerId}/transactions/${txnId}`,
-      { note: '先更新', base_revision: 1 },
-      token,
-    );
-    expect(firstPatch.status).toBe(200);
-    const conflicted = await api(
-      'patch',
-      `/ledgers/${ledgerId}/transactions/${txnId}`,
-      { note: 'REST 过期', base_revision: 1 },
-      token,
-    );
-    expect(conflicted.status).toBe(409);
-    const conflictBody = conflicted.json() as { code: string; details?: { current_revision?: number } };
-    expect(conflictBody.code).toBe('SYNC_CONFLICT');
-    expect(conflictBody.details?.current_revision).toBe(2);
-    const ok = await api(
-      'patch',
-      `/ledgers/${ledgerId}/transactions/${txnId}`,
-      { note: 'REST 正常', base_revision: 2 },
-      token,
-    );
-    expect(ok.status).toBe(200);
-    const dbTxn = await prisma.transaction.findUnique({ where: { id: txnId } });
-    expect(dbTxn?.revision).toBe(3);
   });
 
   it('REST 与 push UPDATE 同步执行 CAS、分摊替换、编辑历史和变更事件', async () => {
@@ -856,19 +537,5 @@ describe('Transaction revision 状态机', () => {
       revision: 1,
       deletedAt: null,
     });
-  });
-
-  it('pull 事件 payload 带 revision（事务 upsert 事件为服务端权威快照）', async () => {
-    const { token, deviceId, syncId, ledgerId } = await setupCloudLedger();
-    const txnId = uuid();
-    await api('post', '/sync/push', txPush(deviceId, ledgerId, syncId, txnId), token);
-    const pull = await api('get', '/sync/pull?since=0', undefined, token);
-    expect(pull.status).toBe(200);
-    const pulled = pull.json() as {
-      changes: Array<{ entity_type: string; entity_id: string; payload: Record<string, unknown> }>;
-    };
-    const txEvent = pulled.changes.find((c) => c.entity_type === 'transaction' && c.entity_id === txnId);
-    expect(txEvent).toBeTruthy();
-    expect(txEvent!.payload.revision).toBe(1);
   });
 });

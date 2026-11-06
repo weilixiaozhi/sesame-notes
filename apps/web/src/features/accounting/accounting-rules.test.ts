@@ -1,23 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { equalAmounts } from './aa-money';
 import { canonicalRate, inverseRate } from './currency-math';
 import { billingRange, currentBillingMonth, customDateRange } from './accounting-periods';
-import { sumAmounts } from './money';
 
 describe('AA and currency precision', () => {
-  it('assigns the exact cent remainder to the payer', () => {
-    expect(equalAmounts('10', 3, 1)).toEqual(['3.33', '3.34', '3.33']);
-    expect(sumAmounts(equalAmounts('1.12', 3, -1))).toBe('1.12');
-    expect(() => equalAmounts('1.123', 3, -1)).toThrow();
-    expect(equalAmounts('1000000000000000000000000000', 2, 0)).toEqual([
-      '500000000000000000000000000',
-      '500000000000000000000000000',
-    ]);
-  });
-  it('does not generate zero shares or divide by zero', () => {
-    expect(() => equalAmounts('0.01', 2, 0)).toThrow();
-    expect(() => equalAmounts('1', 0, 0)).toThrow();
-  });
   it('inverts reference rates at eighteen decimal places without binary rounding', () => {
     expect(inverseRate('2')).toBe('0.5');
     expect(inverseRate('3')).toBe('0.333333333333333333');

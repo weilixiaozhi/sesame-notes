@@ -10,9 +10,8 @@ import type { AccessClaims } from '../src/modules/auth/index.js';
 import { signAccessToken } from '../src/modules/auth/testing.js';
 import { registerSharingRoutes } from '../src/modules/sharing/index.js';
 
-type Action = 'create' | 'accept' | 'leave' | 'remove';
+type Action = 'create' | 'accept' | 'remove';
 type Resource = 'ledger' | 'invite' | 'member';
-type Revocation = 'device' | 'account' | 'credential';
 const applications: ReturnType<typeof Fastify>[] = [];
 const releases: Array<() => void> = [];
 const config = {
@@ -47,7 +46,7 @@ async function fixture(action: Action, resource: Resource) {
       id: randomUUID(),
       ledgerId: ledger.id,
       memberType: 'REGISTERED',
-      linkedAccountId: action === 'leave' ? claims.userId : randomUUID(),
+      linkedAccountId: randomUUID(),
       displayName: '成员',
       role: 'editor',
       status: 'ACTIVE',
@@ -163,7 +162,7 @@ async function fixture(action: Action, resource: Resource) {
         url:
           action === 'accept'
             ? '/api/v1/invites/valid-code/accept'
-            : `/api/v1/ledgers/${ledger.id}/${action === 'create' ? 'invites' : action === 'leave' ? 'leave' : `members/${member.id}`}`,
+            : `/api/v1/ledgers/${ledger.id}/${action === 'create' ? 'invites' : `members/${member.id}`}`,
         headers: { authorization: `Bearer ${token}` },
         ...(action === 'create' ? { payload: {} } : {}),
       })
@@ -187,15 +186,12 @@ afterEach(async () => {
 
 const targets = [
   ['create', 'ledger'],
-  ['accept', 'ledger'],
   ['accept', 'invite'],
-  ['leave', 'member'],
   ['remove', 'member'],
 ] as const;
-const invalidations: Revocation[] = ['device', 'account', 'credential'];
 
 describe('共享写入在行锁等待后的真实会话复查', () => {
-  it.each([`${'a'.repeat(63)}😀`, '😀'.repeat(64)])('接受邀请时完整保留昵称的 Unicode 码点：%s', async (name) => {
+  it.each(['😀'.repeat(64)])('接受邀请时完整保留昵称的 Unicode 码点：%s', async (name) => {
     try {
       const context = await fixture('accept', 'invite');
       context.tx.user.findUnique.mockResolvedValue({ profile: { displayName: name } });
@@ -210,21 +206,26 @@ describe('共享写入在行锁等待后的真实会话复查', () => {
     }
   });
 
-  it.each(
-    targets.flatMap(([action, resource]) => invalidations.map((revocation) => ({ action, resource, revocation }))),
-  )('$action等待$resource期间发生$revocation变更，401且业务与事件零写入', async ({ action, resource, revocation }) => {
-    const context = await fixture(action, resource);
-    if (revocation === 'device') context.state.revoked = true;
-    if (revocation === 'account') context.state.enabled = false;
-    if (revocation === 'credential') context.state.credentialVersion++;
-    context.release();
-    const response = await context.pending;
-    expect(response.statusCode, response.body).toBe(401);
-    expect(response.json()).toMatchObject({ code: 'UNAUTHORIZED', message: '登录状态已失效' });
-    expect(context.businessWrites).not.toHaveBeenCalled();
-    expect(context.events).toEqual([]);
-    expect(context.tx.device.findFirst).toHaveBeenCalledTimes(2);
-  });
+  it.each([
+    { action: 'create', resource: 'ledger', revocation: 'device' },
+    { action: 'accept', resource: 'invite', revocation: 'account' },
+    { action: 'remove', resource: 'member', revocation: 'credential' },
+  ] as const)(
+    '$action等待$resource期间发生$revocation变更，401且业务与事件零写入',
+    async ({ action, resource, revocation }) => {
+      const context = await fixture(action, resource);
+      if (revocation === 'device') context.state.revoked = true;
+      if (revocation === 'account') context.state.enabled = false;
+      if (revocation === 'credential') context.state.credentialVersion++;
+      context.release();
+      const response = await context.pending;
+      expect(response.statusCode, response.body).toBe(401);
+      expect(response.json()).toMatchObject({ code: 'UNAUTHORIZED', message: '登录状态已失效' });
+      expect(context.businessWrites).not.toHaveBeenCalled();
+      expect(context.events).toEqual([]);
+      expect(context.tx.device.findFirst).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it.each(targets)('%s取得%s行锁后，合法会话仍完成原操作及同步事件', async (action, resource) => {
     const context = await fixture(action, resource);

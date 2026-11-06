@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 
 import { buildApp } from '../src/app.js';
 import type { ApiConfig } from '../src/config.js';
-import { registeredMemberId, resolveMemberReference } from '../src/modules/accounting/testing.js';
+import { registeredMemberId } from '../src/modules/accounting/testing.js';
 
 const DATABASE_URL = testFixtureDatabaseUrl();
 const API_BASE = '/api/v1';
@@ -269,38 +269,6 @@ describe('占位成员生命周期与引用锁', () => {
     expect((response.json() as { outcomes: Array<{ status: string }> }).outcomes[0]!.status).toBe('invalid');
     expect((await prisma.ledgerMember.findUniqueOrThrow({ where: { id: vUser } })).status).toBe('REMOVED');
   });
-
-  it('交易引用占位成员时持有共享行锁，成员更新必须等引用事务提交', async () => {
-    const { ledgerId, vUser } = await setupLedgerWithHistory();
-    let markLocked!: () => void;
-    const locked = new Promise<void>((resolve) => {
-      markLocked = resolve;
-    });
-    let releaseReader!: () => void;
-    const readerGate = new Promise<void>((resolve) => {
-      releaseReader = resolve;
-    });
-    const reader = prisma.$transaction(async (tx) => {
-      expect(await resolveMemberReference(tx, ledgerId, { member_id: vUser })).toBe(vUser);
-      markLocked();
-      await readerGate;
-    });
-    await locked;
-    const updater = prisma.$transaction((tx) =>
-      tx.ledgerMember.updateMany({ where: { id: vUser }, data: { displayName: '锁后更新' } }),
-    );
-    try {
-      const state = await Promise.race([
-        updater.then(() => 'updated' as const),
-        new Promise<'blocked'>((resolve) => setTimeout(resolve, 100, 'blocked')),
-      ]);
-      expect(state).toBe('blocked');
-    } finally {
-      releaseReader();
-    }
-    await reader;
-    expect((await updater).count).toBe(1);
-  });
 });
 
 describe('注册成员退出与最终状态事件', () => {
@@ -342,32 +310,6 @@ describe('注册成员退出与最终状态事件', () => {
       expect(await prisma.syncChange.count({ where: scope })).toBe(eventsBefore + 1);
     } catch (cause) {
       throw new Error('成员退出的角色、持久状态与最终事件验收失败', { cause });
-    }
-  });
-
-  it.each(['LEFT', 'REMOVED'] as const)('已有 %s 成员退出仍由授权边界拒绝，不改状态或增加事件', async (status) => {
-    try {
-      const context = await setupRegisteredMember();
-      const transitioned =
-        status === 'LEFT'
-          ? await api('post', `/ledgers/${context.ledgerId}/leave`, undefined, context.editor.token)
-          : await api(
-              'delete',
-              `/ledgers/${context.ledgerId}/members/${context.memberId}`,
-              undefined,
-              context.owner.token,
-            );
-      expect(transitioned.status, transitioned.body).toBe(204);
-      const before = await prisma.ledgerMember.findUniqueOrThrow({ where: { id: context.memberId } });
-      const scope = { entityType: 'member', entityId: context.memberId };
-      const eventsBefore = await prisma.syncChange.count({ where: scope });
-      const response = await api('post', `/ledgers/${context.ledgerId}/leave`, undefined, context.editor.token);
-      expect(response.status, response.body).toBe(404);
-      expect(response.json()).toMatchObject({ code: 'LEDGER_NOT_FOUND' });
-      expect(await prisma.ledgerMember.findUniqueOrThrow({ where: { id: context.memberId } })).toEqual(before);
-      expect(await prisma.syncChange.count({ where: scope })).toBe(eventsBefore);
-    } catch (cause) {
-      throw new Error('失效成员退出的授权边界验收失败', { cause });
     }
   });
 

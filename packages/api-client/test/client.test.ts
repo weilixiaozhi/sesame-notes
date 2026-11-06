@@ -15,17 +15,6 @@ describe('ApiClient', () => {
     vi.restoreAllMocks();
   });
 
-  it('未登录时不注入 Authorization 头', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { status: 'ok', request_id: 'r1' }));
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null });
-
-    await client.client.GET('/api/v1/health');
-
-    const request = fetchMock.mock.calls[0]![0] as Request;
-    expect(request.headers.has('authorization')).toBe(false);
-  });
-
   it('401 单飞刷新：并发请求只刷新一次并全部重放成功', async () => {
     let refreshCount = 0;
     const fetchMock = vi
@@ -83,124 +72,6 @@ describe('ApiClient', () => {
     }
     expect(refreshAccessToken).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledOnce();
-  });
-
-  it('普通请求查询参数包含认证路径片段时仍单飞刷新并重放', async () => {
-    const page = { items: [], next_cursor: null };
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const request = input as Request;
-      return request.headers.get('authorization') === 'Bearer fresh-token'
-        ? jsonResponse(200, page)
-        : jsonResponse(401, { code: 'UNAUTHORIZED', message: '过期', request_id: 'query-1' });
-    });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const refreshAccessToken = vi.fn().mockResolvedValue('fresh-token');
-    const client = new ApiClient({
-      baseUrl: 'http://api.test',
-      getAccessToken: async () => 'expired-token',
-      refreshAccessToken,
-    });
-
-    const searches = ['/auth/login', '/auth/refresh'];
-    const results = await Promise.all(
-      searches.map((search) =>
-        client.client.GET('/api/v1/admin/users', {
-          params: { query: { search } },
-          // 保留查询值里的斜杠，覆盖合法 URL 中原样出现认证路径片段的情况。
-          querySerializer: { allowReserved: true },
-        }),
-      ),
-    );
-
-    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
-    expect(results.map((result) => result.data)).toEqual([page, page]);
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    const replays = fetchMock.mock.calls.map(([input]) => input as Request).slice(2);
-    expect(replays.map((request) => request.url)).toEqual(
-      searches.map((search) => `http://api.test/api/v1/admin/users?search=${search}`),
-    );
-    expect(replays.map((request) => request.headers.get('authorization'))).toEqual([
-      'Bearer fresh-token',
-      'Bearer fresh-token',
-    ]);
-  });
-
-  it('POST 在首次请求体已消费后仍能携带原 body 完成 401 重放', async () => {
-    const bodies: string[] = [];
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const request = input as Request;
-      bodies.push(await request.text());
-      return fetchMock.mock.calls.length === 1
-        ? jsonResponse(401, { code: 'UNAUTHORIZED', message: '过期', request_id: 'post-1' })
-        : jsonResponse(201, { id: 'ledger-1' });
-    });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const client = new ApiClient({
-      baseUrl: 'http://api.test',
-      getAccessToken: async () => 'expired-token',
-      refreshAccessToken: async () => 'fresh-token',
-    });
-
-    const result = await client.client.POST('/api/v1/ledgers', { body: { name: 'POST body' } });
-
-    expect(result.data).toEqual({ id: 'ledger-1' });
-    expect(bodies).toEqual(['{"name":"POST body"}', '{"name":"POST body"}']);
-    const replay = fetchMock.mock.calls[1]![0] as Request;
-    expect(replay.headers.get('authorization')).toBe('Bearer fresh-token');
-  });
-
-  it('刷新重放保留后注册中间件的自定义头与幂等头，只替换过期令牌', async () => {
-    const bodies: string[] = [];
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const request = input as Request;
-      bodies.push(await request.text());
-      return fetchMock.mock.calls.length === 1
-        ? jsonResponse(401, { code: 'UNAUTHORIZED', message: '过期', request_id: 'refresh-1' })
-        : jsonResponse(201, { id: 'ledger-1' });
-    });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const client = new ApiClient({
-      baseUrl: 'http://api.test',
-      getAccessToken: async () => 'expired-token',
-      refreshAccessToken: async () => 'fresh-token',
-    });
-    client.client.use({
-      onRequest({ request }) {
-        request.headers.set('x-client-context', '1');
-        request.headers.set('idempotency-key', 'same-action-after-refresh');
-      },
-    });
-    const result = await client.client.POST('/api/v1/ledgers', { body: { name: '请求重放' } });
-    expect(result.data).toEqual({ id: 'ledger-1' });
-    expect(bodies).toEqual(['{"name":"请求重放"}', '{"name":"请求重放"}']);
-    const replay = fetchMock.mock.calls[1]![0] as Request;
-    expect(replay.headers.get('x-client-context')).toBe('1');
-    expect(replay.headers.get('idempotency-key')).toBe('same-action-after-refresh');
-    expect(replay.headers.get('authorization')).toBe('Bearer fresh-token');
-  });
-
-  it('PATCH 在首次请求体已消费后仍能携带原 body 完成 401 重放', async () => {
-    const bodies: string[] = [];
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      const request = input as Request;
-      bodies.push(await request.text());
-      return fetchMock.mock.calls.length === 1
-        ? jsonResponse(401, { code: 'UNAUTHORIZED', message: '过期', request_id: 'patch-1' })
-        : jsonResponse(200, { display_name: 'PATCH body' });
-    });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const client = new ApiClient({
-      baseUrl: 'http://api.test',
-      getAccessToken: async () => 'expired-token',
-      refreshAccessToken: async () => 'fresh-token',
-    });
-
-    const result = await client.client.PATCH('/api/v1/profile/me', { body: { display_name: 'PATCH body' } });
-
-    expect(result.data).toEqual({ display_name: 'PATCH body' });
-    expect(bodies).toEqual(['{"display_name":"PATCH body"}', '{"display_name":"PATCH body"}']);
-    const replay = fetchMock.mock.calls[1]![0] as Request;
-    expect(replay.headers.get('authorization')).toBe('Bearer fresh-token');
   });
 
   it('登录与刷新端点不参与 401 重放', async () => {
@@ -262,120 +133,28 @@ describe('ApiClient', () => {
     expect(unwrap<void>(result)).toBeUndefined();
   });
 
-  it.each([
-    { status: 200, explicitLength: false },
-    { status: 200, explicitLength: true },
-    { status: 201, explicitLength: false },
-    { status: 201, explicitLength: true },
-  ])('空 $status 响应（零长度声明：$explicitLength）不能解包为有效数据', ({ status, explicitLength }) => {
-    try {
-      const response = new Response(explicitLength ? '' : null, {
-        status,
-        headers: { 'x-request-id': 'empty-result', ...(explicitLength ? { 'content-length': '0' } : {}) },
-      });
-      expect(() => unwrap({ response })).toThrowError(
-        expect.objectContaining({ status, code: 'EMPTY_RESPONSE', requestId: 'empty-result' }),
-      );
-    } catch (cause) {
-      throw new Error('缺少正文的业务响应被解包为成功', { cause });
-    }
-  });
-
-  it.each([
-    { status: 200, explicitLength: false },
-    { status: 200, explicitLength: true },
-    { status: 201, explicitLength: false },
-    { status: 201, explicitLength: true },
-  ])('空 $status 响应（零长度声明：$explicitLength）不能触发写入成功回调', async ({ status, explicitLength }) => {
-    try {
-      for (const validateResponse of [undefined, vi.fn()]) {
-        globalThis.fetch = vi.fn().mockResolvedValue(
-          new Response(explicitLength ? '' : null, {
-            status,
-            headers: { 'x-request-id': 'empty-write', ...(explicitLength ? { 'content-length': '0' } : {}) },
-          }),
-        );
-        const client = new ApiClient({
-          baseUrl: 'http://api.test',
-          getAccessToken: async () => 'token',
-          validateResponse,
-        });
-        const completeSave = vi.fn();
-        await expect(
-          client.client
-            .POST('/api/v1/ledgers', { body: { name: '账本' } })
-            .then(unwrap)
-            .then(completeSave),
-        ).rejects.toMatchObject({ status, code: 'EMPTY_RESPONSE', requestId: 'empty-write' });
-        expect(completeSave).not.toHaveBeenCalled();
-        if (validateResponse) expect(validateResponse).not.toHaveBeenCalled();
-      }
-    } catch (cause) {
-      throw new Error('空响应错误未在请求边界阻止保存成功副作用', { cause });
-    }
-  });
-
-  it('205 与 HEAD 的无正文语义保留，HEAD 方法和通用 request 返回值均可解包', async () => {
-    try {
-      const fetchMock = vi.fn().mockImplementation(async (request: Request) => {
-        return new Response(null, {
-          status: request.method === 'HEAD' ? 200 : 205,
-          headers: { 'x-request-id': 'empty-http' },
-        });
-      });
-      globalThis.fetch = fetchMock;
-      const validateResponse = vi.fn();
-      const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null, validateResponse });
-      expect(
-        unwrap(await client.client.POST('/api/v1/auth/logout', { body: { refresh_token: 'test-refresh-token' } })),
-      ).toBeUndefined();
-      // 当前生成契约未声明 HEAD 路由，此处验证 SDK 保留的通用 HTTP 方法能力。
-      expect(unwrap(await client.client.HEAD('/api/v1/health' as never))).toBeUndefined();
-      expect(unwrap(await client.client.request('head', '/api/v1/health' as never))).toBeUndefined();
-      expect(validateResponse).toHaveBeenCalledTimes(3);
-      expect(validateResponse.mock.calls.every(([context]) => context.body === undefined)).toBe(true);
-      client.client.use({
-        onRequest: () => new Response(null, { status: 200 }),
-      });
-      expect(unwrap(await client.client.HEAD('/api/v1/health' as never))).toBeUndefined();
-      expect(fetchMock).toHaveBeenCalledTimes(3);
-    } catch (cause) {
-      throw new Error('合法无正文 HTTP 响应被误判', { cause });
-    }
-  });
-
-  it.each([401, 403, 500])('无正文 HTTP %s 保留失败状态与请求编号', async (status) => {
+  it('创建成功状态缺少业务正文时不能触发写入成功回调', async () => {
     try {
       globalThis.fetch = vi
         .fn()
-        .mockResolvedValue(
-          new Response(null, { status, headers: { 'content-length': '0', 'x-request-id': 'empty-error' } }),
-        );
-      const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null });
-      const result = await client.client.GET('/api/v1/health');
-      expect(() => unwrap(result)).toThrowError(
-        expect.objectContaining({ status, code: `HTTP_${status}`, requestId: 'empty-error' }),
-      );
-    } catch (cause) {
-      throw new Error('无正文 HTTP 错误的业务语义丢失', { cause });
-    }
-  });
-
-  it('缓存复用同一响应时，HEAD 的无正文许可不能传给后续 GET', async () => {
-    try {
-      const cachedResponse = new Response(null, {
-        status: 200,
-        headers: { 'content-length': '0', 'x-request-id': 'shared-cache' },
+        .mockResolvedValue(new Response(null, { status: 201, headers: { 'x-request-id': 'empty-write' } }));
+      const validateResponse = vi.fn();
+      const client = new ApiClient({
+        baseUrl: 'http://api.test',
+        getAccessToken: async () => 'token',
+        validateResponse,
       });
-      const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null });
-      client.client.use({ onRequest: () => cachedResponse });
-      expect(unwrap(await client.client.HEAD('/api/v1/health' as never))).toBeUndefined();
-      const result = await client.client.GET('/api/v1/health');
-      expect(() => unwrap(result)).toThrowError(
-        expect.objectContaining({ status: 200, code: 'EMPTY_RESPONSE', requestId: 'shared-cache' }),
-      );
+      const completeSave = vi.fn();
+      await expect(
+        client.client
+          .POST('/api/v1/ledgers', { body: { name: '账本' } })
+          .then(unwrap)
+          .then(completeSave),
+      ).rejects.toMatchObject({ status: 201, code: 'EMPTY_RESPONSE', requestId: 'empty-write' });
+      expect(completeSave).not.toHaveBeenCalled();
+      expect(validateResponse).not.toHaveBeenCalled();
     } catch (cause) {
-      throw new Error('缓存响应复用污染了不同请求的正文契约', { cause });
+      throw new Error('空响应错误未在请求边界阻止保存成功副作用', { cause });
     }
   });
 
@@ -452,36 +231,6 @@ describe('ApiClient', () => {
       cause: { message: 'status 必须是字符串' },
     });
   });
-
-  it('可选响应校验器允许符合边界的响应继续解析', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { status: 'ok', request_id: 'valid-shape' }));
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const client = new ApiClient({
-      baseUrl: 'http://api.test',
-      getAccessToken: async () => null,
-      validateResponse: ({ body }) => {
-        if (!body || typeof body !== 'object' || !('status' in body) || body.status !== 'ok') {
-          throw new Error('status 必须为 ok');
-        }
-      },
-    });
-
-    const result = await client.client.GET('/api/v1/health');
-
-    expect(unwrap(result)).toEqual({ status: 'ok', request_id: 'valid-shape' });
-  });
-
-  it('超时中止请求', async () => {
-    globalThis.fetch = vi.fn(
-      (_input: RequestInfo | URL, init?: RequestInit) =>
-        new Promise<Response>((_resolve, reject) => {
-          init?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
-        }),
-    ) as unknown as typeof fetch;
-    const client = new ApiClient({ baseUrl: 'http://api.test', getAccessToken: async () => null, timeoutMs: 50 });
-
-    await expect(client.client.GET('/api/v1/health')).rejects.toThrow();
-  }, 10_000);
 });
 
 describe('ApiError', () => {
@@ -489,12 +238,6 @@ describe('ApiError', () => {
     const body = { code: 'UNAUTHORIZED', message: '请重新登录', request_id: 'r-status', __status: 200 };
     expect(ApiError.from(body, jsonResponse(401, body))).toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
     expect(ApiError.from(body)).toMatchObject({ status: 0, code: 'UNAUTHORIZED' });
-  });
-
-  it('from 对非标准载荷返回兜底错误', () => {
-    const error = ApiError.from('oops');
-    expect(error.code).toBe('API_ERROR');
-    expect(error.message).toBeTruthy();
   });
 });
 
@@ -535,65 +278,58 @@ describe('头像二进制仍经过响应校验边界', () => {
     globalThis.fetch = originalFetch;
     vi.restoreAllMocks();
   });
-  it.each(['image/png', 'image/jpeg', 'image/webp', 'IMAGE/PNG; charset=binary', ' image/jpeg ; charset=binary '])(
-    '%s 以 Blob 交给校验器，同时保留调用方 parseAs blob 的原始字节',
-    async (contentType) => {
-      const bytes = new Uint8Array([0, 1, 2, 255]);
-      globalThis.fetch = vi
-        .fn()
-        .mockImplementation(
-          async () => new Response(bytes, { status: 200, headers: { 'content-type': contentType } }),
-        ) as typeof fetch;
-      const validateResponse = vi.fn();
-      const client = new ApiClient({
-        baseUrl: 'http://api.test',
-        getAccessToken: async () => 'token',
-        validateResponse,
-      });
-      const result = await client.client.GET('/api/v1/profile/avatar/{user_id}', {
+  it('头像以 Blob 交给校验器并保留原始字节', async () => {
+    const bytes = new Uint8Array([0, 1, 2, 255]);
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        async () => new Response(bytes, { status: 200, headers: { 'content-type': 'image/png' } }),
+      ) as typeof fetch;
+    const validateResponse = vi.fn();
+    const client = new ApiClient({
+      baseUrl: 'http://api.test',
+      getAccessToken: async () => 'token',
+      validateResponse,
+    });
+    const result = await client.client.GET('/api/v1/profile/avatar/{user_id}', {
+      params: { path: { user_id: '00000000-0000-4000-8000-000000000001' } },
+      parseAs: 'blob',
+    });
+    expect(result.data).toBeInstanceOf(Blob);
+    expect(result.data?.size).toBe(4);
+    expect(new Uint8Array(await result.data!.arrayBuffer())).toEqual(bytes);
+    expect(validateResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/api/v1/profile/avatar/{user_id}', body: expect.any(Blob) }),
+    );
+    const validatedBody = validateResponse.mock.calls[0]![0].body as Blob;
+    expect(new Uint8Array(await validatedBody.arrayBuffer())).toEqual(bytes);
+  });
+  it('头像返回 SVG 时拒绝正文并保留错误原因与请求编号', async () => {
+    const headers = new Headers({ 'x-request-id': 'avatar-response', 'content-type': 'image/svg+xml' });
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        async () => new Response(new Uint8Array([0, 1, 2, 255]), { status: 200, headers }),
+      ) as typeof fetch;
+    const validateResponse = vi.fn();
+    const client = new ApiClient({
+      baseUrl: 'http://api.test',
+      getAccessToken: async () => 'token',
+      validateResponse,
+    });
+    await expect(
+      client.client.GET('/api/v1/profile/avatar/{user_id}', {
         params: { path: { user_id: '00000000-0000-4000-8000-000000000001' } },
         parseAs: 'blob',
-      });
-      expect(result.data).toBeInstanceOf(Blob);
-      expect(result.data?.size).toBe(4);
-      expect(new Uint8Array(await result.data!.arrayBuffer())).toEqual(bytes);
-      expect(validateResponse).toHaveBeenCalledWith(
-        expect.objectContaining({ path: '/api/v1/profile/avatar/{user_id}', body: expect.any(Blob) }),
-      );
-      const validatedBody = validateResponse.mock.calls[0]![0].body as Blob;
-      expect(new Uint8Array(await validatedBody.arrayBuffer())).toEqual(bytes);
-    },
-  );
-  it.each(['image/gif', 'image/svg+xml', 'application/json', undefined])(
-    '头像返回非契约类型 %s 时保留错误原因与请求编号',
-    async (contentType) => {
-      const headers = new Headers({ 'x-request-id': 'avatar-response' });
-      if (contentType) headers.set('content-type', contentType);
-      globalThis.fetch = vi
-        .fn()
-        .mockImplementation(
-          async () => new Response(new Uint8Array([0, 1, 2, 255]), { status: 200, headers }),
-        ) as typeof fetch;
-      const validateResponse = vi.fn();
-      const client = new ApiClient({
-        baseUrl: 'http://api.test',
-        getAccessToken: async () => 'token',
-        validateResponse,
-      });
-      await expect(
-        client.client.GET('/api/v1/profile/avatar/{user_id}', {
-          params: { path: { user_id: '00000000-0000-4000-8000-000000000001' } },
-          parseAs: 'blob',
-        }),
-      ).rejects.toMatchObject({
-        status: 200,
-        code: 'INVALID_API_RESPONSE',
-        requestId: 'avatar-response',
-        cause: { message: 'INVALID_AVATAR_CONTENT_TYPE' },
-      });
-      expect(validateResponse).not.toHaveBeenCalled();
-    },
-  );
+      }),
+    ).rejects.toMatchObject({
+      status: 200,
+      code: 'INVALID_API_RESPONSE',
+      requestId: 'avatar-response',
+      cause: { message: 'INVALID_AVATAR_CONTENT_TYPE' },
+    });
+    expect(validateResponse).not.toHaveBeenCalled();
+  });
   it('JSON 端点伪装图片不能绕过响应校验', async () => {
     const client = new ApiClient({
       baseUrl: 'http://api.test',

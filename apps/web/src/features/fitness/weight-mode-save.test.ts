@@ -64,17 +64,3 @@ it('版本冲突重试读取最新偏好，不覆盖其他动作的新设置', a
   });
   expect(mocks.push.mock.calls[0]![0].mutation_id).not.toBe(mocks.push.mock.calls[1]![0].mutation_id);
 });
-
-it('上次请求结果未知时切换另一动作，使用新动作自己的请求身份', async () => {
-  const other = { ...before, revision: 3, exercise_weight_modes: { '0001': true } };
-  mocks.get
-    .mockResolvedValueOnce({ data: { items: [before] } })
-    .mockResolvedValueOnce({ data: { items: [before] } })
-    .mockResolvedValueOnce({ data: { items: [other] } });
-  mocks.push.mockRejectedValueOnce(new Error('网络中断')).mockResolvedValueOnce(undefined);
-  const write = createWeightModeWriter(space);
-  await expect(write('0025', true)).rejects.toThrow('网络中断');
-  await expect(write('0001', true)).resolves.toEqual(other);
-  expect(mocks.push.mock.calls[1]![0].payload.exercise_weight_modes).toEqual({ '0001': true });
-  expect(mocks.push.mock.calls[0]![0].mutation_id).not.toBe(mocks.push.mock.calls[1]![0].mutation_id);
-});

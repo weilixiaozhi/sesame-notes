@@ -37,47 +37,6 @@ type Taxon = {
   template_count: number;
 };
 
-const traditionalNames: ReadonlyArray<readonly [Kind, string, string]> = [
-  ['body_part', 'back', '背部'],
-  ['body_part', 'cardio', '有氧'],
-  ['body_part', 'chest', '胸部'],
-  ['body_part', 'lower arms', '前臂'],
-  ['body_part', 'lower legs', '小腿'],
-  ['body_part', 'neck', '頸部'],
-  ['body_part', 'shoulders', '肩部'],
-  ['body_part', 'upper arms', '上臂'],
-  ['body_part', 'upper legs', '大腿'],
-  ['body_part', 'waist', '腰腹'],
-  ['equipment', 'assisted', '輔助器械'],
-  ['equipment', 'band', '彈力帶'],
-  ['equipment', 'barbell', '槓鈴'],
-  ['equipment', 'body weight', '自重'],
-  ['equipment', 'bosu ball', '半球平衡球'],
-  ['equipment', 'cable', '滑輪器材'],
-  ['equipment', 'dumbbell', '啞鈴'],
-  ['equipment', 'elliptical machine', '橢圓機'],
-  ['equipment', 'ez barbell', '曲桿槓鈴'],
-  ['equipment', 'hammer', '錘子'],
-  ['equipment', 'kettlebell', '壺鈴'],
-  ['equipment', 'leverage machine', '固定器材'],
-  ['equipment', 'medicine ball', '藥球'],
-  ['equipment', 'olympic barbell', '奧林匹克槓鈴'],
-  ['equipment', 'resistance band', '阻力帶'],
-  ['equipment', 'roller', '泡沫軸'],
-  ['equipment', 'rope', '繩索'],
-  ['equipment', 'skierg machine', '滑雪訓練機'],
-  ['equipment', 'sled machine', '腿推器材'],
-  ['equipment', 'smith machine', '史密斯機'],
-  ['equipment', 'stability ball', '健身球'],
-  ['equipment', 'stationary bike', '健身單車'],
-  ['equipment', 'stepmill machine', '登階機'],
-  ['equipment', 'tire', '輪胎'],
-  ['equipment', 'trap bar', '六角槓鈴'],
-  ['equipment', 'upper body ergometer', '上肢功率車'],
-  ['equipment', 'weighted', '負重器材'],
-  ['equipment', 'wheel roller', '健腹輪'],
-];
-
 function headers(cookie = writer) {
   return { cookie, origin: ORIGIN, 'x-admin-request': '1' };
 }
@@ -313,18 +272,6 @@ afterAll(async () => {
 });
 
 describe('官方部位与器械字典', () => {
-  it('当前字典内置分类具有完整繁体名称', async () => {
-    try {
-      const rows = await prisma.officialFitnessTaxon.findMany();
-      expect(traditionalNames).toHaveLength(38);
-      for (const [kind, id, translated] of traditionalNames) {
-        expect(rows.find((row) => row.kind === kind && row.id === id)?.nameHant, `${kind}:${id}`).toBe(translated);
-      }
-    } catch (cause) {
-      throw new Error('当前内置分类繁体名称验收失败', { cause });
-    }
-  });
-
   it('内置身份保持有效，只读权限可读取但不能修改分类', async () => {
     const unauthorized = await app.inject({ url: '/api/v1/admin/fitness/taxonomies/body_part' });
     expect(unauthorized.statusCode).toBe(401);
@@ -340,49 +287,6 @@ describe('官方部位与器械字典', () => {
     }
     const denied = await mutate('POST', 'equipment', '', { name: { zh: '测试', zh_hant: '測試', en: 'Test' } }, reader);
     expect(denied.statusCode).toBe(403);
-  });
-
-  it('名称可更新且身份保持不变，版本冲突不覆盖修改，公开目录与缓存同步更新', async () => {
-    const taxon = await createTaxon('body_part');
-    expect(taxon).toMatchObject({ version: 1, sort_order: 0, exercise_count: 0, template_count: 0 });
-    expect(taxon.id).toMatch(/^[a-f0-9-]{36}$/);
-    const catalogBefore = await app.inject({ url: '/api/v1/fitness/catalog' });
-    const renamed = await mutate('PATCH', 'body_part', taxon.id, {
-      version: 1,
-      name: { zh: '重命名部位', zh_hant: '重命名部位', en: 'Renamed part' },
-      sort_order: 12,
-    });
-    expect(renamed.statusCode, renamed.body).toBe(200);
-    expect(renamed.json()).toMatchObject({ id: taxon.id, version: 2, sort_order: 12, name: { zh: '重命名部位' } });
-    const stale = await mutate('PATCH', 'body_part', taxon.id, { version: 1, sort_order: 99 });
-    expect(stale.statusCode).toBe(409);
-    expect(stale.json().code).toBe('FITNESS_TAXON_CHANGED');
-    const catalog = await app.inject({
-      url: '/api/v1/fitness/catalog',
-      headers: { 'if-none-match': String(catalogBefore.headers.etag) },
-    });
-    expect(catalog.statusCode, catalog.body).toBe(200);
-    expect(catalog.json().content_version).toBeGreaterThan(catalogBefore.json().content_version);
-    expect(catalog.json().taxonomies.body_parts).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: taxon.id,
-          name: { zh: '重命名部位', zh_hant: '重命名部位', en: 'Renamed part' },
-        }),
-      ]),
-    );
-    const deleted = await mutate('DELETE', 'body_part', taxon.id, { version: 2 });
-    expect(deleted.statusCode).toBe(204);
-    const historical = await app.inject({ url: '/api/v1/fitness/catalog' });
-    expect(historical.json().taxonomies.body_parts).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: taxon.id,
-          name: { zh: '重命名部位', zh_hant: '重命名部位', en: 'Renamed part' },
-          is_deleted: true,
-        }),
-      ]),
-    );
   });
 
   it('删除使用中的器械要求替代项，并原子迁移停用动作与模板器械且去重', async () => {

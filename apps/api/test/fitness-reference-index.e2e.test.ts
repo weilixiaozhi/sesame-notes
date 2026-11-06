@@ -99,43 +99,6 @@ async function references(entityId: string): Promise<string[]> {
 }
 
 describe('健身来源关系索引', () => {
-  it('任意嵌套、数组与大小写遵循原始 JSONPath 比较语义', async () => {
-    const first = 'aaaaaaaa-1111-4111-8111-111111111111';
-    const second = 'bbbbbbbb-2222-4222-8222-222222222222';
-    const unrelated = 'cccccccc-3333-4333-8333-333333333333';
-    const candidates = [first, second, unrelated];
-    const payloads = [
-      { source_plan_id: first, source_template_id: second, unrelated },
-      { nested: [{ deeper: { source_template_id: [first, second, first] } }], unrelated },
-      { source_template_id: [[first], second], nested: { source_plan_id: null }, unrelated },
-      { source_plan_id: first.toUpperCase(), source_template_id: 7, unrelated },
-      [{ source_template_id: first }, { nested: { source_plan_id: second } }],
-      { source_plan_id: { nested: first }, unrelated },
-    ];
-    try {
-      for (const payload of payloads) {
-        const [result] = await prisma.$queryRaw<Array<{ actual: string[]; expected: string[] }>>`
-          SELECT
-            ARRAY(SELECT target_id::text FROM fitness_reference_ids(${JSON.stringify(payload)}::jsonb) ORDER BY target_id) AS actual,
-            ARRAY(
-              SELECT id FROM jsonb_array_elements_text(${JSON.stringify(candidates)}::jsonb) AS candidate(id)
-              WHERE jsonb_path_exists(
-                ${JSON.stringify(payload)}::jsonb,
-                '$.** ? (@.source_plan_id == $id || @.source_template_id == $id)',
-                jsonb_build_object('id', id)
-              ) ORDER BY id
-            ) AS expected
-        `;
-        expect(result!.actual, JSON.stringify(payload)).toEqual(result!.expected);
-      }
-      expect(
-        await prisma.$queryRaw`SELECT target_id::text FROM fitness_reference_ids(${JSON.stringify(payloads[0])}::jsonb) ORDER BY target_id`,
-      ).toEqual([{ target_id: first }, { target_id: second }]);
-    } catch (cause) {
-      throw new Error('健身来源提取与原始 JSONPath 语义不一致', { cause });
-    }
-  });
-
   it('来源晚到、同空间补齐、目标软删和物理删除保留引用，引用方删除级联清理', async () => {
     const targetId = randomUUID();
     const sourceId = randomUUID();

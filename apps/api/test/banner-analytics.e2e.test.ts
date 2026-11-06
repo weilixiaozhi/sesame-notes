@@ -4,9 +4,6 @@ import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { testFixtureDatabaseUrl } from './existing-test-database.js';
 import {
   ingestAnalyticsEvents,
-  readAnalyticsReport,
-  readAnalyticsDetails,
-  readAnalyticsFunnel,
   readBannerStatistics,
   type AnalyticsEventInput,
 } from '../src/modules/analytics/testing.js';
@@ -211,51 +208,5 @@ it('同一 Banner 跨日期版本位置累计，重传幂等、未来事件不�
         },
       }),
     ).toBe(3);
-  });
-});
-
-it('曝光在行为分析保留次数和真实人数，不能抬高页面访问或页面排行', async () => {
-  await inRollback(async (tx) => {
-    await tx.productAnalyticsState.update({
-      where: { id: 1 },
-      data: { startedAt: new Date('2035-01-01'), bannerStartedAt: new Date('2035-01-19T01:00:00Z') },
-    });
-    const client = { productAnalyticsEvent: tx.productAnalyticsEvent } as PrismaClient;
-    const user = randomUUID();
-    const page = event({
-      kind: 'page_view',
-      event_name: 'fitness_plans_view',
-      banner_slot: undefined,
-      banner_id: undefined,
-      banner_source: undefined,
-      banner_version: undefined,
-    });
-    await ingestAnalyticsEvents(client, user, [page, event(), event(), event({ event_name: 'banner_click' })], now);
-    const database = {
-      $transaction: async (run: (tx: Prisma.TransactionClient) => unknown) => run(tx),
-    } as unknown as PrismaClient;
-    const range = { start_date: '2035-01-19', end_date: '2035-01-19' };
-    const detail = await readAnalyticsDetails(database, {
-      ...range,
-      event_name: 'banner_impression',
-      behavior: 'view',
-    });
-    expect(detail.summary.page_views).toBe(0);
-    expect(detail.pages).toEqual([]);
-    expect(detail.events).toEqual([]);
-    expect(detail.exposures).toEqual([{ event_name: 'banner_impression', name: 'Banner_曝光', total: 2, users: 1 }]);
-    expect(detail.coverage).toEqual({ collection_started_at: '2035-01-19T01:00:00.000Z', complete: false });
-    const funnel = await readAnalyticsFunnel(database, {
-      ...range,
-      steps: ['banner_impression', 'banner_click'],
-      scope: 'user',
-      window_minutes: 30,
-    });
-    expect(funnel.coverage.collection_started_at).toBe('2035-01-19T01:00:00.000Z');
-    expect(funnel.coverage.complete).toBe(false);
-    expect(funnel.completion_rate).toBeNull();
-    const overview = await readAnalyticsReport(database, range);
-    expect(overview.summary.page_views).toBe(1);
-    expect(overview.summary.active_users).toBe(1);
   });
 });

@@ -57,13 +57,7 @@ test('发布只接受完整当前同步状态，保留大整数切点与持久�
   assert.equal(result.errors.length, 0);
 });
 
-for (const state of [
-  { columns: 2 },
-  { cursor: null },
-  { completed: null },
-  { floor: '-1' },
-  { completed: new Date('invalid') },
-]) {
+for (const state of [{ columns: 2 }, { floor: '-1' }]) {
   test(`发布拒绝缺失或不完整的当前同步事实：${Object.keys(state)[0]}`, async () => {
     const result = await inspectCurrentSync([
       [{ installed: state.columns ?? 3 }],

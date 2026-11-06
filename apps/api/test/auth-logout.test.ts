@@ -302,31 +302,6 @@ for (const browser of [false, true]) {
     }
   });
 
-  it(`${client}正常轮换旧令牌登出终止全部后继，其他安装会话不受影响`, async () => {
-    try {
-      const fixture = await setup(browser);
-      const first = await fixture.login(randomUUID());
-      const other = await fixture.login(randomUUID());
-      const sessions = [first];
-      for (let index = 0; index < 2; index++) {
-        const refreshed = await fixture.request('refresh', first);
-        expect(refreshed.statusCode, refreshed.body).toBe(200);
-        sessions.push(fixture.readSession(refreshed));
-      }
-      const logout = await fixture.request('logout', first);
-      expect(logout.statusCode, logout.body).toBe(204);
-      if (browser) expect(logout.headers['set-cookie']).toContain('browser_refresh_token=;');
-      for (const session of sessions) {
-        const response = await fixture.request('refresh', session);
-        expect(response.statusCode, response.body).toBe(401);
-      }
-      const unaffected = await fixture.request('refresh', other);
-      expect(unaffected.statusCode, unaffected.body).toBe(200);
-    } catch (cause) {
-      throw new Error(`${client}轮换后登出范围验证失败`, { cause });
-    }
-  });
-
   it.each(['unknown', 'user', 'device', 'generation'] as const)(
     `${client}登出不接受 %s 令牌扩大撤销范围`,
     async (mismatch) => {

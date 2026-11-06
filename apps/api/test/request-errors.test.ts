@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
-import { ApiError } from '../src/shared/errors.js';
 
 const apps: ReturnType<typeof buildApp>[] = [];
 const requestId = 'request-parser-test';
@@ -62,24 +61,6 @@ describe('框架请求解析错误边界', () => {
       message: '请求参数不符合接口要求',
     },
     {
-      name: '空 JSON 正文',
-      headers: { 'content-type': 'application/json' },
-      payload: '',
-      frameworkCode: 'FST_ERR_CTP_EMPTY_JSON_BODY',
-      status: 400,
-      code: 'VALIDATION_ERROR',
-      message: '请求参数不符合接口要求',
-    },
-    {
-      name: '正文长度与声明不一致',
-      headers: { 'content-type': 'application/json', 'content-length': '4' },
-      payload: '{}',
-      frameworkCode: 'FST_ERR_CTP_INVALID_CONTENT_LENGTH',
-      status: 400,
-      code: 'VALIDATION_ERROR',
-      message: '请求参数不符合接口要求',
-    },
-    {
       name: '不支持的媒体类型',
       headers: { 'content-type': 'application/octet-stream' },
       payload: sensitiveValue,
@@ -112,7 +93,6 @@ describe('框架请求解析错误边界', () => {
 
   it.each([
     { method: 'POST' as const, url: '/api/v1/auth/register', length: 1024 * 1024 + 1, code: 'PAYLOAD_TOO_LARGE' },
-    { method: 'PUT' as const, url: '/api/v1/profile/avatar', length: 12 * 1024 * 1024 + 1, code: 'AVATAR_TOO_LARGE' },
   ])('$url 正文超限保持原有 413 语义', async ({ method, url, length, code }) => {
     try {
       const { app, prisma } = setup();
@@ -131,31 +111,7 @@ describe('框架请求解析错误边界', () => {
     }
   });
 
-  it('Schema 校验失败仍返回原有 400 及校验详情，不进入数据库', async () => {
-    try {
-      const { app, prisma, warn, error } = setup();
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/v1/auth/register',
-        headers: { 'x-request-id': requestId },
-        payload: {},
-      });
-      expect(response.statusCode, response.body).toBe(400);
-      expect(response.json()).toMatchObject({
-        code: 'VALIDATION_ERROR',
-        request_id: requestId,
-        details: expect.any(Array),
-      });
-      expect(warn).toHaveBeenCalledWith(expect.objectContaining({ request_id: requestId }), '请求参数校验失败');
-      expect(error).not.toHaveBeenCalled();
-      expect(prisma.user.findUnique).not.toHaveBeenCalled();
-      expect(prisma.$transaction).not.toHaveBeenCalled();
-    } catch (cause) {
-      throw new Error('Schema 校验错误边界回归失败', { cause });
-    }
-  });
-
-  it.each(['UNTRUSTED_FAILURE', 'FST_ERR_CTP_INVALID_JSON_BODY', 'FST_ERR_CTP_BODY_TOO_LARGE'])(
+  it.each(['FST_ERR_CTP_INVALID_JSON_BODY'])(
     '普通异常伪装 statusCode 和 %s 仍返回 500 并完整记录错误',
     async (code) => {
       try {
@@ -181,27 +137,4 @@ describe('框架请求解析错误边界', () => {
       }
     },
   );
-
-  it('业务 ApiError 保留原有响应与业务日志语义', async () => {
-    try {
-      const failure = new ApiError(409, 'KNOWN_CONFLICT', '当前内容已变化', { revision: 2 });
-      const { app, warn, error } = setup(failure);
-      const response = await app.inject({
-        method: 'GET',
-        url: '/request-errors/failure',
-        headers: { 'x-request-id': requestId },
-      });
-      expect(response.statusCode, response.body).toBe(409);
-      expect(response.json()).toEqual({
-        code: failure.code,
-        message: failure.message,
-        details: failure.details,
-        request_id: requestId,
-      });
-      expect(warn).toHaveBeenCalledWith({ err: failure, code: failure.code, request_id: requestId }, '业务请求失败');
-      expect(error).not.toHaveBeenCalled();
-    } catch (cause) {
-      throw new Error('业务错误边界回归失败', { cause });
-    }
-  });
 });

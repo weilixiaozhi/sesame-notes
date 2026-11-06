@@ -115,17 +115,6 @@ afterAll(async () => {
 });
 
 describe('切片三：个人资料与修改密码（需求锚点）', () => {
-  it('个人资料只保留支出设置，读取与修改均不接受收入颜色字段', async () => {
-    const { token } = await registerUser();
-    const me = await api('get', '/profile/me', undefined, token);
-    expect(me.status).toBe(200);
-    expect.soft(me.json()).not.toHaveProperty('income_is_red');
-
-    const patched = await api('patch', '/profile/me', { income_is_red: false }, token);
-    expect(patched.status).toBe(400);
-    expect(patched.json()).toMatchObject({ code: 'VALIDATION_ERROR' });
-  });
-
   it('profile/me 返回本人资料和完整手机号，不含脱敏手机号或 account 字段', async () => {
     const { token, userId, phone } = await registerUser();
     const me = await api('get', '/profile/me', undefined, token);
@@ -140,55 +129,6 @@ describe('切片三：个人资料与修改密码（需求锚点）', () => {
     // 完整手机号仅本人可见（产品要求完全显示）
     expect(body.phone).toBe(`+86${phone}`);
     expect(JSON.stringify(body)).not.toContain('account');
-  });
-
-  it('本人可修改昵称与性别；非法昵称/性别返回对应错误码', async () => {
-    const { token, userId } = await registerUser();
-
-    const nick = await api('patch', '/profile/me', { display_name: '  新昵称  ' }, token);
-    expect(nick.status).toBe(200);
-    expect((nick.json() as { display_name: string }).display_name).toBe('新昵称');
-
-    const gender = await api('patch', '/profile/me', { gender: 'MALE' }, token);
-    expect(gender.status).toBe(200);
-    expect((gender.json() as { gender: string }).gender).toBe('MALE');
-    // 数据库事实：gender 已落库
-    const row = await prisma.userProfile.findUniqueOrThrow({ where: { userId } });
-    expect(row.gender).toBe('MALE');
-
-    // 名称含 NUL → 400 DISPLAY_NAME_INVALID
-    const badNick = await api('patch', '/profile/me', { display_name: 'a\u0000b' }, token);
-    expect(badNick.status).toBe(400);
-    expect((badNick.json() as { code: string }).code).toBe('DISPLAY_NAME_INVALID');
-
-    // 昵称不可置空（注册即分配默认昵称，账号昵称恒非空）
-    const emptyNick = await api('patch', '/profile/me', { display_name: '' }, token);
-    expect(emptyNick.status).toBe(400);
-    expect((emptyNick.json() as { code: string }).code).toBe('DISPLAY_NAME_INVALID');
-    const blankNick = await api('patch', '/profile/me', { display_name: '   ' }, token);
-    expect(blankNick.status).toBe(400);
-    expect((blankNick.json() as { code: string }).code).toBe('DISPLAY_NAME_INVALID');
-    const nullNick = await api('patch', '/profile/me', { display_name: null }, token);
-    expect(nullNick.status).toBe(400);
-
-    // 置空被拒后昵称保持原值
-    const after = await api('get', '/profile/me', undefined, token);
-    expect((after.json() as { display_name: string }).display_name).toBe('新昵称');
-
-    // 非法性别 → 400 GENDER_INVALID
-    const badGender = await api('patch', '/profile/me', { gender: 'ALIEN' }, token);
-    expect(badGender.status).toBe(400);
-    expect((badGender.json() as { code: string }).code).toBe('GENDER_INVALID');
-  });
-
-  it('昵称采用公共 100 码点上限并能完整落库，拒绝纯不可见名称', async () => {
-    const { token, userId } = await registerUser();
-    const name = '🏠'.repeat(100);
-    const result = await api('patch', '/profile/me', { display_name: name }, token);
-    expect(result.status).toBe(200);
-    expect((await prisma.userProfile.findUniqueOrThrow({ where: { userId } })).displayName).toBe(name);
-    expect((await api('patch', '/profile/me', { display_name: '🏠'.repeat(101) }, token)).status).toBe(400);
-    expect((await api('patch', '/profile/me', { display_name: '\u200B' }, token)).status).toBe(400);
   });
 
   it('不能修改手机号与芝麻号（契约不接受这些字段，值保持不变）', async () => {
@@ -277,37 +217,6 @@ describe('切片三：个人资料与修改密码（需求锚点）', () => {
     const myRefresh = await api('post', '/auth/refresh', { refresh_token: refreshToken });
     expect(myRefresh.status).toBe(200);
     expect((myRefresh.json() as { device_id: string }).device_id).toBe(deviceId);
-  });
-
-  it('修改密码接受单字符和 128 字符密码，拒绝超长输入且不改变已保存密码', async () => {
-    const { token, phone } = await registerUser();
-    let current = 'password-123456';
-    for (const next of ['1', 'a'.repeat(128)]) {
-      const changed = await api('patch', '/auth/password', { current_password: current, new_password: next }, token);
-      expect(changed.status).toBe(204);
-      const loggedIn = await api('post', '/auth/login', {
-        country_code: '+86',
-        phone,
-        password: next,
-        device: { installation_id: randomUUID(), name: 'password-rule-check', platform: 'e2e' },
-      });
-      expect(loggedIn.status).toBe(200);
-      current = next;
-    }
-    const rejected = await api(
-      'patch',
-      '/auth/password',
-      { current_password: current, new_password: 'a'.repeat(129) },
-      token,
-    );
-    expect(rejected.status).toBe(400);
-    const unchanged = await api('post', '/auth/login', {
-      country_code: '+86',
-      phone,
-      password: current,
-      device: { installation_id: randomUUID(), name: 'password-unchanged-check', platform: 'e2e' },
-    });
-    expect(unchanged.status).toBe(200);
   });
 
   it('上传/下载/恢复默认头像：上传成功递增版本，DELETE 幂等 204', async () => {

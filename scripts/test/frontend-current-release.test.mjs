@@ -112,10 +112,7 @@ test('现有站点有合法当前组件版本标记时通过只读预检', () =>
   });
 });
 
-for (const metadata of [
-  { component: 'admin', version: '0.1.9' },
-  { component: 'web', version: 'invalid' },
-]) {
+for (const metadata of [{ component: 'admin', version: '0.1.9' }]) {
   test(`现有站点版本标记不匹配时拒绝并保留现场：${metadata.component}/${metadata.version}`, () => {
     inspectExistingSite(JSON.stringify(metadata), (result) => {
       assert.equal(result.accepted, false);

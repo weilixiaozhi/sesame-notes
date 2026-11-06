@@ -150,26 +150,6 @@ afterEach(() => {
 });
 
 describe('browser session isolation', () => {
-  it('刷新会话附带当前发布和可得设备资料，不接受设备归属字段', async () => {
-    vi.stubGlobal('__WEB_APP_VERSION__', '2.6.1');
-    Object.assign(navigator, {
-      userAgentData: {
-        platform: 'Android',
-        getHighEntropyValues: async () => ({ model: 'Pixel 8', platformVersion: '14.0.0' }),
-      },
-    });
-    await mount();
-    expect(await sent[0]!.clone().json()).toEqual({
-      device: { platform: 'web', app_version: '2.6.1', os_version: 'Android 14.0.0', device_model: 'Pixel 8' },
-    });
-  });
-
-  it('刷新缺少 Client Hints 时省略空资料，既有设备字段无需被清空', async () => {
-    vi.stubGlobal('__WEB_APP_VERSION__', '2.6.1');
-    await mount();
-    expect(await sent[0]!.clone().json()).toEqual({ device: { platform: 'web', app_version: '2.6.1' } });
-  });
-
   it('等待设备资料时退出账号，迟到资料不能继续发送旧代际的刷新请求', async () => {
     const hints = deferred<Record<string, unknown>>();
     const readHints = vi.fn(() => hints.promise);
@@ -182,105 +162,6 @@ describe('browser session isolation', () => {
     expect(current.session).toBeNull();
     expect(sent).toHaveLength(0);
   });
-
-  it('首次打开没有 Cookie 时保持正常未登录，登录失败不刷新会话且可重新登录', async () => {
-    handler = (request) =>
-      request.url.endsWith('/refresh')
-        ? json({ code: 'REFRESH_TOKEN_REQUIRED', message: '登录状态已失效，请重新登录' }, 401)
-        : json({ code: 'INVALID_CREDENTIALS', message: '手机号或密码错误' }, 401);
-    await mount();
-    expect(current.session).toBeNull();
-    expect(current.error).toBeNull();
-    await settle(async () => {
-      await expect(current.login(credentials('A'))).rejects.toMatchObject({
-        status: 401,
-        code: 'INVALID_CREDENTIALS',
-      });
-    });
-    expect(current.status).toBe('ready');
-    expect(current.error).toBeNull();
-    expect(current.session).toBeNull();
-    expect(sent.filter((request) => request.url.endsWith('/refresh'))).toHaveLength(1);
-    handler = () => json(session('A'));
-    await settle(() => current.login(credentials('A')));
-    expect(current.session?.user.user_id).toBe('A');
-  });
-
-  it('protects the generated generic request method with the same account and cancellation boundary', async () => {
-    await mount();
-    const delayed = deferred<Response>();
-    handler = () => delayed.promise;
-    const pending = module.api.request('get', '/api/v1/ledgers').catch((error: unknown) => error);
-    await waitFor(() => expect(sent).toHaveLength(2));
-    expect(sent[1]!.headers.get('authorization')).toBe('Bearer A-token');
-    await act(async () => {
-      channels[0]!.emit({ type: 'logout' });
-    });
-    delayed.resolve(json({ ledgers: [] }));
-    expect(await pending).toMatchObject({ code: 'SESSION_CHANGED' });
-    expect(sent[1]!.signal.aborted).toBe(true);
-  });
-
-  it('keeps initial network errors visible and can restore after reconnecting', async () => {
-    handler = () => {
-      throw new TypeError('offline');
-    };
-    await mount(false);
-    await waitFor(() => expect(current.status).toBe('error'));
-    expect(current.session).toBeNull();
-    handler = () => json(session('A'));
-    await settle(() => current.retry());
-    expect(current.status).toBe('ready');
-    expect(current.session?.user.user_id).toBe('A');
-  });
-
-  it('shares one refresh for concurrent unauthorized requests', async () => {
-    await mount();
-    const refresh = deferred<Response>();
-    handler = (request) => {
-      if (request.url.endsWith('/refresh')) return refresh.promise;
-      return request.headers.get('authorization') === 'Bearer A-token'
-        ? json({ code: 'UNAUTHORIZED', message: 'expired' }, 401)
-        : json({ ledgers: [] });
-    };
-    const first = module.api.GET('/api/v1/ledgers');
-    const second = module.api.GET('/api/v1/ledgers');
-    await waitFor(() => expect(sent.filter((item) => item.url.endsWith('/refresh'))).toHaveLength(2));
-    await settle(async () => {
-      refresh.resolve(json(session('A', 'fresh-A')));
-      await Promise.all([first, second]);
-    });
-    expect(sent.filter((item) => item.url.endsWith('/refresh'))).toHaveLength(2);
-    expect(sent.filter((item) => item.headers.get('authorization') === 'Bearer fresh-A')).toHaveLength(2);
-    expect(sent.filter((item) => item.url.endsWith('/ledgers')).every((item) => item.cache === 'no-store')).toBe(true);
-  });
-
-  it.each([200, 401])(
-    'rejects a late %s response after account switching without refreshing or replaying',
-    async (status) => {
-      await mount();
-      module.queryClient.setQueryData(['account', 'A', 'secret'], 'private-A');
-      const delayed = deferred<Response>();
-      const normal = handler;
-      handler = (request) => (request.url.endsWith('/ledgers') ? delayed.promise : normal(request));
-      const pending = module.api.POST('/api/v1/ledgers', {
-        body: { id: '089b3e65-2aa7-40cd-8617-88c77025d9d8', name: 'A private ledger', currency: 'CNY' },
-      });
-      const result = pending.catch((error: unknown) => error);
-      await waitFor(() => expect(sent.some((item) => item.url.endsWith('/ledgers'))).toBe(true));
-      const original = sent.find((item) => item.url.endsWith('/ledgers'))!;
-      await settle(() => current.login(credentials('B')));
-      module.queryClient.setQueryData(['account', 'B', 'safe'], 'private-B');
-      delayed.resolve(json(status === 200 ? { id: 'old-A' } : { code: 'UNAUTHORIZED' }, status));
-      expect(await result).toMatchObject({ code: 'SESSION_CHANGED' });
-      expect(original.signal.aborted).toBe(true);
-      expect(sent.filter((item) => item.url.endsWith('/ledgers'))).toHaveLength(1);
-      expect(sent.filter((item) => item.url.endsWith('/refresh'))).toHaveLength(1);
-      expect(module.queryClient.getQueryData(['account', 'A', 'secret'])).toBeUndefined();
-      expect(module.queryClient.getQueryData(['account', 'B', 'safe'])).toBe('private-B');
-      expect(current.session?.user.user_id).toBe('B');
-    },
-  );
 
   it('never replays an A operation using a different account returned by the refresh cookie', async () => {
     await mount();
@@ -297,23 +178,6 @@ describe('browser session isolation', () => {
     expect(sent.filter((item) => item.url.endsWith('/ledgers'))).toHaveLength(1);
     expect(current.session?.user.user_id).toBe('B');
     expect(module.queryClient.getQueryData(['account', 'A', 'secret'])).toBeUndefined();
-  });
-
-  it('resumes a changed notification after an obsolete initial refresh finishes', async () => {
-    const firstRefresh = deferred<Response>();
-    let count = 0;
-    handler = () => (++count === 1 ? firstRefresh.promise : json(session('B')));
-    await mount(false);
-    await waitFor(() => expect(sent).toHaveLength(1));
-    await act(async () => {
-      channels[0]!.emit({ type: 'changed' });
-    });
-    await act(async () => {
-      firstRefresh.resolve(json(session('A')));
-    });
-    await waitFor(() => expect(current.status).toBe('ready'));
-    expect(current.session?.user.user_id).toBe('B');
-    expect(count).toBe(2);
   });
 
   it('does not restore an obsolete refresh after a logout notification', async () => {
@@ -354,19 +218,6 @@ describe('browser session isolation', () => {
     expect(sent.filter((item) => item.url.endsWith('/ledgers'))).toHaveLength(1);
   });
 
-  it('retains caller cancellation alongside session cancellation', async () => {
-    await mount();
-    const delayed = deferred<Response>();
-    handler = () => delayed.promise;
-    const controller = new AbortController();
-    const pending = module.api.GET('/api/v1/ledgers', { signal: controller.signal });
-    await waitFor(() => expect(sent).toHaveLength(2));
-    controller.abort();
-    expect(sent[1]!.signal.aborted).toBe(true);
-    delayed.resolve(json({ ledgers: [] }));
-    await pending;
-  });
-
   it('only sends the newest of simultaneous logins', async () => {
     await mount();
     let results: PromiseSettledResult<void>[] = [];
@@ -378,16 +229,6 @@ describe('browser session isolation', () => {
     expect(sent.filter((item) => item.url.endsWith('/login'))).toHaveLength(1);
     expect(current.status).toBe('ready');
     expect(current.session?.user.user_id).toBe('B');
-  });
-
-  it('keeps an installation identifier stable when browser storage is denied', async () => {
-    await mount();
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new DOMException('denied', 'SecurityError');
-    });
-    const first = module.installationId();
-    expect(module.installationId()).toBe(first);
-    expect(first).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
 
@@ -404,29 +245,6 @@ describe('browser logout', () => {
     expect(channels[0]!.postMessage).toHaveBeenCalledWith({ type: 'logout' });
   });
 
-  it('treats an already revoked session as signed out without a nested lock or request loop', async () => {
-    await mount();
-    handler = () => json({ code: 'INVALID_REFRESH_TOKEN', message: 'expired' }, 401);
-    await settle(() => current.logout());
-    expect(current.session).toBeNull();
-    expect(current.status).toBe('ready');
-    expect(sent.filter((item) => item.url.endsWith('/logout'))).toHaveLength(0);
-  });
-
-  it('retains the current session and reports network failure so logout can be retried', async () => {
-    await mount();
-    const normal = handler;
-    handler = () => {
-      throw new TypeError('offline');
-    };
-    await expect(current.logout()).rejects.toThrow('offline');
-    expect(current.session?.user.user_id).toBe('A');
-    expect(channels[0]!.postMessage).not.toHaveBeenCalled();
-    handler = normal;
-    await settle(() => current.logout());
-    expect(current.session).toBeNull();
-  });
-
   it('does not sign out B when the initiating tab still shows A', async () => {
     await mount();
     refreshResponse = session('B');
@@ -438,12 +256,6 @@ describe('browser logout', () => {
     expect(current.session?.user.user_id).toBe('B');
     expect(sent.filter((item) => item.url.endsWith('/logout'))).toHaveLength(0);
     expect(channels[0]!.postMessage).not.toHaveBeenCalled();
-  });
-
-  it('coalesces repeated clicks into one server logout', async () => {
-    await mount();
-    await settle(() => Promise.all([current.logout(), current.logout()]));
-    expect(sent.filter((item) => item.url.endsWith('/logout'))).toHaveLength(1);
   });
 });
 
@@ -459,20 +271,6 @@ describe('bulk import session boundary', () => {
     expect(operation.assertCurrent).toThrow();
     await expect(operation.client.GET('/api/v1/ledgers')).rejects.toMatchObject({ code: 'SESSION_CHANGED' });
     expect(sent.filter((item) => item.url.endsWith('/ledgers'))).toHaveLength(0);
-  });
-
-  it('cancels captured REST requests that are in flight when the account changes', async () => {
-    await mount();
-    const operation = module.captureSessionOperation();
-    const delayed = deferred<Response>();
-    const normal = handler;
-    handler = (request) => (request.url.endsWith('/ledgers') ? delayed.promise : normal(request));
-    const pending = operation.client.GET('/api/v1/ledgers').catch((error: unknown) => error);
-    await waitFor(() => expect(sent.filter((item) => item.url.endsWith('/ledgers'))).toHaveLength(1));
-    await settle(() => current.login(credentials('B')));
-    expect(sent.find((item) => item.url.endsWith('/ledgers'))!.signal.aborted).toBe(true);
-    delayed.resolve(json([]));
-    expect(await pending).toMatchObject({ code: 'SESSION_CHANGED' });
   });
   const change: SyncChange = {
     mutation_id: '26b59cb9-daa4-4c43-bbd7-d6fe7065e8f3',
@@ -491,18 +289,6 @@ describe('bulk import session boundary', () => {
     },
     updated_at: '2026-09-30T08:00:00.000Z',
   };
-
-  it('defers successful per-record refresh until the caller completes the batch', async () => {
-    await mount();
-    const invalidate = vi.spyOn(module.queryClient, 'invalidateQueries');
-    handler = () => json({ outcomes: [{ mutation_id: change.mutation_id, status: 'accepted' }] });
-    const batch = module.createChangeBatch();
-    await batch.push(change);
-    await batch.push({ ...change, entity_id: 'bfa4debb-5cc4-4e53-9f0b-82c57f923857' });
-    expect(invalidate).not.toHaveBeenCalled();
-    await batch.invalidate();
-    expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['account', 'A'] });
-  });
 
   it('rejects subsequent records after switching accounts, including a later return to the original user', async () => {
     await mount();

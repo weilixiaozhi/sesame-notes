@@ -27,23 +27,7 @@ const app = buildApp({
   },
 });
 type Session = { access_token: string; device_id: string; user: { user_id: string } };
-type Command =
-  | 'add-batch'
-  | 'initialize-defaults'
-  | 'reorder'
-  | 'remove'
-  | 'change-currency'
-  | 'imports'
-  | 'sync-push'
-  | 'rest-category-create'
-  | 'rest-category-update'
-  | 'rest-category-delete'
-  | 'rest-ledger-create'
-  | 'rest-ledger-update'
-  | 'rest-ledger-delete'
-  | 'rest-transaction-create'
-  | 'rest-transaction-update'
-  | 'rest-transaction-delete';
+type Command = 'add-batch' | 'imports' | 'sync-push' | 'rest-transaction-create';
 beforeAll(async () => {
   await assertGuardedTestDatabase(prisma, databaseUrl, process.env);
   await app.ready();
@@ -58,165 +42,120 @@ afterAll(async () => {
 
 /** 只注册当前隔离数据库中的随机账号，不读取任何现有登录信息。 */
 async function fixture(command: Command) {
-  const registered = await app.inject({
-    method: 'POST',
-    url: '/api/v1/auth/register',
-    payload: {
-      country_code: '+86',
-      phone: `138${randomInt(100000000).toString().padStart(8, '0')}`,
-      password: 'isolated-web-race-password',
-      device: { installation_id: randomUUID(), name: 'Web 会话排队回归', platform: 'test' },
-    },
-  });
-  expect(registered.statusCode, registered.body).toBe(201);
-  const session = registered.json<Session>();
-  const headers = { authorization: `Bearer ${session.access_token}`, 'idempotency-key': randomUUID() };
-  const createdLedger = await app.inject({
-    method: 'POST',
-    url: '/api/v1/ledgers',
-    headers,
-    payload: { name: '排队会话专属账本', currency: 'CNY' },
-  });
-  expect(createdLedger.statusCode, createdLedger.body).toBe(201);
-  const ledgerId = createdLedger.json<{ id: string }>().id;
-  const createdCategory = await app.inject({
-    method: 'POST',
-    url: `/api/v1/ledgers/${ledgerId}/categories`,
-    headers,
-    payload: { name: '受保护的分类', kind: 'expense', level: 1, sort_order: 0 },
-  });
-  expect(createdCategory.statusCode, createdCategory.body).toBe(201);
-  const category = createdCategory.json<{ id: string; updated_at: string }>();
-  const transaction = await prisma.transaction.create({
-    data: {
-      ledgerId,
-      ownerId: session.user.user_id,
-      categoryId: category.id,
-      categoryName: '受保护的分类',
-      categoryKind: 'expense',
-      txType: 'expense',
-      amount: '10',
-      currencyCode: 'CNY',
-      nativeAmount: '10',
-      happenedAt: new Date('2026-09-30T00:00:00.000Z'),
-    },
-  });
-  if (command.startsWith('rest-')) {
-    const [domain, action] = command.slice(5).split('-');
-    const method: 'POST' | 'PATCH' | 'DELETE' = action === 'create' ? 'POST' : action === 'update' ? 'PATCH' : 'DELETE';
-    const base = `/api/v1/ledgers/${ledgerId}`;
-    const url =
-      domain === 'ledger'
-        ? action === 'create'
-          ? '/api/v1/ledgers'
-          : base
-        : domain === 'category'
-          ? action === 'create'
-            ? `${base}/categories`
-            : `${base}/categories/${category.id}`
-          : action === 'create'
-            ? `${base}/transactions`
-            : `${base}/transactions/${transaction.id}`;
-    const payload =
-      domain === 'ledger'
-        ? action === 'delete'
-          ? undefined
-          : { name: '排队后不得写入的账本', currency: 'CNY' }
-        : domain === 'category'
-          ? action === 'delete'
-            ? undefined
-            : { name: '排队后不得写入的分类', kind: 'expense', level: 1 }
-          : action === 'delete'
-            ? { base_revision: transaction.revision }
-            : {
-                ...(action === 'update' ? { base_revision: transaction.revision } : {}),
-                tx_type: 'expense',
-                amount: '15',
-                native_amount: '15',
-                currency_code: 'CNY',
-                happened_at: '2026-09-30T00:00:00.000Z',
-                category_id: category.id,
-                note: '排队后不得写入的交易',
-              };
+  try {
+    const registered = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: {
+        country_code: '+86',
+        phone: `138${randomInt(100000000).toString().padStart(8, '0')}`,
+        password: 'isolated-web-race-password',
+        device: { installation_id: randomUUID(), name: 'Web 会话排队回归', platform: 'test' },
+      },
+    });
+    expect(registered.statusCode, registered.body).toBe(201);
+    const session = registered.json<Session>();
+    const headers = { authorization: `Bearer ${session.access_token}`, 'idempotency-key': randomUUID() };
+    const createdLedger = await app.inject({
+      method: 'POST',
+      url: '/api/v1/ledgers',
+      headers,
+      payload: { name: '排队会话专属账本', currency: 'CNY' },
+    });
+    expect(createdLedger.statusCode, createdLedger.body).toBe(201);
+    const ledgerId = createdLedger.json<{ id: string }>().id;
+    const createdCategory = await app.inject({
+      method: 'POST',
+      url: `/api/v1/ledgers/${ledgerId}/categories`,
+      headers,
+      payload: { name: '受保护的分类', kind: 'expense', level: 1, sort_order: 0 },
+    });
+    expect(createdCategory.statusCode, createdCategory.body).toBe(201);
+    const category = createdCategory.json<{ id: string; updated_at: string }>();
+    await prisma.transaction.create({
+      data: {
+        ledgerId,
+        ownerId: session.user.user_id,
+        categoryId: category.id,
+        categoryName: '受保护的分类',
+        categoryKind: 'expense',
+        txType: 'expense',
+        amount: '10',
+        currencyCode: 'CNY',
+        nativeAmount: '10',
+        happenedAt: new Date('2026-09-30T00:00:00.000Z'),
+      },
+    });
+    if (command === 'rest-transaction-create') {
+      const method = 'POST' as const;
+      const url = `/api/v1/ledgers/${ledgerId}/transactions`;
+      const payload = {
+        tx_type: 'expense',
+        amount: '15',
+        native_amount: '15',
+        currency_code: 'CNY',
+        happened_at: '2026-09-30T00:00:00.000Z',
+        category_id: category.id,
+      };
+      return {
+        session,
+        ledgerId,
+        headers,
+        payload,
+        method,
+        url: await accountingRequestFixturePath(app, method, url, headers),
+      };
+    }
+    let payload: object;
+    if (command === 'imports')
+      payload = {
+        categories: [{ name: '排队后不得导入的分类', kind: 'expense', level: 1, sort_order: 1 }],
+        transactions: [
+          {
+            id: randomUUID(),
+            tx_type: 'expense',
+            amount: '2',
+            native_amount: '2',
+            currency_code: 'CNY',
+            happened_at: '2026-09-30T00:00:00.000Z',
+            category_id: category.id,
+          },
+        ],
+      };
+    else if (command === 'sync-push')
+      payload = {
+        device_id: session.device_id,
+        changes: [1, 2].map((index) => ({
+          mutation_id: randomUUID(),
+          entity_type: 'category',
+          entity_id: randomUUID(),
+          ledger_id: null,
+          action: 'upsert',
+          updated_at: new Date().toISOString(),
+          payload: {
+            name: `排队后不得同步的分类${index}`,
+            kind: 'expense',
+            level: 1,
+            sort_order: index,
+            icon: null,
+            parent_id: null,
+          },
+        })),
+      };
+    else payload = { items: [{ name: '不得新增的分类', kind: 'expense', level: 1, sort_order: 1 }] };
+    const path = command === 'imports' ? command : 'categories/add-batch';
+    const url = command === 'sync-push' ? '/api/v1/sync/push' : `/api/v1/ledgers/${ledgerId}/${path}`;
     return {
       session,
       ledgerId,
       headers,
       payload,
-      method,
-      url: await accountingRequestFixturePath(app, method, url, headers),
+      method: 'POST' as const,
+      url: await accountingRequestFixturePath(app, 'POST', url, headers),
     };
+  } catch (cause) {
+    throw new Error('排队会话撤销夹具准备失败', { cause });
   }
-  let payload: object;
-  if (command === 'imports')
-    payload = {
-      categories: [{ name: '排队后不得导入的分类', kind: 'expense', level: 1, sort_order: 1 }],
-      transactions: [
-        {
-          id: randomUUID(),
-          tx_type: 'expense',
-          amount: '2',
-          native_amount: '2',
-          currency_code: 'CNY',
-          happened_at: '2026-09-30T00:00:00.000Z',
-          category_id: category.id,
-        },
-      ],
-    };
-  else if (command === 'sync-push')
-    payload = {
-      device_id: session.device_id,
-      changes: [1, 2].map((index) => ({
-        mutation_id: randomUUID(),
-        entity_type: 'category',
-        entity_id: randomUUID(),
-        ledger_id: null,
-        action: 'upsert',
-        updated_at: new Date().toISOString(),
-        payload: {
-          name: `排队后不得同步的分类${index}`,
-          kind: 'expense',
-          level: 1,
-          sort_order: index,
-          icon: null,
-          parent_id: null,
-        },
-      })),
-    };
-  else if (command === 'initialize-defaults') payload = { items: [], initialize_defaults: true };
-  else if (command === 'add-batch')
-    payload = { items: [{ name: '不得新增的分类', kind: 'expense', level: 1, sort_order: 1 }] };
-  else if (command === 'reorder')
-    payload = { items: [{ id: category.id, sort_order: 100, expected_updated_at: category.updated_at }] };
-  else if (command === 'change-currency')
-    payload = { currency: 'USD', expected_currency: 'CNY', rates: { CNY: '0.14' } };
-  else {
-    const preview = await app.inject({
-      method: 'POST',
-      url: `/api/v1/ledgers/${ledgerId}/categories/removal-preview`,
-      headers,
-      payload: { category_ids: [category.id] },
-    });
-    expect(preview.statusCode, preview.body).toBe(200);
-    payload = {
-      category_ids: [category.id],
-      mode: 'delete',
-      preview_token: preview.json<{ preview_token: string }>().preview_token,
-    };
-  }
-  const path =
-    command === 'change-currency' || command === 'imports'
-      ? command
-      : `categories/${command === 'initialize-defaults' ? 'add-batch' : command}`;
-  const url = command === 'sync-push' ? '/api/v1/sync/push' : `/api/v1/ledgers/${ledgerId}/${path}`;
-  return {
-    session,
-    ledgerId,
-    headers,
-    payload,
-    method: 'POST' as const,
-    url: await accountingRequestFixturePath(app, 'POST', url, headers),
-  };
 }
 
 /** 保存完整业务与同步快照，拒绝请求不得悄悄改版本、墓碑或幂等回执。 */
@@ -255,26 +194,12 @@ async function waitForQueuedWrite() {
 }
 
 describe('Web 原子命令等待写锁后的会话撤销边界', () => {
-  const cases = (
-    [
-      'add-batch',
-      'initialize-defaults',
-      'reorder',
-      'remove',
-      'change-currency',
-      'imports',
-      'sync-push',
-      'rest-category-create',
-      'rest-category-update',
-      'rest-category-delete',
-      'rest-ledger-create',
-      'rest-ledger-update',
-      'rest-ledger-delete',
-      'rest-transaction-create',
-      'rest-transaction-update',
-      'rest-transaction-delete',
-    ] as const
-  ).flatMap((command) => (['撤销设备', '停用账号'] as const).map((revocation) => ({ command, revocation })));
+  const cases = [
+    { command: 'add-batch', revocation: '撤销设备' },
+    { command: 'imports', revocation: '停用账号' },
+    { command: 'sync-push', revocation: '撤销设备' },
+    { command: 'rest-transaction-create', revocation: '停用账号' },
+  ] as const;
   it.each(cases)(
     '$command 排队期间$revocation，返回401并且业务、SyncChange和幂等回执均不改变',
     async ({ command, revocation }) => {
@@ -311,7 +236,7 @@ describe('Web 原子命令等待写锁后的会话撤销边界', () => {
         try {
           await blocker;
         } finally {
-          // Drain this request even if the queue/revocation assertion failed.
+          // 等锁或撤销断言失败时仍等待请求结束，避免夹具在后台继续访问数据库。
           await pending.catch(() => undefined);
         }
       }

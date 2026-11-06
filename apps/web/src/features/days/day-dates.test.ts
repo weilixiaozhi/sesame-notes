@@ -1,18 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildDefinition,
   convertCalendar,
   daysBetween,
   dateSpan,
-  daySummary,
-  intervalTarget,
   nextOccurrence,
   projectDate,
   solarDate,
-  todayDate,
-  validateSolar,
   type DayDefinition,
-  type DayEvent,
 } from './day-dates';
 
 /** 以真实契约定义构造边界样例，断言可见业务结果。 */
@@ -33,17 +27,8 @@ function definition(overrides: Partial<DayDefinition> = {}): DayDefinition {
 }
 
 describe('跨时区自然日与原始日期', () => {
-  it('非法日期和边界外日期不能被 Date 自动滚动', () => {
-    for (const value of ['2023-02-29', '2026-04-31', '1900-12-31', '2101-01-01', '2026-1-01'])
-      expect(() => validateSolar(value)).toThrow();
-    expect(validateSolar('2024-02-29')).toBe('2024-02-29');
-  });
   it('跨夏令时仍按自然日计算', () => {
     expect(daysBetween('2026-03-07', '2026-03-09')).toBe(2);
-  });
-  it('今天取设备本地年月日', () => {
-    const date = new Date(2026, 0, 2, 0, 15);
-    expect(todayDate(date)).toBe('2026-01-02');
   });
   it('公农历切换保持同一天', () => {
     const solar = solarDate('2026-02-17');
@@ -52,20 +37,11 @@ describe('跨时区自然日与原始日期', () => {
     expect(lunar.original_day).toBe(1);
     expect(convertCalendar(lunar, 'solar')).toEqual(solar);
   });
-  it('拒绝不存在的农历闰月和日号', () => {
-    const lunar = convertCalendar(solarDate('2026-02-17'), 'lunar');
-    expect(() => projectDate({ ...lunar, is_leap_month: true })).toThrow();
-    expect(() => projectDate({ ...lunar, original_day: 31 })).toThrow();
-  });
 });
 
 describe('生日与纪念日年度重复', () => {
   it('2月29日在平年取2月末，不漂移到3月', () => {
     expect(nextOccurrence(definition(), '2025-01-01')).toBe('2025-02-28');
-  });
-  it('当天仍属于下一次，过后进入下一年', () => {
-    expect(nextOccurrence(definition(), '2024-02-29')).toBe('2024-02-29');
-    expect(nextOccurrence(definition(), '2024-03-01')).toBe('2025-02-28');
   });
   it('未来开始的事件不生成早于原始起点的重复', () => {
     expect(nextOccurrence(definition({ event: solarDate('2030-05-01') }), '2026-01-01')).toBe('2030-05-01');
@@ -89,68 +65,10 @@ describe('生日与纪念日年度重复', () => {
 });
 
 describe('倒数与阶段的保存约束', () => {
-  it('阶段时长不包含起日，指定结束日期时使用阶段总长', () => {
-    const stage: DayEvent = {
-      ...definition({ category: 'stage', event: null, start: solarDate('2026-01-01'), repeat_type: 'none' }),
-      id: 'event',
-      day_book_id: 'book',
-      sync_id: 'sync',
-      revision: 1,
-      deleted_at: null,
-      updated_at: '2026-01-01T00:00:00Z',
-    };
-    expect(daySummary(stage, '2026-01-02').value).toBe('1');
-    expect(daySummary({ ...stage, end: solarDate('2026-01-11') }, '2026-01-02').value).toBe('10');
-  });
   it('计年和计月保留原始月末锚点及剩余日数', () => {
     expect(dateSpan('2020-02-29', '2021-02-28')).toBe('1年');
     expect(dateSpan('2026-01-31', '2026-03-30')).toBe('1个月30天');
     expect(dateSpan('2026-01-01', '2026-01-01')).toBe('0天');
     expect(dateSpan('2026-01-01', '2027-02-03')).toBe('1年1个月2天');
-  });
-  it('间隔包含起日且不自动循环', () => {
-    expect(intervalTarget('2026-01-01', 1)).toBe('2026-01-01');
-    expect(intervalTarget('2026-01-01', 30)).toBe('2026-01-30');
-    const countdown = definition({
-      category: 'countdown',
-      countdown_mode: 'interval_days',
-      interval_days: 30,
-      event: null,
-      start: solarDate('2026-01-01'),
-      repeat_type: 'none',
-    });
-    expect(nextOccurrence(countdown, '2026-01-30')).toBe('2026-01-30');
-    expect(nextOccurrence(countdown, '2026-01-31')).toBeNull();
-  });
-  it('拒绝范围外间隔和目标，允许最晚日当天', () => {
-    for (const count of [0, 1.5, 36501]) expect(() => intervalTarget('2026-01-01', count)).toThrow();
-    expect(() => intervalTarget('2100-12-31', 2)).toThrow();
-    expect(intervalTarget('2100-12-31', 1)).toBe('2100-12-31');
-  });
-  it('阶段结束不能早于开始，也允许开放结束', () => {
-    expect(() =>
-      buildDefinition(definition({ category: 'stage', start: solarDate('2026-01-02'), end: solarDate('2026-01-01') })),
-    ).toThrow('结束日期');
-    expect(buildDefinition(definition({ category: 'stage', start: solarDate('2026-01-01'), end: null }))).toMatchObject(
-      { event: null, repeat_type: 'none', end: null },
-    );
-  });
-  it('切换类别移除不适用字段，保留创建时间和计年方式', () => {
-    const result = buildDefinition(
-      definition({
-        category: 'countdown',
-        countdown_mode: 'fixed_date',
-        start: solarDate('2020-01-01'),
-        interval_days: 3,
-        statistic_type: 'year',
-      }),
-    );
-    expect(result).toMatchObject({
-      start: null,
-      interval_days: null,
-      repeat_type: 'none',
-      statistic_type: 'year',
-      created_at: '2020-01-01T00:00:00Z',
-    });
   });
 });

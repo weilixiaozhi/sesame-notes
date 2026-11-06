@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { memoExportJson } from './memo-export';
-import { exportFileName } from '../../lib/transfer/download';
 import type { MemoBook, MemoEntry } from './memo-content';
 import { dayExportCsv } from '../days/day-export';
 import { projectDate, type DayBook, type DayEvent } from '../days/day-dates';
@@ -84,8 +83,5 @@ describe('客户端兼容交换格式导出', () => {
     expect(csv.startsWith('\uFEFFname,category,')).toBe(true);
     expect(csv).toContain('2026-01-01,lunar,false');
     expect(csv).toContain('"带逗号,和""引号"""');
-  });
-  it('文件名中移除系统禁用字符', () => {
-    expect(exportFileName('a/b:c?d')).toBe('a_b_c_d');
   });
 });

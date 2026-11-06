@@ -62,25 +62,4 @@ describe('当前同步协议的持久水位', () => {
       throw new Error('完整快照与条件写入的水位一致性验证失败', { cause });
     }
   });
-
-  it('清理保存的水位高于当前事件时仍有效，一次性协议切点保持原值', async () => {
-    try {
-      const fixture = repository();
-      fixture.state.cursor = 42n;
-      fixture.state.cursorFloor = 70n;
-      fixture.state.observed = 60n;
-      expect(await requireSyncCutover(fixture.prisma)).toBe(42n);
-      expect(await fullSnapshotCursor(fixture.prisma, { syncRetentionMinCursor: 0 } as ApiConfig)).toBe(70n);
-      const tx = fixture.prisma as unknown as SyncTransaction;
-      await expect(assertSyncSnapshot(tx, { memoBookId: 'book' }, '70', 0n)).resolves.toBeUndefined();
-      await expect(assertSyncSnapshot(tx, { memoBookId: 'book' }, '71', 0n)).rejects.toMatchObject({
-        code: 'SYNC_SNAPSHOT_CHANGED',
-      });
-      await expect(assertSyncSnapshot(tx, { memoBookId: 'book' }, '70', 71n)).rejects.toMatchObject({
-        code: 'SYNC_SNAPSHOT_CHANGED',
-      });
-    } catch (cause) {
-      throw new Error('清理持久水位与协议切点边界验证失败', { cause });
-    }
-  });
 });

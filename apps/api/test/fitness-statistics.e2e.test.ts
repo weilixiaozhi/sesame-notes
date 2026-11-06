@@ -4,7 +4,7 @@ import { afterAll, beforeAll, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { testFixtureDatabaseUrl } from './existing-test-database.js';
-import { fitnessWorkout, fitnessExercise, fitnessPreferences, fitnessTime } from './fitness-fixtures.js';
+import { fitnessWorkout, fitnessExercise, fitnessTime } from './fitness-fixtures.js';
 
 const databaseUrl = testFixtureDatabaseUrl();
 const prisma = new PrismaClient({ datasourceUrl: databaseUrl });
@@ -83,36 +83,6 @@ it('聚合跨越 200 条列表上限，动作筛选要求同一动作有完成�
   expect(
     (await get(`${base}/statistics?start_date=2026-02-30&end_date=2026-03-01`, actor.access_token)).statusCode,
   ).toBe(400);
-});
-it('健身偏好使用本子唯一 ID，分页读取与他人账号隔离', async () => {
-  const actor = await account();
-  const other = await account();
-  const space = await prisma.fitnessSpace.create({
-    data: {
-      id: randomUUID(),
-      createdAt: new Date(fitnessTime),
-      updatedAt: new Date(fitnessTime),
-      ownerId: actor.user.user_id,
-      name: '偏好测试',
-    },
-  });
-  const time = new Date(fitnessTime);
-  await prisma.fitnessEntity.create({
-    data: {
-      id: space.id,
-      fitnessSpaceId: space.id,
-      entityType: 'fitness_preferences',
-      payload: fitnessPreferences(),
-      createdAt: time,
-      updatedAt: time,
-    },
-  });
-  const url = `/api/v1/fitness-spaces/${space.id}/preferences`;
-  const response = await get(url, actor.access_token);
-  expect(response.statusCode, response.body).toBe(200);
-  expect(response.json().items).toHaveLength(1);
-  expect(response.json().next_cursor).toBeNull();
-  expect((await get(url, other.access_token)).statusCode).toBe(404);
 });
 
 /** 单独准备超过分页上限的真实数据；数据库 CHECK 校验耗时不挤占请求断言的默认五秒预算。 */

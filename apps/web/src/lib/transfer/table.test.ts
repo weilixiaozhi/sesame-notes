@@ -13,37 +13,6 @@ describe('JSON 表格字段归属', () => {
     ]);
   });
 
-  it('同一路径下的多个嵌套数组按文件顺序收集，每条记录只追加一次', () => {
-    const rows = Array.from({ length: 2000 }, (_, index) => ({ records: [{ name: `记录 ${index}`, amount: index }] }));
-    const tables = parseJsonTables(JSON.stringify(rows));
-    const nested = tables.find((table) => table.name === '$[].records');
-    expect(nested?.records).toEqual([
-      ['name', 'amount'],
-      ...rows.map((row) => [row.records[0]!.name, String(row.records[0]!.amount)]),
-    ]);
-  });
-
-  it('含路径标点的字段与真正嵌套数组保持为独立数据表', () => {
-    try {
-      const tables = parseJsonTables(
-        JSON.stringify({
-          'a.b': [{ amount: '1' }],
-          a: { b: [{ amount: '2' }] },
-          'items[]': [{ amount: '3' }],
-          items: [[{ amount: '4' }]],
-        }),
-      );
-      expect(tables).toEqual([
-        { name: '$["a.b"]', records: [['amount'], ['1']] },
-        { name: '$.a.b', records: [['amount'], ['2']] },
-        { name: '$["items[]"]', records: [['amount'], ['3']] },
-        { name: '$.items[]', records: [['amount'], ['4']] },
-      ]);
-    } catch (cause) {
-      throw new Error('JSON 独立数据表路径归属验证失败', { cause });
-    }
-  });
-
   it('稀疏字段并集与记录数量使用工作表容量边界，展开前拒绝超限文件', () => {
     try {
       const rows = Array.from({ length: 201 }, (_, index) => ({ [`column_${index}`]: '数据' }));

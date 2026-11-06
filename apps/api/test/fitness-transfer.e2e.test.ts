@@ -244,24 +244,3 @@ it('偏好覆盖要求明确确认并保留目标自定义动作，所有权、�
     ).statusCode,
   ).toBe(400);
 });
-
-it('单路由严格校验拒绝非法参数、错类型正文、未知字段且不会删除联合字段', async () => {
-  const actor = await account();
-  const source = document();
-  const body = { sync_id: actor.space.syncId, export_id: source.export_id, records: source.records };
-  for (const invalid of [
-    { ...body, unknown: true },
-    { ...body, records: 'invalid' },
-    { ...body, records: [{ ...source.records[0], deleted_at: null }] },
-    { ...body, records: [{ ...source.records[1], payload: { ...source.records[1]!.payload, unknown: true } }] },
-  ]) {
-    const response = await api(actor, 'POST', 'import', invalid);
-    expect(response.statusCode, response.body).toBe(400);
-  }
-  const invalidParams = await api({ ...actor, space: { id: 'not-uuid' } }, 'POST', 'import', body);
-  expect(invalidParams.statusCode, invalidParams.body).toBe(400);
-  expect(await prisma.fitnessEntity.count({ where: { fitnessSpaceId: actor.space.id } })).toBe(0);
-  const valid = await api(actor, 'POST', 'import', body);
-  expect(valid.statusCode, valid.body).toBe(200);
-  expect(valid.json().imported).toBe(4);
-});

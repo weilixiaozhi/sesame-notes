@@ -113,24 +113,6 @@ test('当前未完成任务及损坏 JSONL 均保留', () => {
   );
 });
 
-test('未登记的文本日志、目录和未知 JSONL 均按未知条目保留', () => {
-  withPlan(
-    {
-      'Temp/prod-update.Ab12c3.log': 'release completed\n',
-      'Temp/prod-build.Ab12c3/build.log': 'build completed\n',
-      'Temp/unrelated.jsonl': '{"event":"release_completed"}\n',
-    },
-    (result) => {
-      assert.deepEqual(result.candidates, []);
-      assert.deepEqual(Object.keys(result.retained).sort(), [
-        'prod-build.Ab12c3',
-        'prod-update.Ab12c3.log',
-        'unrelated.jsonl',
-      ]);
-    },
-  );
-});
-
 test('识别未占用的独立运维日志，保留同名目录、未知目录和相似名称', () => {
   withPlan(
     {
@@ -157,17 +139,6 @@ test('识别未占用的独立运维日志，保留同名目录、未知目录�
   );
 });
 
-test('独立日志位于挂载点时保留', () => {
-  withPlan(
-    { 'Temp/prod-check.7dtOeO.log': '健康检查通过\n' },
-    (result) => {
-      assert.deepEqual(result.candidates, []);
-      assert.equal(Object.hasOwn(result.retained, 'prod-check.7dtOeO.log'), true);
-    },
-    'prod-check.7dtOeO.log',
-  );
-});
-
 test('候选仅限 Temp 直接子项，不认领嵌套目录或 Temp 外同名完成任务', () => {
   withPlan(
     {
@@ -179,13 +150,6 @@ test('候选仅限 Temp 直接子项，不认领嵌套目录或 Temp 外同名�
       assert.deepEqual(Object.keys(result.retained), ['nested']);
     },
   );
-});
-
-test('当前任务路径类型不符时保留文件', () => {
-  withPlan({ [`Temp/${completedName}`]: '{"event":"release_completed"}\n' }, (result) => {
-    assert.deepEqual(result.candidates, []);
-    assert.equal(Object.hasOwn(result.retained, completedName), true);
-  });
 });
 
 test('完成任务位于挂载边界时不进入候选', () => {

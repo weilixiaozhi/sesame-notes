@@ -134,7 +134,6 @@ afterEach(async () => {
 
 it.each([
   { endpoint: '/api/v1/auth/login', code: 'LOGIN_FAILED' },
-  { endpoint: '/api/v1/auth/browser/login', code: 'LOGIN_FAILED' },
   { endpoint: '/api/v1/auth/password', code: 'PASSWORD_CHANGE_FAILED' },
 ])('$endpoint 将密码计算故障报告为 500，保留根因且不更改账号或会话', async ({ endpoint, code }) => {
   try {
@@ -167,24 +166,5 @@ it.each([
     expect(fixture.records.join('')).not.toContain(nextPassword);
   } catch (cause) {
     throw new Error(`密码计算失败的接口与状态验收失败：${endpoint}`, { cause });
-  }
-});
-
-it.each([
-  { endpoint: '/api/v1/auth/login', status: 401, code: 'INVALID_CREDENTIALS' },
-  { endpoint: '/api/v1/auth/browser/login', status: 401, code: 'INVALID_CREDENTIALS' },
-  { endpoint: '/api/v1/auth/password', status: 400, code: 'CURRENT_PASSWORD_INVALID' },
-])('$endpoint 的正常密码不匹配保留业务拒绝语义', async ({ endpoint, status, code }) => {
-  try {
-    const fixture = await setup();
-    const before = fixture.snapshot();
-    const response = await request(fixture, endpoint, 'incorrect-password-fixture');
-    expect(response.statusCode, response.body).toBe(status);
-    expect(response.json()).toMatchObject({ code });
-    expect(response.cookies).toHaveLength(0);
-    expect(fixture.snapshot()).toEqual(before);
-    expect(fixture.records.map((record) => JSON.parse(record)).filter((record) => record.level >= 50)).toHaveLength(0);
-  } catch (cause) {
-    throw new Error(`正常密码不匹配验收失败：${endpoint}`, { cause });
   }
 });

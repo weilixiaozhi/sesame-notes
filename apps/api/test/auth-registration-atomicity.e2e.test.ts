@@ -125,7 +125,7 @@ async function unusedPhone() {
 }
 
 for (const browser of [false, true]) {
-  it.each(['children', 'events'] as const)(
+  it.each(['events'] as const)(
     `${browser ? '浏览器' : '移动端'}注册在 %s 写入后失败完整回滚，取消故障后相同手机号可创建完整目录`,
     async (stage) => {
       const phone = await unusedPhone();

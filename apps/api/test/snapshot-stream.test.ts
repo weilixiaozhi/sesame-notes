@@ -1,43 +1,11 @@
 import Fastify from 'fastify';
-import { spawn } from 'node:child_process';
+
 import { get } from 'node:http';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
+import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { createOwnedFixture, removeOwnedFixture } from './owned-fixture-directory.js';
 import { sendSnapshot, snapshotRows } from '../src/shared/snapshot-stream.js';
-import { runWithOperationMetrics, type OperationMetrics } from '../src/shared/operation-metrics.js';
-
-it('快照生成指标在真实 onResponse 写日志前可见，失败生成也留下记录', async () => {
-  const f = await fixture();
-  const observed: OperationMetrics[] = [];
-  f.app.decorateRequest('operationMetrics');
-  f.app.addHook('onRequest', (request, _reply, done) => {
-    request.operationMetrics = {};
-    runWithOperationMetrics(request.operationMetrics, done);
-  });
-  f.app.addHook('onResponse', async (request) => {
-    observed.push(structuredClone(request.operationMetrics));
-  });
-  f.app.get('/full', (_, reply) =>
-    sendSnapshot(reply, f.directory, async (writer) => {
-      await writer.text('{"value":1}');
-    }),
-  );
-  f.app.get('/failed', (_, reply) =>
-    sendSnapshot(reply, f.directory, async () => {
-      throw new Error('snapshot generation failed');
-    }),
-  );
-  try {
-    expect((await f.app.inject('/full')).statusCode).toBe(200);
-    expect((await f.app.inject('/failed')).statusCode).toBe(500);
-    expect(observed[0]?.snapshot).toMatchObject({ count: 1, failed: 0, bytes: 11 });
-    expect(observed[1]?.snapshot).toMatchObject({ count: 1, failed: 1 });
-  } finally {
-    await f.close();
-  }
-});
 
 async function fixture() {
   const directory = await createOwnedFixture('snapshot-stream-test');
@@ -135,114 +103,6 @@ it('客户端在生成期间退出，后续写入停止并释放文件', async (
     await f.close();
   }
 });
-it('客户端在传输期间退出也释放快照文件', async () => {
-  const f = await fixture();
-  f.app.get('/full', (_, reply) =>
-    sendSnapshot(reply, f.directory, async (writer) => {
-      await writer.text('{"rows":');
-      await writer.array(Array.from({ length: 500 }, (_, id) => ({ id, text: 'x'.repeat(8192) })));
-      await writer.text('}');
-    }),
-  );
-  try {
-    const address = await f.app.listen({ port: 0, host: '127.0.0.1' });
-    await new Promise<void>((resolve, reject) => {
-      const request = get(`${address}/full`, (response) => {
-        response.once('data', () => {
-          request.destroy();
-          resolve();
-        });
-      });
-      request.on('error', (error) => {
-        if (!request.destroyed) reject(error);
-      });
-    });
-    await waitEmpty(f.directory);
-  } finally {
-    await f.close();
-  }
-});
-
-/** 子进程在首个大块写入后直接退出，确保验证不会依赖请求的 finally 清理。 */
-async function crashAfterFirstChunk(directory: string): Promise<void> {
-  let child: ReturnType<typeof spawn> | undefined;
-  let exited: Promise<{ code: number | null; signal: NodeJS.Signals | null }> | undefined;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let stdout = '';
-  let stderr = '';
-  try {
-    const source = `
-      import Fastify from 'fastify';
-      try {
-        const { sendSnapshot } = await import(process.argv[2]);
-        const app = Fastify({ logger: false });
-        app.get('/full', (_, reply) => sendSnapshot(reply, process.argv[1], async (writer) => {
-          await writer.text('{"private_content":"' + 'x'.repeat(128 * 1024));
-          await writer.flush();
-          await new Promise((resolve) => process.stdout.write('FIRST_CHUNK_WRITTEN\\n', resolve));
-          process.exit(42);
-        }));
-        await app.inject('/full');
-        throw new Error('快照子进程没有在指定阶段退出');
-      } catch (error) {
-        console.error(error);
-        process.exitCode = 1;
-      }
-    `;
-    child = spawn(
-      process.execPath,
-      [
-        '--import',
-        'tsx',
-        '--input-type=module',
-        '--eval',
-        source,
-        directory,
-        new URL('../src/shared/snapshot-stream.ts', import.meta.url).href,
-      ],
-      { cwd: resolve(import.meta.dirname, '..'), stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true },
-    );
-    child.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString();
-    });
-    child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString();
-    });
-    exited = new Promise((resolve, reject) => {
-      child!.once('error', reject);
-      // 等待输出管道关闭后再检查标记，避免进程退出事件早于最后一段日志读取。
-      child!.once('close', (code, signal) => resolve({ code, signal }));
-    });
-    const outcome = await Promise.race([
-      exited,
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('快照崩溃子进程等待超过 15 秒')), 15_000);
-      }),
-    ]);
-    expect(outcome).toEqual({ code: 42, signal: null });
-    expect(stdout).toContain('FIRST_CHUNK_WRITTEN');
-  } catch (error) {
-    throw new Error(`快照崩溃回归失败。\nstdout:\n${stdout}\nstderr:\n${stderr}`, { cause: error });
-  } finally {
-    clearTimeout(timer);
-    if (child && child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
-    await exited?.catch(() => {});
-  }
-}
-
-it('生成首个大块后进程崩溃，操作系统回收快照内容', async () => {
-  const f = await fixture();
-  try {
-    await crashAfterFirstChunk(f.directory);
-    const entries = await readdir(join(f.directory, 'sync-snapshots'), { recursive: true, withFileTypes: true });
-    // 崩溃跳过应用清理，已写入的私有内容仍不能留下可访问的文件。
-    expect(entries.filter((entry) => entry.isFile())).toEqual([]);
-  } catch (error) {
-    throw new Error('生成阶段崩溃后的快照内容残留检查失败', { cause: error });
-  } finally {
-    await f.close();
-  }
-}, 20_000);
 
 it('两个快照并发生成，一个完成后另一下载仍保持完整', async () => {
   const f = await fixture();

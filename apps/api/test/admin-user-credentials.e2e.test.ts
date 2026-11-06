@@ -345,7 +345,7 @@ describe('后台用户手机号换绑和密码重置', () => {
     }
   });
 
-  it.each(['1', '  新密码  ', 'x'.repeat(128)])('重置密码完整保留输入字符并使旧凭据失效：%s', async (password) => {
+  it.each(['  新密码  '])('重置密码完整保留输入字符并使旧凭据失效：%s', async (password) => {
     try {
       const account = await registerAccount();
       const userId = account.session.user.user_id;

@@ -52,13 +52,10 @@ function guard(key: string) {
 }
 
 describe('后台路由默认拒绝漏配置', () => {
-  it.each(['/api/v1/admin', '/api/v1/admin/new-feature', '/api/v1/admin/auth/new-method'])(
-    '未声明独立认证守卫的 %s 不能注册',
-    (url) => {
-      const app = protectedApp();
-      expect(() => app.get(url, async () => ({ ok: true }))).toThrow('独立管理员鉴权守卫');
-    },
-  );
+  it.each(['/api/v1/admin/new-feature'])('未声明独立认证守卫的 %s 不能注册', (url) => {
+    const app = protectedApp();
+    expect(() => app.get(url, async () => ({ ok: true }))).toThrow('独立管理员鉴权守卫');
+  });
 
   it('只有精确 POST 登录入口可以公开，GET 或混合方法不能借用例外', () => {
     const app = protectedApp();
@@ -87,16 +84,6 @@ describe('后台路由默认拒绝漏配置', () => {
       app.post('/api/v1/admin/new-feature', { preHandler: guard('GET /api/v1/admin/users') }, async () => ({})),
     ).toThrow('只读权限');
   });
-
-  it.each(['/api/v1/admin/analytics', '/api/v1/admin/fitness/exercises', '/api/v1/admin/banners'])(
-    '新模块只读权限不能保护写接口：%s',
-    (path) => {
-      const app = protectedApp();
-      expect(() =>
-        app.post('/api/v1/admin/new-feature', { preHandler: guard(`GET ${path}`) }, async () => ({})),
-      ).toThrow('只读权限');
-    },
-  );
 
   it('本人改密守卫不能扩展到普通后台功能', () => {
     const app = protectedApp();

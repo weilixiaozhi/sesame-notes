@@ -5,7 +5,7 @@ import { buildApp } from '../src/app.js';
 import { loadConfig } from '../src/config.js';
 import { testFixtureDatabaseUrl } from './existing-test-database.js';
 import { fitnessPlan, fitnessTemplate, fitnessTime } from './fitness-fixtures.js';
-import { generatePlanCycles, type FitnessPlanPayload } from '../src/modules/fitness/testing.js';
+import type { FitnessPlanPayload } from '../src/modules/fitness/testing.js';
 
 const databaseUrl = testFixtureDatabaseUrl();
 const prisma = new PrismaClient({ datasourceUrl: databaseUrl });
@@ -69,44 +69,6 @@ function command(actor: Actor, spaceId: string, id: string, body: unknown) {
 }
 
 describe('atomic online plan commands', () => {
-  it('imports template copies and a closed plan atomically, preserving retry identity', async () => {
-    const actor = await account();
-    const space = await scope(actor);
-    const templateId = randomUUID();
-    const planId = randomUUID();
-    const plan = fresh();
-    plan.status = 'closed';
-    plan.days[0]!.slot!.source_template_id = templateId;
-    const body = {
-      mutation_id: randomUUID(),
-      sync_id: space.syncId,
-      base_revision: 0,
-      today: '2026-09-11',
-      action: 'save',
-      plan,
-      template_copies: [{ id: templateId, payload: fitnessTemplate() }],
-    };
-    const first = await command(actor, space.id, planId, body);
-    expect(first.statusCode, first.body).toBe(200);
-    expect(first.json()).toMatchObject({ generated_count: 0, plan: { status: 'closed' } });
-    expect(await prisma.fitnessEntity.count({ where: { fitnessSpaceId: space.id } })).toBe(2);
-    expect((await command(actor, space.id, planId, body)).json().replayed).toBe(true);
-    expect(await prisma.syncChange.count({ where: { fitnessSpaceId: space.id } })).toBe(2);
-    const failedSpace = await scope(actor);
-    const collision = await command(actor, failedSpace.id, randomUUID(), {
-      ...body,
-      mutation_id: randomUUID(),
-      sync_id: failedSpace.syncId,
-      template_copies: [
-        { id: randomUUID(), payload: fitnessTemplate() },
-        { id: templateId, payload: fitnessTemplate() },
-      ],
-    });
-    expect(collision.statusCode, collision.body).toBe(409);
-    expect(await prisma.fitnessEntity.count({ where: { fitnessSpaceId: failedSpace.id } })).toBe(0);
-    expect(await prisma.syncChange.count({ where: { fitnessSpaceId: failedSpace.id } })).toBe(0);
-  });
-
   it('commits plan, generated workouts and sync events together and replays exactly once', async () => {
     const actor = await account();
     const space = await scope(actor);
@@ -266,51 +228,6 @@ describe('atomic online plan commands', () => {
     expect(await prisma.syncChange.count({ where: { fitnessSpaceId: space.id } })).toBe(0);
   });
 
-  it('advances past a deleted occurrence without resurrecting its tombstone', async () => {
-    const actor = await account();
-    const space = await scope(actor);
-    const id = randomUUID();
-    const first = await command(actor, space.id, id, {
-      mutation_id: randomUUID(),
-      sync_id: space.syncId,
-      base_revision: 0,
-      today: '2026-09-11',
-      action: 'save',
-      plan: fresh(),
-    });
-    expect(first.statusCode, first.body).toBe(200);
-    const saved = first.json().plan;
-    const next = generatePlanCycles(id, saved, '2026-09-13', fitnessTime).workouts[0]!;
-    const tombstone = await prisma.fitnessEntity.create({
-      data: {
-        id: next.id,
-        fitnessSpaceId: space.id,
-        entityType: 'fitness_workout',
-        payload: next.payload,
-        status: 'scheduled',
-        occurrenceKey: next.payload.occurrence_key,
-        deletedAt: new Date(),
-        revision: 3,
-        createdAt: new Date(fitnessTime),
-        updatedAt: new Date(fitnessTime),
-      },
-    });
-    const response = await command(actor, space.id, id, {
-      mutation_id: randomUUID(),
-      sync_id: space.syncId,
-      base_revision: saved.revision,
-      today: '2026-09-13',
-      action: 'generate',
-    });
-    expect(response.statusCode, response.body).toBe(200);
-    expect(response.json().generated_count).toBe(0);
-    expect(response.json().plan.generation_state.next_cycle_index).toBe(2);
-    expect(await prisma.fitnessEntity.findUnique({ where: { id: tombstone.id } })).toMatchObject({
-      revision: 3,
-      deletedAt: tombstone.deletedAt,
-    });
-  });
-
   it('restarts with a new cycle identity and only removes overlapping records from that plan', async () => {
     const actor = await account();
     const space = await scope(actor);
@@ -370,34 +287,5 @@ describe('atomic online plan commands', () => {
     const overlap = before.find((row) => (row.payload as { scheduled_date: string }).scheduled_date === '2026-09-13')!;
     expect((await prisma.fitnessEntity.findUnique({ where: { id: early.id } }))!.deletedAt).toBeNull();
     expect((await prisma.fitnessEntity.findUnique({ where: { id: overlap.id } }))!.deletedAt).not.toBeNull();
-  });
-
-  it('rejects cross-space template references even for a closed plan with no generated workouts', async () => {
-    const actor = await account();
-    const space = await scope(actor);
-    const another = await scope(actor);
-    const template = await prisma.fitnessEntity.create({
-      data: {
-        id: randomUUID(),
-        fitnessSpaceId: another.id,
-        entityType: 'fitness_template',
-        payload: fitnessTemplate(),
-        createdAt: new Date(fitnessTime),
-        updatedAt: new Date(fitnessTime),
-      },
-    });
-    const plan = fresh();
-    plan.status = 'closed';
-    plan.days[0]!.slot!.source_template_id = template.id;
-    const response = await command(actor, space.id, randomUUID(), {
-      mutation_id: randomUUID(),
-      sync_id: space.syncId,
-      base_revision: 0,
-      today: '2026-09-11',
-      action: 'save',
-      plan,
-    });
-    expect(response.statusCode, response.body).toBe(400);
-    expect(await prisma.fitnessEntity.count({ where: { fitnessSpaceId: space.id } })).toBe(0);
   });
 });

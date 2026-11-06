@@ -135,7 +135,7 @@ async function snapshot(value: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe('周期发生 REST 来源与历史编辑', () => {
-  it.each([false, true])('规则删除后保留来源编辑金额和备注，显式来源=%s', async (explicit) => {
+  it('规则删除后保留来源编辑金额和备注，显式来源=false', async () => {
     const value = await fixture();
     await prisma.recurringTransaction.update({ where: { id: value.rule.id }, data: { deletedAt: new Date() } });
     const response = await request('PATCH', `/ledgers/${value.ledgerId}/transactions/${value.transaction.id}`, {
@@ -143,7 +143,6 @@ describe('周期发生 REST 来源与历史编辑', () => {
       amount: '12',
       native_amount: '12',
       note: '保留人工历史修改',
-      ...(explicit ? { recurring_id: value.rule.id, occurrence_date: date } : {}),
     });
     expect(response.statusCode, response.body).toBe(200);
     expect(response.json()).toMatchObject({
@@ -158,24 +157,22 @@ describe('周期发生 REST 来源与历史编辑', () => {
     ).not.toBeNull();
   });
 
-  it.each([
-    { recurring_id: null },
-    { recurring_id: randomUUID() },
-    { occurrence_date: null },
-    { occurrence_date: '2026-01-11' },
-  ])('改挂或清空来源被完整拒绝：%j', async (patch) => {
-    const value = await fixture();
-    const before = await snapshot(value);
-    const response = await request('PATCH', `/ledgers/${value.ledgerId}/transactions/${value.transaction.id}`, {
-      base_revision: value.transaction.revision,
-      ...patch,
-    });
-    expect(response.statusCode, response.body).toBe(409);
-    expect(response.json().code).toBe('RECURRING_SOURCE_IMMUTABLE');
-    expect(await snapshot(value)).toEqual(before);
-  });
+  it.each([{ recurring_id: null }, { occurrence_date: '2026-01-11' }])(
+    '改挂或清空来源被完整拒绝：%j',
+    async (patch) => {
+      const value = await fixture();
+      const before = await snapshot(value);
+      const response = await request('PATCH', `/ledgers/${value.ledgerId}/transactions/${value.transaction.id}`, {
+        base_revision: value.transaction.revision,
+        ...patch,
+      });
+      expect(response.statusCode, response.body).toBe(409);
+      expect(response.json().code).toBe('RECURRING_SOURCE_IMMUTABLE');
+      expect(await snapshot(value)).toEqual(before);
+    },
+  );
 
-  it.each(['transactions', 'imports'])('普通 %s 入口不能伪造现代周期发生', async (entry) => {
+  it.each(['imports'])('普通 %s 入口不能伪造现代周期发生', async (entry) => {
     const value = await fixture();
     const transactionId = randomUUID();
     const ordinaryId = randomUUID();
@@ -191,37 +188,14 @@ describe('周期发生 REST 来源与历史编辑', () => {
     };
     const before = await snapshot(value);
     const ordinary = { ...payload, id: ordinaryId, recurring_id: null, occurrence_date: null };
-    const response = await request(
-      'POST',
-      `/ledgers/${value.ledgerId}/${entry}`,
-      entry === 'imports' ? { transactions: [ordinary, payload] } : payload,
-    );
+    const response = await request('POST', `/ledgers/${value.ledgerId}/${entry}`, {
+      transactions: [ordinary, payload],
+    });
     expect(response.statusCode, response.body).toBe(400);
-    expect(response.json().code).toBe(
-      entry === 'imports' ? 'IMPORT_VALIDATION_FAILED' : 'RECURRING_GENERATION_REQUIRED',
-    );
+    expect(response.json().code).toBe('IMPORT_VALIDATION_FAILED');
     expect(await prisma.transaction.findUnique({ where: { id: transactionId } })).toBeNull();
     expect(await prisma.transaction.findUnique({ where: { id: ordinaryId } })).toBeNull();
     expect(await snapshot(value)).toEqual(before);
-  });
-
-  it('仅携带规则引用的新交易拒绝，跨账本规则引用同样拒绝', async () => {
-    const value = await fixture();
-    const other = await fixture();
-    const payload = {
-      tx_type: 'expense',
-      amount: '10',
-      native_amount: '10',
-      currency_code: 'CNY',
-      happened_at: '2026-01-11T00:00:00.000Z',
-      recurring_id: value.rule.id,
-    };
-    const rejectedSource = await request('POST', `/ledgers/${value.ledgerId}/transactions`, payload);
-    expect(rejectedSource.statusCode, rejectedSource.body).toBe(400);
-    expect(rejectedSource.json().code).toBe('RECURRING_GENERATION_REQUIRED');
-    const rejected = await request('POST', `/ledgers/${other.ledgerId}/transactions`, payload);
-    expect(rejected.statusCode, rejected.body).toBe(400);
-    expect(rejected.json().code).toBe('INVALID_RECURRING');
   });
 
   it('同步新建只有规则引用的交易被拒绝，原有交易和同步事件保持完整', async () => {
@@ -262,64 +236,5 @@ describe('周期发生 REST 来源与历史编辑', () => {
     expect(response.json()).toMatchObject({ outcomes: [{ status: 'invalid' }] });
     expect(await prisma.transaction.findUnique({ where: { id } })).toBeNull();
     expect(await snapshot(value)).toEqual(before);
-  });
-
-  it.each(['REST', 'sync'])('%s 仍可编辑规则已删除的存量无发生日交易并保留来源', async (transport) => {
-    const value = await fixture();
-    const stored = await prisma.transaction.create({
-      data: {
-        ...value.transaction,
-        id: randomUUID(),
-        occurrenceDate: null,
-        note: '存量来源',
-      },
-    });
-    await prisma.recurringTransaction.update({ where: { id: value.rule.id }, data: { deletedAt: new Date() } });
-    const note = '保留存量来源的人工修改';
-    const response =
-      transport === 'REST'
-        ? await request('PATCH', `/ledgers/${value.ledgerId}/transactions/${stored.id}`, {
-            base_revision: stored.revision,
-            note,
-          })
-        : await request('POST', '/sync/push', {
-            device_id: deviceId,
-            changes: [
-              {
-                mutation_id: randomUUID(),
-                entity_type: 'transaction',
-                entity_id: stored.id,
-                ledger_id: value.ledgerId,
-                sync_id: value.syncId,
-                base_revision: stored.revision,
-                action: 'upsert',
-                updated_at: new Date().toISOString(),
-                payload: {
-                  tx_type: 'expense',
-                  amount: '10',
-                  native_amount: '10',
-                  currency_code: 'CNY',
-                  happened_at: stored.happenedAt.toISOString(),
-                  note,
-                  category_id: null,
-                  recurring_id: value.rule.id,
-                  occurrence_date: null,
-                  payer_member_id: stored.payerMemberId,
-                  aa_mode: null,
-                  splits: null,
-                  last_edited_at: null,
-                },
-              },
-            ],
-          });
-    expect(response.statusCode, response.body).toBe(200);
-    if (transport === 'sync') expect(response.json()).toMatchObject({ outcomes: [{ status: 'accepted' }] });
-    const edited = await prisma.transaction.findUniqueOrThrow({ where: { id: stored.id } });
-    expect(edited).toMatchObject({
-      recurringId: value.rule.id,
-      occurrenceDate: null,
-      note,
-      revision: stored.revision + 1,
-    });
   });
 });

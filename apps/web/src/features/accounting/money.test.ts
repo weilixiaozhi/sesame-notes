@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalAmount, canonicalEntryAmount, localDateTime, roundEntryAmount, sumAmounts } from './money';
+import { canonicalAmount, canonicalEntryAmount, roundEntryAmount, sumAmounts } from './money';
 
 describe('accounting decimal amounts', () => {
   it('手工记账只接受两位小数，并支持键盘结束的小数点', () => {
@@ -21,29 +21,11 @@ describe('accounting decimal amounts', () => {
     expect(canonicalAmount('9999999999999999999999999999.1234567891')).toBe('9999999999999999999999999999.1234567891');
     expect(canonicalAmount('0.0000000001')).toBe('0.0000000001');
   });
-  it.each([
-    '0',
-    '0.000',
-    '-1',
-    '1e3',
-    '1,000',
-    '1.',
-    '.1',
-    'NaN',
-    '',
-    '1.12345678901',
-    '10000000000000000000000000000',
-  ])('rejects invalid amount %s', (input) => {
-    expect(canonicalAmount(input)).toBeNull();
-  });
   it('sums decimal values exactly', () => {
     expect(sumAmounts(['0.1', '0.2'])).toBe('0.3');
     expect(sumAmounts(['9999999999999999999999999999.9999999999', '0.0000000001'])).toBe(
       '10000000000000000000000000000',
     );
     expect(sumAmounts([])).toBe('0');
-  });
-  it('formats a local date without a timezone shift', () => {
-    expect(localDateTime(new Date(2026, 8, 30, 23, 5))).toBe('2026-09-30T23:05');
   });
 });

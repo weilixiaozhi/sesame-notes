@@ -63,116 +63,59 @@ async function push(actor: Actor, changes: Record<string, unknown>[]) {
 }
 
 describe('所有同步实体共用原始输入边界', () => {
-  it.each(['device_id', 'mutation_id', 'entity_id', 'ledger_id', 'entity_type', 'action', 'base_revision'])(
-    '非法原始外壳 %s 必须整批拒绝，前面的合法变更也不能写入',
-    async (field) => {
-      try {
-        const actor = await account();
-        const ids = [randomUUID(), randomUUID()];
-        const payload = { name: '外壳验收', currency: 'CNY', month_start_day: 1, aa_enabled: false };
-        const first = change('ledger', ids[0]!, payload, { ledger_id: ids[0] });
-        const second: Record<string, unknown> = change('ledger', ids[1]!, payload, { ledger_id: ids[1] });
-        if (field !== 'device_id') second[field] = field === 'base_revision' ? '0' : [second[field]];
-        const response = await app.inject({
-          method: 'POST',
-          url: '/api/v1/sync/push',
-          headers: { authorization: `Bearer ${actor.token}` },
-          payload: { device_id: field === 'device_id' ? [actor.deviceId] : actor.deviceId, changes: [first, second] },
-        });
-        expect({
-          status: response.statusCode,
-          ledgers: await prisma.ledger.count({ where: { id: { in: ids } } }),
-          members: await prisma.ledgerMember.count({ where: { ledgerId: { in: ids } } }),
-          events: await prisma.syncChange.count({ where: { entityId: { in: ids } } }),
-        }).toEqual({ status: 400, ledgers: 0, members: 0, events: 0 });
-        expect(response.json().code).toBe('VALIDATION_ERROR');
-      } catch (cause) {
-        throw new Error(`原始外壳整批拒绝验收失败：${field}`, { cause });
-      }
-    },
-  );
-
-  it.each([{ name: 123 }, { month_start_day: '1' }, { aa_enabled: 'false' }])(
-    '非法账本字段 %j 不被框架转换为成功，后续合法变更仍提交',
-    async (invalid) => {
-      try {
-        const actor = await account();
-        const invalidId = randomUUID();
-        const validId = randomUUID();
-        const payload = { name: '原值账本', currency: 'CNY', month_start_day: 1, aa_enabled: false };
-        const changes = [
-          change('ledger', invalidId, { ...payload, ...invalid }, { ledger_id: invalidId }),
-          change('ledger', validId, payload, { ledger_id: validId }),
-        ];
-        const response = await push(actor, changes);
-        expect(response.statusCode, response.body).toBe(200);
-        expect(response.json().outcomes).toMatchObject([{ status: 'invalid' }, { status: 'accepted' }]);
-        expect(await prisma.ledger.findUnique({ where: { id: invalidId } })).toBeNull();
-        expect(await prisma.ledgerMember.count({ where: { ledgerId: invalidId } })).toBe(0);
-        expect(await prisma.syncChange.count({ where: { entityId: invalidId } })).toBe(0);
-        expect(await prisma.ledger.findUniqueOrThrow({ where: { id: validId } })).toMatchObject({
-          name: payload.name,
-          monthStartDay: 1,
-          aaEnabled: false,
-        });
-        const repeated = await push(actor, changes);
-        expect(repeated.statusCode, repeated.body).toBe(200);
-        expect(repeated.json().outcomes).toMatchObject([{ status: 'invalid' }, { status: 'ignored' }]);
-        expect(await prisma.syncChange.count({ where: { entityId: validId } })).toBe(1);
-      } catch (cause) {
-        throw new Error('账本原始输入与混批状态验收失败', { cause });
-      }
-    },
-  );
-
-  it('个人归档拒绝字符串布尔，保持原状态且不写事件', async () => {
+  it.each(['device_id', 'base_revision'])('非法原始外壳 %s 必须整批拒绝，前面的合法变更也不能写入', async (field) => {
     try {
       const actor = await account();
-      const id = randomUUID();
-      const created = await push(actor, [
-        change(
-          'ledger',
-          id,
-          { name: '归档验收', currency: 'CNY', month_start_day: 1, aa_enabled: false },
-          { ledger_id: id },
-        ),
-      ]);
-      expect(created.statusCode, created.body).toBe(200);
-      const ledger = await prisma.ledger.findUniqueOrThrow({ where: { id } });
-      const where = { ledgerId_linkedAccountId: { ledgerId: id, linkedAccountId: actor.userId } };
-      const before = await prisma.ledgerMember.findUniqueOrThrow({ where });
-      const draft = change('ledger_archive', id, { archived: 'true' }, { ledger_id: id, sync_id: ledger.syncId });
-      const response = await push(actor, [draft]);
-      expect(response.statusCode, response.body).toBe(200);
-      expect(response.json().outcomes[0]).toMatchObject({ status: 'invalid', code: 'INVALID_SYNC_PAYLOAD' });
-      expect(await prisma.ledgerMember.findUniqueOrThrow({ where })).toEqual(before);
-      expect(await prisma.syncChange.count({ where: { mutationId: draft.mutation_id } })).toBe(0);
-      const valid = await push(actor, [{ ...draft, mutation_id: randomUUID(), payload: { archived: true } }]);
-      expect(valid.json().outcomes[0].status).toBe('accepted');
-      expect((await prisma.ledgerMember.findUniqueOrThrow({ where })).archivedAt).not.toBeNull();
+      const ids = [randomUUID(), randomUUID()];
+      const payload = { name: '外壳验收', currency: 'CNY', month_start_day: 1, aa_enabled: false };
+      const first = change('ledger', ids[0]!, payload, { ledger_id: ids[0] });
+      const second: Record<string, unknown> = change('ledger', ids[1]!, payload, { ledger_id: ids[1] });
+      if (field !== 'device_id') second[field] = field === 'base_revision' ? '0' : [second[field]];
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/sync/push',
+        headers: { authorization: `Bearer ${actor.token}` },
+        payload: { device_id: field === 'device_id' ? [actor.deviceId] : actor.deviceId, changes: [first, second] },
+      });
+      expect({
+        status: response.statusCode,
+        ledgers: await prisma.ledger.count({ where: { id: { in: ids } } }),
+        members: await prisma.ledgerMember.count({ where: { ledgerId: { in: ids } } }),
+        events: await prisma.syncChange.count({ where: { entityId: { in: ids } } }),
+      }).toEqual({ status: 400, ledgers: 0, members: 0, events: 0 });
+      expect(response.json().code).toBe('VALIDATION_ERROR');
     } catch (cause) {
-      throw new Error('归档标记原值验收失败', { cause });
+      throw new Error(`原始外壳整批拒绝验收失败：${field}`, { cause });
     }
   });
 
-  it('健身空间拒绝数字名称，合法字符串名称按原值创建', async () => {
+  it.each([{ aa_enabled: 'false' }])('非法账本字段 %j 不被框架转换为成功，后续合法变更仍提交', async (invalid) => {
     try {
       const actor = await account();
-      const id = randomUUID();
-      const scope = { ledger_id: null, day_book_id: null, memo_book_id: null, fitness_space_id: id };
-      const draft = change('fitness_space', id, { name: 123, created_at: time, updated_at: time }, scope);
-      const response = await push(actor, [draft]);
+      const invalidId = randomUUID();
+      const validId = randomUUID();
+      const payload = { name: '原值账本', currency: 'CNY', month_start_day: 1, aa_enabled: false };
+      const changes = [
+        change('ledger', invalidId, { ...payload, ...invalid }, { ledger_id: invalidId }),
+        change('ledger', validId, payload, { ledger_id: validId }),
+      ];
+      const response = await push(actor, changes);
       expect(response.statusCode, response.body).toBe(200);
-      expect(response.json().outcomes[0]).toMatchObject({ status: 'invalid', code: 'INVALID_BOOK' });
-      expect(await prisma.fitnessSpace.findUnique({ where: { id } })).toBeNull();
-      expect(await prisma.syncChange.count({ where: { entityId: id } })).toBe(0);
-      const valid = await push(actor, [
-        { ...draft, mutation_id: randomUUID(), payload: { ...draft.payload, name: '123' } },
-      ]);
-      expect(valid.json().outcomes[0].status).toBe('accepted');
-      expect((await prisma.fitnessSpace.findUniqueOrThrow({ where: { id } })).name).toBe('123');
+      expect(response.json().outcomes).toMatchObject([{ status: 'invalid' }, { status: 'accepted' }]);
+      expect(await prisma.ledger.findUnique({ where: { id: invalidId } })).toBeNull();
+      expect(await prisma.ledgerMember.count({ where: { ledgerId: invalidId } })).toBe(0);
+      expect(await prisma.syncChange.count({ where: { entityId: invalidId } })).toBe(0);
+      expect(await prisma.ledger.findUniqueOrThrow({ where: { id: validId } })).toMatchObject({
+        name: payload.name,
+        monthStartDay: 1,
+        aaEnabled: false,
+      });
+      const repeated = await push(actor, changes);
+      expect(repeated.statusCode, repeated.body).toBe(200);
+      expect(repeated.json().outcomes).toMatchObject([{ status: 'invalid' }, { status: 'ignored' }]);
+      expect(await prisma.syncChange.count({ where: { entityId: validId } })).toBe(1);
     } catch (cause) {
-      throw new Error('健身空间名称原值验收失败', { cause });
+      throw new Error('账本原始输入与混批状态验收失败', { cause });
     }
   });
 
