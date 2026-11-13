@@ -124,6 +124,30 @@ function historyPath(value: Fixture, query = ''): string {
   return `/ledgers/${value.ledgerId}/transactions/${value.transactionId}/history${query}`;
 }
 
+/** 批量路径把交易集合编码为单个查询参数，服务端负责校验、去重和排序。 */
+function batchHistoryPath(value: Fixture, transactionIds: readonly string[], query = ''): string {
+  return `/ledgers/${value.ledgerId}/transactions/history?transaction_ids=${encodeURIComponent(
+    transactionIds.join(','),
+  )}${query}`;
+}
+
+/** 同一账本追加第二笔交易，批量接口必须只返回请求集合内的历史。 */
+async function createSecondTransaction(value: Fixture, actor = owner): Promise<string> {
+  const transactionId = randomUUID();
+  const response = await request('POST', `/ledgers/${value.ledgerId}/transactions`, actor, {
+    id: transactionId,
+    tx_type: 'expense',
+    amount: '20',
+    native_amount: '20',
+    currency_code: 'CNY',
+    happened_at: '2026-11-04T00:00:00.000Z',
+    aa_mode: '0',
+    splits: [],
+  });
+  expect(response.statusCode, response.body).toBe(201);
+  return transactionId;
+}
+
 beforeAll(async () => {
   try {
     prisma = new PrismaClient({ datasourceUrl: databaseUrl });
@@ -287,5 +311,124 @@ describe('云端交易编辑历史', () => {
     expect(response.json<HistoryPage>().items[0]!.changes).toEqual({ action: 'delete', base_revision: 1 });
     await prisma.ledger.update({ where: { id: value.ledgerId }, data: { deletedAt: new Date() } });
     expect((await request('GET', historyPath(value), owner)).statusCode).toBe(404);
+  });
+});
+
+describe('云端批量交易编辑历史', () => {
+  it('只返回请求集合内的历史，并按发生时间倒序分页', async () => {
+    const value = await fixture();
+    const second = await createSecondTransaction(value);
+    await patch(value, 1, { note: '第一笔编辑' });
+    await patch({ ...value, transactionId: second }, 1, { note: '第二笔编辑' });
+    await patch(value, 2, { note: '第一笔再次编辑' });
+
+    const response = await request('GET', batchHistoryPath(value, [value.transactionId, second]), owner);
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.headers['cache-control']).toBe('no-store');
+    const items = response.json<HistoryPage>().items;
+    expect(items.filter((item) => item.transaction_id === value.transactionId).map((item) => item.version)).toEqual([
+      3, 2,
+    ]);
+    expect(items.filter((item) => item.transaction_id === second).map((item) => item.version)).toEqual([2]);
+    expect(items.map((item) => item.ledger_id)).toEqual([value.ledgerId, value.ledgerId, value.ledgerId]);
+    expect(items[0]!.operator_display_name).toBe('账本操作成员');
+
+    const onlySecond = await request('GET', batchHistoryPath(value, [second]), owner);
+    expect(onlySecond.statusCode, onlySecond.body).toBe(200);
+    expect(onlySecond.json<HistoryPage>().items.every((item) => item.transaction_id === second)).toBe(true);
+  });
+
+  it('分页不重复不遗漏，批量游标只对同一交易集合有效', async () => {
+    const value = await fixture();
+    const second = await createSecondTransaction(value);
+    for (let revision = 1; revision <= 3; revision++) {
+      await patch(value, revision, { note: `第一笔编辑${revision}` });
+      await patch({ ...value, transactionId: second }, revision, { note: `第二笔编辑${revision}` });
+    }
+    // 同一时刻的历史行按 id 稳定排序，验证跨页游标不会重复或漏项。
+    await prisma.transactionEditHistory.updateMany({
+      where: { ledgerId: value.ledgerId },
+      data: { createdAt: new Date('2026-11-03T00:00:00.000Z') },
+    });
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    let pages = 0;
+    do {
+      const response = await request(
+        'GET',
+        batchHistoryPath(
+          value,
+          [value.transactionId, second],
+          `&limit=1${cursor === null ? '' : `&cursor=${encodeURIComponent(cursor)}`}`,
+        ),
+        owner,
+      );
+      expect(response.statusCode, response.body).toBe(200);
+      const page = response.json<HistoryPage>();
+      expect(page.items.length).toBeLessThanOrEqual(1);
+      seen.push(...page.items.map((item) => item.id));
+      cursor = page.next_cursor;
+      pages++;
+      expect(pages).toBeLessThanOrEqual(6);
+    } while (cursor !== null);
+    expect(seen).toHaveLength(6);
+    expect(new Set(seen).size).toBe(6);
+
+    const first = await request('GET', batchHistoryPath(value, [value.transactionId, second], '&limit=1'), owner);
+    expect(first.statusCode, first.body).toBe(200);
+    const firstCursor = first.json<HistoryPage>().next_cursor;
+    expect(firstCursor).not.toBeNull();
+    // 游标是客户端原样透传的短字符串，契约上限 256 字符。
+    expect(firstCursor!.length).toBeLessThanOrEqual(256);
+    expect(
+      (
+        await request(
+          'GET',
+          batchHistoryPath(value, [value.transactionId], `&limit=1&cursor=${encodeURIComponent(firstCursor!)}`),
+          owner,
+        )
+      ).statusCode,
+    ).toBe(400);
+    expect(
+      (await request('GET', batchHistoryPath(value, [value.transactionId], '&limit=1&cursor=not-a-cursor'), owner))
+        .statusCode,
+    ).toBe(400);
+  });
+
+  it('批量参数、权限和账本边界一致拒绝', async () => {
+    const value = await fixture();
+    const second = await createSecondTransaction(value);
+    expect((await request('GET', `/ledgers/${value.ledgerId}/transactions/history`, owner)).statusCode).toBe(400);
+    expect((await request('GET', batchHistoryPath(value, ['not-a-valid-transaction-id']), owner)).statusCode).toBe(400);
+    expect(
+      (await request('GET', batchHistoryPath(value, [value.transactionId, value.transactionId]), owner)).statusCode,
+    ).toBe(400);
+    expect(
+      (
+        await request(
+          'GET',
+          batchHistoryPath(
+            value,
+            Array.from({ length: 101 }, () => randomUUID()),
+          ),
+          owner,
+        )
+      ).statusCode,
+    ).toBe(400);
+
+    const key = new TextEncoder().encode(config.jwtSecret);
+    const { payload } = await jwtVerify(owner.token, key);
+    const reader = {
+      ...owner,
+      token: await new SignJWT({ ...payload, scopes: ['sync:read'] }).setProtectedHeader({ alg: 'HS256' }).sign(key),
+    };
+    const denied = {
+      ...owner,
+      token: await new SignJWT({ ...payload, scopes: ['sync:write'] }).setProtectedHeader({ alg: 'HS256' }).sign(key),
+    };
+    expect((await request('GET', batchHistoryPath(value, [value.transactionId, second]), reader)).statusCode).toBe(200);
+    expect((await request('GET', batchHistoryPath(value, [value.transactionId]), denied)).statusCode).toBe(403);
+    expect((await request('GET', batchHistoryPath(value, [value.transactionId]))).statusCode).toBe(401);
+    expect((await request('GET', batchHistoryPath(value, [value.transactionId]), outsider)).statusCode).toBe(404);
   });
 });
