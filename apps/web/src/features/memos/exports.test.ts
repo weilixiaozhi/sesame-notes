@@ -48,6 +48,15 @@ describe('客户端兼容交换格式导出', () => {
         .entries,
     ).toEqual([]);
   });
+  it('交换格式保留正文图片引用，不静默删除图片 op', () => {
+    const imageId = '9f8e7d6c-5b4a-4392-8171-60514f3e2d1c';
+    const withImage = {
+      ...entry,
+      body: { ops: [{ insert: '看图\n' }, { insert: { memo_image: imageId } }, { insert: '\n' }] },
+    };
+    const exported = JSON.parse(memoExportJson(book, [withImage], 'export', book.created_at));
+    expect(exported.books[0].entries[0].body).toEqual(withImage.body);
+  });
   it('日子CSV保留农历而非把原始日期换成公历', () => {
     const dayBook: DayBook = {
       id: book.id,

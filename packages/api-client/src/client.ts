@@ -335,16 +335,23 @@ function normalizeEmptyResponse(response: Response, method: string): Response {
   return normalized;
 }
 
+/** 契约声明为原始图片字节的下载端点；这些成功响应不能按 JSON 解析。 */
+const binaryImagePaths = new Set(['/api/v1/profile/avatar/{user_id}', '/api/v1/memo-media/{media_id}']);
+
 /** 为可选校验器解析响应副本；空响应返回 undefined，JSON 损坏统一转成友好契约错误。 */
 async function parseValidationBody(response: Response, method: string, schemaPath: string): Promise<unknown> {
   if (isEmptyResponse(response, method)) return undefined;
   try {
-    // 只有契约明确声明的头像下载允许二进制；其他成功响应仍必须能解析为 JSON。
-    if (schemaPath === '/api/v1/profile/avatar/{user_id}' && method === 'GET') {
+    // 图片下载端点按契约返回二进制；其他成功响应仍必须能解析为 JSON。
+    if (method === 'GET' && binaryImagePaths.has(schemaPath)) {
       const contentType = response.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
-      // 服务端按头像原格式返回图片，三种契约格式都以原始字节交给调用方。
+      // 服务端按原图格式返回图片，三种契约格式都以原始字节交给调用方。
       if (!contentType || !['image/png', 'image/jpeg', 'image/webp'].includes(contentType)) {
-        throw new Error('INVALID_AVATAR_CONTENT_TYPE');
+        throw new Error(
+          schemaPath === '/api/v1/profile/avatar/{user_id}'
+            ? 'INVALID_AVATAR_CONTENT_TYPE'
+            : 'INVALID_IMAGE_CONTENT_TYPE',
+        );
       }
       return await response.clone().blob();
     }

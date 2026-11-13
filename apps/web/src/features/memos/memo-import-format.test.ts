@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createImportId } from '../../lib/transfer/import-identity';
-import { parseMemoImport } from './memo-import-format';
+import { importedMemoPayload, parseMemoImport } from './memo-import-format';
 
 const bookId = '1775f9e0-bc7d-4915-9d64-e6efce77d2f2';
 const entryId = '28311426-261b-40cb-abed-ac0131a0b26d';
@@ -65,6 +65,16 @@ describe('客户端格式导入', () => {
         'normal',
       ),
     ).toThrow('归属');
+  });
+  it('接受并保留正文图片引用', () => {
+    const book = document.books[0]!;
+    const imageId = '9f8e7d6c-5b4a-4392-8171-60514f3e2d1c';
+    const body = { ops: [{ insert: '看图\n' }, { insert: { memo_image: imageId } }, { insert: '\n' }] };
+    const parsed = parseMemoImport(
+      JSON.stringify({ ...document, books: [{ ...book, entries: [{ ...book.entries[0], body }] }] }),
+      'normal',
+    );
+    expect(importedMemoPayload(parsed.books[0]!.entries[0]!).body).toEqual(body);
   });
   it('同来源同目标有稳定且兼容移动端v4校验的身份，目标间隔离', async () => {
     const first = await createImportId(bookId, exportId, entryId);

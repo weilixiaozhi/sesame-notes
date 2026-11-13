@@ -10,25 +10,32 @@ const attributesSchema = z.strictObject({
   list: z.enum(['ordered', 'bullet', 'checked', 'unchecked']).optional(),
   indent: z.number().int().min(0).max(5).optional(),
 });
+/** 图片引用只保存客户端生成的媒体标识，正文不承载地址或字节。 */
+const memoImageIdSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+/** 单篇正文最多引用 20 张图片，与客户端插入限制一致。 */
+const memoImageMaxCount = 20;
+const textOpSchema = z
+  .strictObject({
+    insert: z.string().min(1).refine(isWellFormed),
+    attributes: attributesSchema.optional(),
+  })
+  .refine(
+    (op) =>
+      !op.attributes ||
+      ((!('header' in op.attributes) || !('list' in op.attributes)) &&
+        (!['header', 'list', 'indent'].some((key) => key in op.attributes!) || /^\n+$/.test(op.insert))),
+  );
+/** 图片 op 是严格单键对象，不能携带段落属性或尺寸信息。 */
+const imageOpSchema = z.strictObject({ insert: z.strictObject({ memo_image: memoImageIdSchema }) });
 export const deltaSchema = z
   .strictObject({
-    ops: z
-      .array(
-        z
-          .strictObject({
-            insert: z.string().min(1).refine(isWellFormed),
-            attributes: attributesSchema.optional(),
-          })
-          .refine(
-            (op) =>
-              !op.attributes ||
-              ((!('header' in op.attributes) || !('list' in op.attributes)) &&
-                (!['header', 'list', 'indent'].some((key) => key in op.attributes!) || /^\n+$/.test(op.insert))),
-          ),
-      )
-      .min(1),
+    ops: z.array(z.union([textOpSchema, imageOpSchema])).min(1),
   })
-  .refine((delta) => delta.ops.at(-1)?.insert.endsWith('\n'));
+  .refine((delta) => delta.ops.filter((op) => typeof op.insert !== 'string').length <= memoImageMaxCount)
+  .refine((delta) => {
+    const last = delta.ops.at(-1);
+    return typeof last?.insert === 'string' && last.insert.endsWith('\n');
+  });
 export const fieldsSchema = z.strictObject({
   fields: z
     .array(
@@ -90,6 +97,17 @@ export function logMemoError(action: string, error: unknown, context: Record<str
   }
 }
 
+/** 提取正文引用的图片标识，去重并保持出现顺序，供导出预加载与渲染使用。 */
+export function memoImageIds(body: unknown): string[] {
+  const parsed = deltaSchema.safeParse(body);
+  if (!parsed.success) return [];
+  const ids = new Set<string>();
+  for (const op of parsed.data.ops) {
+    if (typeof op.insert !== 'string') ids.add(op.insert.memo_image);
+  }
+  return [...ids];
+}
+
 /** 账号卡片直接展示字段，普通笔记摘要跳过与外部标题相同的正文首行。 */
 export function memoPreview(entry: Pick<MemoEntry, 'book_type' | 'body' | 'title'>): string {
   if (entry.book_type === 'credentials') {
@@ -103,8 +121,9 @@ export function memoPreview(entry: Pick<MemoEntry, 'book_type' | 'body' | 'title
   }
   const parsed = deltaSchema.safeParse(entry.body);
   if (!parsed.success) return '正文格式暂不支持，请在客户端查看';
+  // 图片 op 不产生摘要文字，只拼接文字 op。
   const lines = parsed.data.ops
-    .map((op) => op.insert)
+    .flatMap((op) => (typeof op.insert === 'string' ? [op.insert] : []))
     .join('')
     .trim()
     .split('\n');

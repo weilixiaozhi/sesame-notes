@@ -895,6 +895,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/memo-media/{media_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMemoMediaByMediaId"];
+        put: operations["putMemoMediaByMediaId"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exchange-rate-overrides": {
         parameters: {
             query?: never;
@@ -1144,6 +1160,23 @@ export interface paths {
         };
         /** @description 读取账本内交易的服务端编辑历史，按版本倒序分页；changes 为当次提交的字段或动作。 */
         get: operations["getTransactionEditHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledgers/{ledger_id}/transactions/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 按事务编号批量读取账本内交易的服务端编辑历史，按发生时间倒序分页；changes 为当次提交的字段或动作。 */
+        get: operations["getTransactionsEditHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9991,6 +10024,234 @@ export interface operations {
             };
         };
     };
+    getMemoMediaByMediaId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putMemoMediaByMediaId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                media_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    content_type: "image/png" | "image/jpeg" | "image/webp";
+                    data_base64: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                        id: string;
+                        byte_size: number;
+                        width: number;
+                        height: number;
+                        sha256: string;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getExchangeRateOverrides: {
         parameters: {
             query?: {
@@ -12143,6 +12404,126 @@ export interface operations {
                 ledger_id: string;
                 /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
                 transaction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: {
+                            /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                            id: string;
+                            /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                            transaction_id: string;
+                            /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                            ledger_id: string;
+                            version: number;
+                            operator_member_id: string | null;
+                            operator_display_name: string | null;
+                            /**
+                             * Format: date-time
+                             * @example 2026-08-20T09:00:00.000Z
+                             */
+                            created_at: string;
+                            changes: unknown;
+                        }[];
+                        next_cursor: string | null;
+                    };
+                };
+            };
+            /** @description Default Response */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 请求频率超过限制，请按 Retry-After 指示重试。 */
+            429: {
+                headers: {
+                    /** @description 距离允许重试的秒数 */
+                    "Retry-After"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Default Response */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getTransactionsEditHistory: {
+        parameters: {
+            query: {
+                transaction_ids: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                /** @example 056cf10d-2d59-599c-9d97-6749e866aa52 */
+                ledger_id: string;
             };
             cookie?: never;
         };

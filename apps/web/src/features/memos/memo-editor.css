@@ -3,3 +3,41 @@
 .memo-editor .ql-snow .ql-picker.ql-header .ql-picker-item::before {
   content: attr(data-label);
 }
+
+/* 图片入口位于工具栏上方，失败提示与按钮同排显示。 */
+.memo-image-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.memo-image-toolbar .error-text {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Quill 图片 embed 先显示占位块，加载成功后替换为实际图片。 */
+.memo-image {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.memo-image-placeholder {
+  display: inline-flex;
+  align-items: center;
+  min-width: 120px;
+  min-height: 80px;
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+.memo-image-content {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
