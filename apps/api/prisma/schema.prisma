@@ -257,6 +257,7 @@ model User {
   mutationReservations MutationReservation[]
   createdInvites   LedgerInvite[]         @relation("InviteCreator")
   usedInvites      LedgerInvite[]         @relation("InviteUsedBy")
+  memoMedia        MemoMedia[]
 
   @@map("users")
 }
@@ -783,6 +784,22 @@ model MemoEntry {
   @@index([memoBookId, deletedAt, createdAt(sort: Desc), id])
   @@index([memoBookId, deletedAt, orderKey, id])
   @@map("memo_entries")
+}
+
+// 备忘录内联图片：正文只保存媒体标识，字节按账号隔离存放并可被孤儿清理回收。
+model MemoMedia {
+  id        String   @id @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  fileName  String   @map("file_name") @db.VarChar(128)
+  byteSize  Int      @map("byte_size")
+  width     Int
+  height    Int
+  sha256    String   @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt])
+  @@map("memo_media")
 }
 
 model IdempotencyKey {

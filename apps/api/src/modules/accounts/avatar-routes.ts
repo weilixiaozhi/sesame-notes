@@ -12,11 +12,10 @@ import { ErrorSchema } from '../../shared/contracts/errors.js';
 import { UuidSchema } from '../../shared/contracts/scalars.js';
 import { authenticate, requireAuth, requireScopes } from '../auth/index.js';
 import { executor } from '../../shared/execute.js';
+import { sanitizeImage } from '../../shared/image-sanitize.js';
 
 /** 头像路由共用的 500 失败码，捕获与日志由公共执行器负责。 */
 const executeAvatar = executor('AVATAR_OPERATION_FAILED');
-
-type SharpFactory = (typeof import('sharp'))['default'];
 
 /** 原图字节上限：8 MiB（客户端按同一上限校验后上传）。 */
 export const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
@@ -147,65 +146,22 @@ export function registerAvatarRoutes(app: FastifyInstance, prisma: PrismaClient,
 }
 
 /**
- * 解码并净化头像：完整解码验证（不只校验文件头）、像素上限检查，
- * 再统一重编码以剥离 EXIF/定位等元数据；日志不记录 Base64 内容。
- *
- * 设计意图：仅靠文件头签名无法识别伪装图片，重编码同时满足
- * 「真实可解码」「像素受限」「元数据零残留」三个信任边界。
+ * 解码并净化头像：完整解码验证、像素上限检查，再统一重编码以剥离
+ * EXIF/定位等元数据；头像保留原始尺寸，只做无损/固定质量重编码。
  */
 export async function decodeAvatar(contentType: AvatarContentType, data: string): Promise<Buffer> {
-  try {
-    const bytes = Buffer.from(data, 'base64');
-    if (!bytes.length) throw new ApiError(422, 'AVATAR_INVALID', '无法识别该图片，请重新选择');
-    if (bytes.length > MAX_AVATAR_BYTES) throw new ApiError(413, 'AVATAR_TOO_LARGE', '图片过大，请选择较小的图片');
-    if (bytes.toString('base64').replace(/=+$/, '') !== data.replace(/=+$/, ''))
-      throw new ApiError(422, 'AVATAR_INVALID', '无法识别该图片，请重新选择');
-    // 在原生解码器识别输入之前限制文件签名，避免其他格式进入其解析路径。
-    const signatureMatches =
-      contentType === 'image/png'
-        ? bytes.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))
-        : contentType === 'image/jpeg'
-          ? bytes.subarray(0, 3).equals(Buffer.from('ffd8ff', 'hex'))
-          : bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
-    if (!signatureMatches) throw new ApiError(422, 'AVATAR_INVALID', '无法识别该图片，请重新选择');
-    // 按需加载原生库，文件签名通过后仍须完整解码、核对格式并重新编码。
-    const sharp = (await import('sharp')).default as SharpFactory;
-    const image = sharp(bytes, { failOn: 'error', limitInputPixels: MAX_AVATAR_PIXELS });
-    const metadata = await image.metadata();
-    // 实际格式必须与声明一致：防止伪装 MIME 上传任意文件
-    const actualFormat = metadata.format;
-    if (!actualFormat || !['png', 'jpeg', 'webp'].includes(actualFormat)) {
-      throw new ApiError(422, 'AVATAR_INVALID', '无法识别该图片，请重新选择');
-    }
-    const declared = contentType === 'image/png' ? 'png' : contentType === 'image/jpeg' ? 'jpeg' : 'webp';
-    if (actualFormat !== declared) {
-      throw new ApiError(422, 'AVATAR_INVALID', '无法识别该图片，请重新选择');
-    }
-    const width = metadata.width ?? 0;
-    const height = metadata.height ?? 0;
-    if (width > MAX_AVATAR_DIMENSION || height > MAX_AVATAR_DIMENSION || width * height > MAX_AVATAR_PIXELS) {
-      throw new ApiError(413, 'AVATAR_TOO_LARGE', '图片过大，请选择较小的图片');
-    }
-    // 重编码：应用 EXIF 方向到像素后丢弃全部元数据；解码失败同样视为无效图片。
-    // PNG 保留无损（default 压缩保留 alpha），JPEG/WebP 固定质量参数，
-    // 保证输出体积稳定且不携带任何原始元数据。
-    const reencoded = sharp(bytes, { failOn: 'error', limitInputPixels: MAX_AVATAR_PIXELS }).rotate();
-    const output =
-      actualFormat === 'png'
-        ? await reencoded.png().toBuffer()
-        : actualFormat === 'jpeg'
-          ? await reencoded.jpeg({ quality: 92 }).toBuffer()
-          : await reencoded.webp({ quality: 92 }).toBuffer();
-    if (!output.length) throw new ApiError(422, 'AVATAR_INVALID', '无法识别该图片，请重新选择');
-    return output;
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    // sharp 的像素上限保护直接以异常形式暴露：与业务像素超限统一为 413
-    if (error instanceof Error && /exceeds pixel limit/i.test(error.message)) {
-      throw new ApiError(413, 'AVATAR_TOO_LARGE', '图片过大，请选择较小的图片');
-    }
-    throw new ApiError(422, 'AVATAR_INVALID', '无法识别该图片，请重新选择');
-  }
+  const image = await sanitizeImage({
+    contentType,
+    data,
+    maxBytes: MAX_AVATAR_BYTES,
+    maxDimension: MAX_AVATAR_DIMENSION,
+    maxPixels: MAX_AVATAR_PIXELS,
+    tooLargeCode: 'AVATAR_TOO_LARGE',
+    tooLargeMessage: '图片过大，请选择较小的图片',
+    invalidCode: 'AVATAR_INVALID',
+    invalidMessage: '无法识别该图片，请重新选择',
+  });
+  return image.bytes;
 }
 
 /** 根据受支持的 MIME 类型选择固定扩展名，文件名不接受客户端输入。 */

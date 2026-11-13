@@ -26,6 +26,17 @@
         ]
       },
       "text": "标题\n加粗与正文\n有序\n嵌套\n未完成\n已完成\n"
+    },
+    {
+      "id": "image",
+      "body": {
+        "ops": [
+          { "insert": "照片\n" },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": "\n" }
+        ]
+      },
+      "text": "照片\n\uFFFC\n"
     }
   ],
   "invalid": [
@@ -55,6 +66,57 @@
     {
       "id": "conflicting-blocks",
       "body": { "ops": [{ "insert": "\n", "attributes": { "header": 1, "list": "ordered" } }] }
+    },
+    { "id": "image-id-format", "body": { "ops": [{ "insert": { "memo_image": "invalid" } }, { "insert": "\n" }] } },
+    {
+      "id": "image-extra-key",
+      "body": {
+        "ops": [{ "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c", "width": 10 } }, { "insert": "\n" }]
+      }
+    },
+    {
+      "id": "image-attributes",
+      "body": {
+        "ops": [
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" }, "attributes": { "header": 1 } },
+          { "insert": "\n" }
+        ]
+      }
+    },
+    {
+      "id": "image-last",
+      "body": {
+        "ops": [{ "insert": "图片" }, { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } }]
+      }
+    },
+    {
+      "id": "image-overflow",
+      "body": {
+        "ops": [
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c" } },
+          { "insert": "\n" }
+        ]
+      }
     }
   ]
 }

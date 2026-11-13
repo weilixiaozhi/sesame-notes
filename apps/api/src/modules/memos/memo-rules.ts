@@ -9,7 +9,12 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** delta_v1 只保存完整文字文档；拒绝未知格式，不修剪或改写正文。 */
+/** 单篇笔记的图片数量上限，与客户端插入限制一致。 */
+const MEMO_IMAGE_MAX = 20;
+/** 图片引用只保存客户端生成的媒体标识，不接受服务端地址或字节。 */
+const MEMO_IMAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** delta_v1 只保存文字与图片引用；拒绝未知格式，不修剪或改写正文。 */
 export function validateMemoDelta(value: unknown): void {
   const fail = (): never => {
     throw new ApiError(400, 'INVALID_MEMO_DELTA', '备忘录正文格式无效');
@@ -17,9 +22,25 @@ export function validateMemoDelta(value: unknown): void {
   if (!isObject(value) || Object.keys(value).some((key) => key !== 'ops')) return fail();
   const ops = value.ops;
   if (!Array.isArray(ops) || ops.length === 0) return fail();
+  let images = 0;
   for (const op of ops) {
     if (!isObject(op) || Object.keys(op).some((key) => key !== 'insert' && key !== 'attributes')) return fail();
-    if (typeof op.insert !== 'string' || op.insert.length === 0 || !op.insert.isWellFormed()) return fail();
+    const insert = op.insert;
+    if (isObject(insert)) {
+      // 图片引用只接受固定的媒体标识形状：正文不承载字节或服务端地址。
+      if (
+        Object.keys(insert).length !== 1 ||
+        !Object.hasOwn(insert, 'memo_image') ||
+        typeof insert.memo_image !== 'string' ||
+        !MEMO_IMAGE_ID.test(insert.memo_image) ||
+        Object.hasOwn(op, 'attributes')
+      )
+        return fail();
+      images++;
+      if (images > MEMO_IMAGE_MAX) return fail();
+      continue;
+    }
+    if (typeof insert !== 'string' || insert.length === 0 || !insert.isWellFormed()) return fail();
     if (!Object.hasOwn(op, 'attributes')) continue;
     const attributes = op.attributes;
     if (!isObject(attributes)) return fail();
@@ -36,12 +57,13 @@ export function validateMemoDelta(value: unknown): void {
       } else return fail();
     }
     // 段落格式只归属于换行，标题与列表不能同时定义同一行。
-    if (['header', 'list', 'indent'].some((key) => Object.hasOwn(attributes, key)) && !/^\n+$/.test(op.insert))
+    if (['header', 'list', 'indent'].some((key) => Object.hasOwn(attributes, key)) && !/^\n+$/.test(insert))
       return fail();
     if (Object.hasOwn(attributes, 'header') && Object.hasOwn(attributes, 'list')) return fail();
   }
+  // 正文始终以文字换行结束，图片引用不能成为最后一段。
   const last = ops.at(-1) as Record<string, unknown>;
-  if (!(last.insert as string).endsWith('\n')) return fail();
+  if (typeof last.insert !== 'string' || !last.insert.endsWith('\n')) return fail();
 }
 
 const MEMO_FIELD_MAX = 20;

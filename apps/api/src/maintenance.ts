@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { cleanupAvatarFiles } from './modules/accounts/index.js';
+import { cleanupMemoMediaFiles } from './modules/memos/index.js';
 import { createFitnessMediaMaintenance } from './modules/fitness/index.js';
 
 /** 仅在实际监听后执行有界维护；关闭时等待本轮完成，避免与数据库断开竞争。 */
@@ -42,6 +43,7 @@ export function registerMaintenance(
       const started = performance.now();
       try {
         await cleanupAvatarFiles(prisma, storagePath, app.log);
+        await cleanupMemoMediaFiles(prisma, storagePath, app.log);
         await mediaMaintenance.run();
         const removed = await cleanExpiredRows();
         app.log.info({ removed, duration_ms: Math.round(performance.now() - started) }, '后台维护完成');

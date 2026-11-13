@@ -12,6 +12,7 @@ import { Type } from '@sinclair/typebox';
 import { loadConfig, type ApiConfig } from './config.js';
 import { registerMaintenance } from './maintenance.js';
 import { registerAccountRoutes } from './modules/accounts/index.js';
+import { registerMemoMediaRoutes } from './modules/memos/index.js';
 import {
   enforceAdminRouteProtection,
   registerAdminAccountRoutes,
@@ -134,6 +135,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           { name: 'transactions', description: '交易' },
           { name: 'categories', description: '分类' },
           { name: 'sync', description: '离线同步' },
+          { name: 'memos', description: '备忘录内联图片' },
           { name: 'fitness', description: '训练内容库' },
           { name: 'admin', description: '系统管理（管理员）' },
           { name: 'admin-auth', description: '独立后台用户认证与会话' },
@@ -309,6 +311,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       registerBannerRoutes(api, prisma, config);
       registerAnalyticsRoutes(api, prisma, config);
       registerAccountRoutes(api, prisma, config);
+      registerMemoMediaRoutes(api, prisma, config);
       registerAccountingRoutes(api, prisma, config);
       registerSharingRoutes(api, prisma, config);
       registerSyncRoutes(api, prisma, config);

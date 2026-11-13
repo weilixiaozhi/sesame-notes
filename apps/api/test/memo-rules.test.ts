@@ -20,6 +20,32 @@ describe('备忘录 delta_v1 共享黄金向量', () => {
   );
 });
 
+describe('备忘录正文图片引用', () => {
+  const id = '3f2a6c58-9d4e-4a1b-8c2d-5e6f7a8b9c0d';
+  const body = (ops: unknown[]) => ({ ops });
+
+  it('图片引用与文字混排保持原样', () => {
+    const value = body([{ insert: '看图\n' }, { insert: { memo_image: id } }, { insert: '\n' }]);
+    const before = JSON.stringify(value);
+    expect(() => validateMemoDelta(value)).not.toThrow();
+    expect(JSON.stringify(value)).toBe(before);
+  });
+
+  it.each([
+    ['未知嵌入类型', body([{ insert: { image: id } }, { insert: '\n' }])],
+    ['图片标识不是 UUID', body([{ insert: { memo_image: 'not-a-uuid' } }, { insert: '\n' }])],
+    ['图片对象带额外键', body([{ insert: { memo_image: id, width: 10 } }, { insert: '\n' }])],
+    ['图片不允许段落格式', body([{ insert: { memo_image: id }, attributes: { header: 1 } }, { insert: '\n' }])],
+    ['图片不能作为末段', body([{ insert: '文字' }, { insert: { memo_image: id } }])],
+    [
+      '单篇图片数量超限',
+      body([...Array.from({ length: 21 }, () => ({ insert: { memo_image: id } })), { insert: '\n' }]),
+    ],
+  ])('拒绝%s', (_name, value) => {
+    expect(() => validateMemoDelta(value)).toThrow('备忘录正文格式无效');
+  });
+});
+
 describe('账号密码 fields_v1 字段规则', () => {
   const body = (fields: unknown) => ({ fields });
 

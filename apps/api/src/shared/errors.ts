@@ -50,9 +50,10 @@ export function registerErrorHandler(app: FastifyInstance): void {
       if (error instanceof errorCodes.FST_ERR_CTP_BODY_TOO_LARGE) {
         request.log.warn({ request_id: request.id, url: safeRequestUrl(request.url) }, '请求体超过路由上限');
         const isAvatarUpload = request.url.startsWith('/api/v1/profile/avatar') && request.method === 'PUT';
+        const isMemoMediaUpload = request.url.startsWith('/api/v1/memo-media/') && request.method === 'PUT';
         await reply.status(413).send({
-          code: isAvatarUpload ? 'AVATAR_TOO_LARGE' : 'PAYLOAD_TOO_LARGE',
-          message: isAvatarUpload ? '图片过大，请选择较小的图片' : '请求内容过大',
+          code: isAvatarUpload ? 'AVATAR_TOO_LARGE' : isMemoMediaUpload ? 'MEMO_MEDIA_TOO_LARGE' : 'PAYLOAD_TOO_LARGE',
+          message: isAvatarUpload || isMemoMediaUpload ? '图片过大，请选择较小的图片' : '请求内容过大',
           request_id: request.id,
         });
         return;
