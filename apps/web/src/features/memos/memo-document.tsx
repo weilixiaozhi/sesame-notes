@@ -3,7 +3,7 @@ import { Download, Printer } from 'lucide-react';
 import { Button, Dialog, ErrorState } from '../../components/ui';
 import { useDraftClose } from '../../components/use-draft-close';
 import { captureSessionOperation } from '../../lib/session';
-import { deltaSchema, fieldsSchema, logMemoError, memoImageIds, type MemoEntry } from './memo-content';
+import { deltaSchema, fieldsSchema, logMemoError, memoImageIds, memoImageRef, type MemoEntry } from './memo-content';
 import { loadMemoImage, readBlobBytes, type MemoImageLoader } from './memo-media';
 import { downloadText, exportFileName } from '../../lib/transfer/download';
 
@@ -25,7 +25,7 @@ export function memoParagraphs(entry: MemoEntry): Paragraph[] {
   for (const op of delta.ops) {
     const insert = op.insert;
     if (typeof insert !== 'string') {
-      runs.push({ type: 'image', mediaId: insert.memo_image });
+      runs.push({ type: 'image', mediaId: memoImageRef(insert.memo_image)?.id ?? insert.memo_image });
       continue;
     }
     const attributes = 'attributes' in op ? op.attributes : undefined;

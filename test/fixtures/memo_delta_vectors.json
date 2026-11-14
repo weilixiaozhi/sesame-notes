@@ -37,6 +37,13 @@
         ]
       },
       "text": "照片\n\uFFFC\n"
+    },
+    {
+      "id": "image-resized",
+      "body": {
+        "ops": [{ "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c|50" } }, { "insert": "\n" }]
+      },
+      "text": "\uFFFC\n"
     }
   ],
   "invalid": [
@@ -72,6 +79,18 @@
       "id": "image-extra-key",
       "body": {
         "ops": [{ "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c", "width": 10 } }, { "insert": "\n" }]
+      }
+    },
+    {
+      "id": "image-width-zero",
+      "body": {
+        "ops": [{ "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c|0" } }, { "insert": "\n" }]
+      }
+    },
+    {
+      "id": "image-width-overflow",
+      "body": {
+        "ops": [{ "insert": { "memo_image": "9f8e7d6c-5b4a-4392-8171-60514f3e2d1c|101" } }, { "insert": "\n" }]
       }
     },
     {

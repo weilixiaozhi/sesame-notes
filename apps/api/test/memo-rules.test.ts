@@ -31,9 +31,17 @@ describe('备忘录正文图片引用', () => {
     expect(JSON.stringify(value)).toBe(before);
   });
 
+  it('图片引用可携带显示比例并保持原样', () => {
+    const value = body([{ insert: { memo_image: `${id}|50` } }, { insert: '\n' }]);
+    expect(() => validateMemoDelta(value)).not.toThrow();
+  });
+
   it.each([
     ['未知嵌入类型', body([{ insert: { image: id } }, { insert: '\n' }])],
     ['图片标识不是 UUID', body([{ insert: { memo_image: 'not-a-uuid' } }, { insert: '\n' }])],
+    ['图片比例为零', body([{ insert: { memo_image: `${id}|0` } }, { insert: '\n' }])],
+    ['图片比例低于下限', body([{ insert: { memo_image: `${id}|5` } }, { insert: '\n' }])],
+    ['图片比例超出上限', body([{ insert: { memo_image: `${id}|101` } }, { insert: '\n' }])],
     ['图片对象带额外键', body([{ insert: { memo_image: id, width: 10 } }, { insert: '\n' }])],
     ['图片不允许段落格式', body([{ insert: { memo_image: id }, attributes: { header: 1 } }, { insert: '\n' }])],
     ['图片不能作为末段', body([{ insert: '文字' }, { insert: { memo_image: id } }])],

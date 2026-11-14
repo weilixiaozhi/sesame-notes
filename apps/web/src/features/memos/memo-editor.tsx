@@ -5,7 +5,7 @@ import { ImagePlus } from 'lucide-react';
 import 'quill/dist/quill.snow.css';
 import './memo-editor.css';
 import { Button } from '../../components/ui';
-import { deltaSchema, logMemoError, type MemoDelta } from './memo-content';
+import { deltaSchema, logMemoError, memoImageRef, type MemoDelta } from './memo-content';
 import { loadMemoImage, uploadMemoImage } from './memo-media';
 
 /** 使用 Quill 内置 embed 基类的类型，运行时仍从注册表导入以复用当前实例配置。 */
@@ -26,21 +26,26 @@ class MemoImageBlot extends EmbedBlot {
   private disposed = false;
 
   static create(value: unknown): Node {
-    const mediaId = String(value);
-    const node = super.create(mediaId) as HTMLElement;
-    node.dataset.mediaId = mediaId;
+    const mediaValue = String(value);
+    const ref = memoImageRef(mediaValue);
+    const node = super.create(mediaValue) as HTMLElement;
+    // 原始引用值写回 Delta，比例单独用于展示宽度。
+    node.dataset.mediaValue = mediaValue;
+    node.dataset.mediaId = ref?.id ?? '';
+    node.dataset.percent = `${ref?.percent ?? 100}`;
     node.setAttribute('contenteditable', 'false');
     node.setAttribute('role', 'img');
     node.setAttribute('aria-label', '图片加载中');
     const placeholder = document.createElement('span');
     placeholder.className = 'memo-image-placeholder';
     placeholder.textContent = '图片加载中…';
+    placeholder.style.width = `${ref?.percent ?? 100}%`;
     node.append(placeholder);
     return node;
   }
 
   static value(node: Node): string {
-    return (node as HTMLElement).dataset.mediaId ?? '';
+    return (node as HTMLElement).dataset.mediaValue ?? '';
   }
 
   /** 挂载后开始加载，同一节点重复挂载不会重复请求。 */
@@ -62,7 +67,9 @@ class MemoImageBlot extends EmbedBlot {
 
   /** 加载成功后替换占位；失败时显示不可用文字，图片 op 仍可继续编辑保存。 */
   private async load(): Promise<void> {
-    const mediaId = MemoImageBlot.value(this.domNode);
+    const mediaValue = MemoImageBlot.value(this.domNode);
+    const mediaId = memoImageRef(mediaValue)?.id;
+    const percent = Number((this.domNode as HTMLElement).dataset.percent ?? '100') || 100;
     if (!mediaId) return;
     this.status = 'loading';
     const controller = new AbortController();
@@ -81,6 +88,8 @@ class MemoImageBlot extends EmbedBlot {
       image.src = url;
       image.alt = '备忘录图片';
       image.className = 'memo-image-content';
+      image.style.width = `${percent}%`;
+      image.style.maxWidth = '100%';
       this.contentNode.replaceChildren(image);
       (this.domNode as HTMLElement).setAttribute('aria-label', '备忘录图片');
       this.status = 'ready';

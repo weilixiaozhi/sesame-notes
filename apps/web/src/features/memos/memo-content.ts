@@ -11,7 +11,10 @@ const attributesSchema = z.strictObject({
   indent: z.number().int().min(0).max(5).optional(),
 });
 /** 图片引用只保存客户端生成的媒体标识，正文不承载地址或字节。 */
-const memoImageIdSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+/** 图片引用：媒体标识 + 可选显示比例（正文宽度百分比），缺省占满整行。 */
+export const memoImageValuePattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:\|(?:[1-9]\d|100))?$/;
+const memoImageValueSchema = z.string().regex(memoImageValuePattern);
 /** 单篇正文最多引用 20 张图片，与客户端插入限制一致。 */
 const memoImageMaxCount = 20;
 const textOpSchema = z
@@ -26,7 +29,7 @@ const textOpSchema = z
         (!['header', 'list', 'indent'].some((key) => key in op.attributes!) || /^\n+$/.test(op.insert))),
   );
 /** 图片 op 是严格单键对象，不能携带段落属性或尺寸信息。 */
-const imageOpSchema = z.strictObject({ insert: z.strictObject({ memo_image: memoImageIdSchema }) });
+const imageOpSchema = z.strictObject({ insert: z.strictObject({ memo_image: memoImageValueSchema }) });
 export const deltaSchema = z
   .strictObject({
     ops: z.array(z.union([textOpSchema, imageOpSchema])).min(1),
@@ -97,13 +100,22 @@ export function logMemoError(action: string, error: unknown, context: Record<str
   }
 }
 
+/** 拆分图片引用；比例缺省为 100，格式非法返回 null。 */
+export function memoImageRef(value: string): { id: string; percent: number } | null {
+  if (!memoImageValuePattern.test(value)) return null;
+  const [id, percent] = value.split('|');
+  return { id: id!, percent: percent ? Number(percent) : 100 };
+}
+
 /** 提取正文引用的图片标识，去重并保持出现顺序，供导出预加载与渲染使用。 */
 export function memoImageIds(body: unknown): string[] {
   const parsed = deltaSchema.safeParse(body);
   if (!parsed.success) return [];
   const ids = new Set<string>();
   for (const op of parsed.data.ops) {
-    if (typeof op.insert !== 'string') ids.add(op.insert.memo_image);
+    if (typeof op.insert === 'string') continue;
+    const ref = memoImageRef(op.insert.memo_image);
+    if (ref) ids.add(ref.id);
   }
   return [...ids];
 }

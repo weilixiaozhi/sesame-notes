@@ -23,8 +23,22 @@ describe('备忘录正文图片校验', () => {
     expect(memoPreview({ book_type: 'normal', title: '', body })).toBe('');
   });
 
+  it('接受带显示比例的图片引用，摘要与导出仍只使用媒体标识', () => {
+    const body = imageBody([{ insert: { memo_image: `${imageId}|50` } }, { insert: '\n' }]);
+    expect(deltaSchema.safeParse(body).success).toBe(true);
+    expect(memoImageIds(body)).toEqual([imageId]);
+    expect(memoPreview({ book_type: 'normal', title: '', body })).toBe('');
+  });
+
   it('拒绝非法图片标识与额外键', () => {
-    for (const value of ['invalid', imageId.toUpperCase(), `${imageId}x`]) {
+    for (const value of [
+      'invalid',
+      imageId.toUpperCase(),
+      `${imageId}x`,
+      `${imageId}|0`,
+      `${imageId}|5`,
+      `${imageId}|101`,
+    ]) {
       expect(deltaSchema.safeParse(imageBody([{ insert: { memo_image: value } }, { insert: '\n' }])).success).toBe(
         false,
       );

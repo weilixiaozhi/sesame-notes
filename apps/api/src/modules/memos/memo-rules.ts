@@ -11,8 +11,8 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 /** 单篇笔记的图片数量上限，与客户端插入限制一致。 */
 const MEMO_IMAGE_MAX = 20;
-/** 图片引用只保存客户端生成的媒体标识，不接受服务端地址或字节。 */
-const MEMO_IMAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** 图片引用只保存客户端生成的媒体标识与可选显示比例（正文宽度的百分比）。 */
+const MEMO_IMAGE_VALUE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:\|(?:[1-9]\d|100))?$/;
 
 /** delta_v1 只保存文字与图片引用；拒绝未知格式，不修剪或改写正文。 */
 export function validateMemoDelta(value: unknown): void {
@@ -32,7 +32,7 @@ export function validateMemoDelta(value: unknown): void {
         Object.keys(insert).length !== 1 ||
         !Object.hasOwn(insert, 'memo_image') ||
         typeof insert.memo_image !== 'string' ||
-        !MEMO_IMAGE_ID.test(insert.memo_image) ||
+        !MEMO_IMAGE_VALUE.test(insert.memo_image) ||
         Object.hasOwn(op, 'attributes')
       )
         return fail();

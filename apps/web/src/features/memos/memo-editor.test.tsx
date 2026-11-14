@@ -20,6 +20,9 @@ describe('备忘录编辑器图片', () => {
     expect(Blot.blotName).toBe('memo_image');
     const node = Blot.create(imageId);
     expect(Blot.value(node)).toBe(imageId);
+    // 带显示比例的引用必须原样回写，比例只影响展示宽度。
+    const resized = Blot.create(`${imageId}|50`);
+    expect(Blot.value(resized)).toBe(`${imageId}|50`);
   });
 
   it('载入图片 op 后渲染占位，加载失败显示不可用', async () => {
