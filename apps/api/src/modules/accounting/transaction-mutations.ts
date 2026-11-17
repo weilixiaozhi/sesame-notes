@@ -5,6 +5,7 @@ import { ApiError } from '../../shared/errors.js';
 import { createChange } from '../sync-events/index.js';
 import { transactionPayload } from './mappers.js';
 import { createdByMemberIdFor } from './member-refs.js';
+import { historyActionOf, historyChangeFlags, withHistoryDisplay } from './transaction-history-display.js';
 
 type TransactionWithSplits = Prisma.TransactionGetPayload<{ include: { splits: true } }>;
 
@@ -46,6 +47,15 @@ export async function updateTransactionMutation(
     if (mutation.baseRevision === undefined) {
       return await readMutationFailure(tx, mutation.transactionId, mutation.ledgerId);
     }
+    const action = historyActionOf(mutation.historyChanges);
+    // 只有普通编辑需要比较前后值，分类迁移和本位币调整由动作本身说明。
+    const before =
+      action === 'edit'
+        ? await tx.transaction.findUnique({
+            where: { id: mutation.transactionId },
+            include: { splits: true },
+          })
+        : null;
     const operatorMemberId = createdByMemberIdFor(mutation.ledgerId, auth.userId);
     const cas = await tx.transaction.updateMany({
       where: {
@@ -72,13 +82,17 @@ export async function updateTransactionMutation(
       where: { id: mutation.transactionId },
       include: { splits: true },
     });
+    const flags = historyChangeFlags(before, transaction, action);
     await tx.transactionEditHistory.create({
       data: {
         transactionId: mutation.transactionId,
         ledgerId: mutation.ledgerId,
         version: transaction.revision,
         operatorMemberId,
-        changes: mutation.historyChanges,
+        changes: withHistoryDisplay(mutation.historyChanges, transaction, {
+          action,
+          ...flags,
+        }),
       },
     });
     const changeId = await createChange(
@@ -139,7 +153,9 @@ export async function deleteTransactionMutation(
         ledgerId: mutation.ledgerId,
         version: transaction.revision,
         operatorMemberId,
-        changes: { action: 'delete', base_revision: mutation.baseRevision },
+        changes: withHistoryDisplay({ action: 'delete', base_revision: mutation.baseRevision }, transaction, {
+          action: 'delete',
+        }),
       },
     });
     const changeId = await createChange(

@@ -299,6 +299,48 @@ describe('云端交易编辑历史', () => {
     }
   });
 
+  it('历史展示快照包含分类、金额、时间及备注/分摊变化标记', async () => {
+    const value = await fixture();
+    const categoryId = randomUUID();
+    await prisma.category.create({
+      data: { id: categoryId, ownerId: owner.userId, name: '餐饮', kind: 'expense' },
+    });
+    await patch(value, 1, {
+      amount: '88',
+      native_amount: '88',
+      category_id: categoryId,
+      note: '午餐',
+    });
+    let item = (await request('GET', historyPath(value), owner)).json<HistoryPage>().items[0]!;
+    expect(item.changes).toMatchObject({
+      display: {
+        action: 'edit',
+        category_name: '餐饮',
+        amount: '88',
+        currency_code: 'CNY',
+        happened_at: '2026-11-03T00:00:00.000Z',
+        note: '午餐',
+        note_changed: true,
+        sharing_changed: false,
+      },
+    });
+
+    await patch(value, 2, {
+      payer_member_id: value.memberId,
+      aa_mode: '2',
+      splits: [{ member_id: value.memberId, amount: '88' }],
+    });
+    item = (await request('GET', historyPath(value), owner)).json<HistoryPage>().items[0]!;
+    expect(item.changes).toMatchObject({
+      display: {
+        action: 'edit',
+        category_name: '餐饮',
+        note_changed: false,
+        sharing_changed: true,
+      },
+    });
+  });
+
   it('软删除交易保留删除动作，归档成员仍可读取，删除账本后不可读取', async () => {
     const value = await fixture();
     const deleted = await request('DELETE', `/ledgers/${value.ledgerId}/transactions/${value.transactionId}`, owner, {
@@ -308,7 +350,20 @@ describe('云端交易编辑历史', () => {
     await prisma.ledgerMember.update({ where: { id: value.memberId }, data: { archivedAt: new Date() } });
     const response = await request('GET', historyPath(value), owner);
     expect(response.statusCode, response.body).toBe(200);
-    expect(response.json<HistoryPage>().items[0]!.changes).toEqual({ action: 'delete', base_revision: 1 });
+    expect(response.json<HistoryPage>().items[0]!.changes).toEqual({
+      action: 'delete',
+      base_revision: 1,
+      display: {
+        action: 'delete',
+        category_name: null,
+        amount: '100',
+        currency_code: 'CNY',
+        happened_at: '2026-11-03T00:00:00.000Z',
+        note: null,
+        note_changed: false,
+        sharing_changed: false,
+      },
+    });
     await prisma.ledger.update({ where: { id: value.ledgerId }, data: { deletedAt: new Date() } });
     expect((await request('GET', historyPath(value), owner)).statusCode).toBe(404);
   });
